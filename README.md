@@ -9,6 +9,8 @@ editor inside Home Assistant, with no external sequencing software or separate h
 ## Features
 
 - Discover Govee devices on the local network and check each one's segments with a test pattern
+- Plan shows before your lights arrive: add planned lights by name and segment count, then link
+  them to the real devices later
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping
 - Draggable effects (solid, fade, chase, rainbow, strobe, twinkle, wipe) with a live,
   segment-level preview
@@ -24,9 +26,12 @@ See [the add-on docs](govee_show/DOCS.md) for how to use it.
 1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**.
 2. Open the ⋮ menu, choose **Repositories** and add
    `https://github.com/gavin-vbmedia/govee-ha-show`.
-3. Install **Govee Light Show** and start it.
+3. Install **Govee Light Show**, turn on **Show in sidebar**, and start it.
+4. Open **Light Shows** from the sidebar.
 
-Home Assistant builds the add-on on your machine the first time, which takes a minute or two.
+Home Assistant builds the add-on on your machine the first time, which takes a few minutes.
+Requires Home Assistant OS or Supervised. For show entities in automations, also set up the
+Mosquitto broker add-on and the MQTT integration (optional).
 
 ## How it works
 
