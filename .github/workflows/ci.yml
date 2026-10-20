@@ -36,9 +36,10 @@ jobs:
       - name: Starts and serves the editor
         run: |
           docker run -d --name gs -e GOVEE_SHOW_ALLOW_ALL=1 -e GOVEE_SHOW_CONFIG=/tmp/c -e GOVEE_SHOW_MEDIA=/tmp/m -p 8099:8099 govee-show-test
-          for i in $(seq 1 20); do curl -fs localhost:8099/api/info && break; sleep 1; done
+          for i in $(seq 1 20); do curl -s -o /dev/null localhost:8099/api/info && break; sleep 1; done
           docker logs gs
-          curl -fs localhost:8099/api/info
+          # 200 (not 403) also proves the container's environment reaches the app.
+          curl -fsS localhost:8099/api/info
       - name: aarch64 base image exists
         run: |
           base=$(sed -n 's/^FROM \(.*\)$/\1/p' govee_show/Dockerfile | sed 's/${BUILD_ARCH}/aarch64/')

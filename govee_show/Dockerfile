@@ -8,4 +8,6 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements
 COPY app/ /app/
 WORKDIR /app
 
-CMD ["python3", "-m", "goveeshow"]
+# Run directly rather than under the base image's s6-overlay /init, which starts the
+# command with a reset environment and would drop SUPERVISOR_TOKEN.
+ENTRYPOINT ["python3", "-m", "goveeshow"]
