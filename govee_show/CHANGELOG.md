@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.11
+
+- **Find segments**: press **Find** next to a light's segment count and answer "can you see any
+  light?" a few times. It lights one segment at a time and narrows down the count, so a light can
+  stay on its reel.
+
 ## 0.2.10
 
 - New per-light **Protocol** option on the Devices tab, for lights that turn on but ignore the

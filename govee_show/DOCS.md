@@ -16,6 +16,11 @@ Govee doesn't report how many segments a device has, so press **Test**: a rainbo
 dot stepping along it. Set **Segments** so the dot visits every segment once per lap, and tick
 **Reverse** if it runs the wrong way. Most strips and outdoor lights have 10 to 15 segments.
 
+**Light still on its reel?** Press **Find** next to **Segments** instead. It lights a single
+segment and asks whether you can see any light at all. A light with fewer segments has nowhere to
+show it, so each answer halves the range, and after about 7 answers the count is filled in. Set
+**Reverse** later, once the light is hung up and you can see which end the Test dot starts from.
+
 **Test only turns the light on?** Lights accept different forms of the realtime command. Change
 **Protocol** and press **Test** again:
 

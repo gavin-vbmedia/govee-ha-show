@@ -4,6 +4,7 @@ All URLs the editor uses are relative, because ingress serves the panel from
 /api/hassio_ingress/<token>/.
 """
 import asyncio
+import contextlib
 import ipaddress
 import logging
 import os
@@ -16,7 +17,7 @@ from . import __version__, commands, discovery
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .mqtt import MqttBridge
-from .output import Output, run_test_pattern
+from .output import PROBE_MAX, Output, run_probe, run_test_pattern
 from .player import Player
 from .protocol import PROTOCOLS
 from .runner import Runner, RunnerError
@@ -132,6 +133,34 @@ async def test_device(request):
         app[OUTPUT], d["ip"], d["segments"], seconds, reverse=d["reverse"], gradient=d["gradient"],
         protocol=d["protocol"]))
     return web.json_response({"ok": True, "seconds": seconds})
+
+
+async def probe_device(request):
+    """Find segments: light one segment so the user can say whether it exists. Segment 0 stops."""
+    body = await request.json()
+    d = _clean_device(body)
+    if not d["ip"]:
+        raise web.HTTPBadRequest(text="link this device to a real light first")
+    try:
+        segment = int(body.get("segment", 0))
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="segment must be a number")
+    if not 0 <= segment <= PROBE_MAX:
+        raise web.HTTPBadRequest(text=f"segment must be 0-{PROBE_MAX}")
+    app = request.app
+    tests = app[TESTS]
+    if (old := tests.pop(d["ip"], None)):
+        # Wait for it to let go of the light, or its clean-up would switch off the next step.
+        old.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await old
+    if segment == 0:
+        app[OUTPUT].release(d["ip"])
+        return web.json_response({"ok": True})
+    await app[RUNNER].stop()
+    tests[d["ip"]] = asyncio.create_task(run_probe(
+        app[OUTPUT], d["ip"], segment, gradient=d["gradient"], protocol=d["protocol"]))
+    return web.json_response({"ok": True, "max": PROBE_MAX})
 
 
 async def stop_tests(app):
@@ -368,6 +397,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_put("/api/devices", put_devices)
     r.add_post("/api/devices/scan", scan_devices)
     r.add_post("/api/devices/test", test_device)
+    r.add_post("/api/devices/probe", probe_device)
     r.add_get("/api/shows", list_shows)
     r.add_post("/api/shows", create_show)
     r.add_get("/api/shows/{id}", get_show)

@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import pytest
@@ -172,3 +173,18 @@ async def test_custom_palettes_round_trip_and_validation(client):
     for bad in ({"name": "x"}, [{"name": "", "colors": ["#ff0000"]}], [{"name": "x", "colors": []}],
                 [{"name": "x", "colors": ["red"]}], [{"name": "x", "colors": ["#000000"] * 13}]):
         assert (await client.put("/api/palettes", json=bad)).status == 400
+
+
+async def test_probe_lights_one_segment_then_stops(client):
+    dev = {"ip": "192.0.2.10", "segments": 15}
+    resp = await client.post("/api/devices/probe", json={**dev, "segment": 64})
+    assert resp.status == 200
+    out = client.app[server.OUTPUT]
+    await asyncio.sleep(0.01)
+    assert out.devices["192.0.2.10"].segments == 64
+    assert (await client.post("/api/devices/probe", json={**dev, "segment": 32})).status == 200
+    await asyncio.sleep(0.01)
+    assert out.devices["192.0.2.10"].segments == 32
+    assert (await client.post("/api/devices/probe", json={**dev, "segment": 0})).status == 200
+    assert "192.0.2.10" not in out.devices
+    assert (await client.post("/api/devices/probe", json={**dev, "segment": 999})).status == 400

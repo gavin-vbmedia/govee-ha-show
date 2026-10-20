@@ -196,7 +196,12 @@ function renderDevices() {
     const model = document.createElement("span");
     model.append(d.sku || "–", realtimeBadge(d.sku));
     cell(model);
-    cell(input("number", "segments", { min: 1, max: 255 }));
+    const segs = document.createElement("span");
+    const find = button("Find", () => findSegments(d), "ghost");
+    find.disabled = !d.ip || d.protocol === "whole";
+    find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
+    segs.append(input("number", "segments", { min: 1, max: 255 }), " ", find);
+    cell(segs);
     cell(input("checkbox", "reverse"));
     cell(input("checkbox", "gradient"));
     const proto = document.createElement("select");
@@ -222,6 +227,69 @@ function renderDevices() {
     rows.append(tr);
   }
 }
+
+// Find segments: light one segment at a time and halve the range on each answer. A light with
+// fewer segments than the frame has nowhere to show the white one, so "anything lit?" can be
+// answered with the light still on its reel.
+const finder = { device: null, lo: 1, hi: 128, max: 128, guess: 0, steps: 0, busy: false };
+
+async function probe(segment) {
+  return api("api/devices/probe", { method: "POST", json: { ...finder.device, segment } });
+}
+
+async function findSegments(d) {
+  if (finder.device) await stopFinder();
+  Object.assign(finder, { device: d, lo: 1, hi: 128, steps: 0, busy: false });
+  try {
+    const { max } = await probe(1);
+    finder.hi = finder.max = max;
+  } catch (e) { status(`Couldn't reach ${d.name}: ${e.message}`, true); finder.device = null; return; }
+  $("finder").hidden = false;
+  $("finder-title").textContent = `Finding segments on ${d.name}`;
+  // Segment 1 always exists, so the first real question is the middle of the range.
+  await askFinder();
+}
+
+async function askFinder() {
+  if (finder.lo >= finder.hi) return finishFinder();
+  finder.guess = Math.ceil((finder.lo + finder.hi) / 2);
+  finder.steps++;
+  const left = Math.ceil(Math.log2(finder.hi - finder.lo + 1));
+  $("finder-question").textContent = "One segment is lit white and everything else is off. Can you see any light on it?";
+  $("finder-progress").textContent = `Question ${finder.steps}, about ${left} to go. Between ${finder.lo} and ${finder.hi} segments.`;
+  try { await probe(finder.guess); } catch (e) { status(`Find segments failed: ${e.message}`, true); stopFinder(); }
+}
+
+async function answerFinder(lit) {
+  if (!finder.device || finder.busy) return;
+  finder.busy = true;
+  if (lit) finder.lo = finder.guess; else finder.hi = finder.guess - 1;
+  await askFinder();
+  finder.busy = false;
+}
+
+async function finishFinder() {
+  const d = finder.device;
+  const stretched = finder.lo === finder.max;
+  await stopFinder();
+  d.segments = finder.lo;
+  await saveDevices();
+  renderDevices();
+  status(stretched
+    ? `${d.name} lit every segment asked for, so it may stretch the colours itself. Set to ${finder.lo}; use Test to check.`
+    : `${d.name} has ${finder.lo} segments`, stretched);
+}
+
+async function stopFinder() {
+  $("finder").hidden = true;
+  if (!finder.device) return;
+  try { await probe(0); } catch { /* the light falls back to its own scene within a minute anyway */ }
+  finder.device = null;
+}
+
+$("finder-yes").addEventListener("click", () => answerFinder(true));
+$("finder-no").addEventListener("click", () => answerFinder(false));
+$("finder-cancel").addEventListener("click", () => stopFinder());
 
 // Govee models ------------------------------------------------------------------
 async function loadModels() {
