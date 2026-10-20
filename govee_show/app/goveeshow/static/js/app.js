@@ -199,6 +199,11 @@ function renderDevices() {
     cell(input("number", "segments", { min: 1, max: 255 }));
     cell(input("checkbox", "reverse"));
     cell(input("checkbox", "gradient"));
+    const proto = document.createElement("select");
+    for (const [v, label] of Object.entries(PROTOCOLS)) proto.add(new Option(label, v, false, v === (d.protocol || "standard")));
+    proto.title = "How colours are sent. If Test only turns the light on, try the next one.";
+    proto.addEventListener("change", () => { d.protocol = proto.value; saveDevices(); });
+    cell(proto);
     const actions = document.createElement("td");
     const test = button(d.ip ? "Test" : "Planned", async () => {
       try {
@@ -228,6 +233,14 @@ async function loadModels() {
     renderDevices();
   } catch { /* the picker is a convenience; manual entry still works */ }
 }
+
+// Lights accept different forms of the realtime packet. See protocol.py.
+const PROTOCOLS = {
+  standard: "Realtime",
+  razer: "Realtime (Razer)",
+  v2: "Realtime v2",
+  whole: "Whole light only",
+};
 
 const skuOf = (text) => (text || "").trim().split(/\s+/)[0].toUpperCase();
 
@@ -267,7 +280,7 @@ function button(label, onclick, cls = "") {
 function addDevice(found) {
   if (app.devices[found.id] || app.deviceList.some((d) => d.ip && d.ip === found.ip)) return;
   const name = `${found.sku || "Govee"} ${found.ip.split(".").pop()}`;
-  app.deviceList.push({ id: found.id, name, ip: found.ip, sku: found.sku || "", segments: 15, reverse: false, gradient: false });
+  app.deviceList.push({ id: found.id, name, ip: found.ip, sku: found.sku || "", segments: 15, reverse: false, gradient: false, protocol: "standard" });
   saveDevices();
 }
 
@@ -1240,7 +1253,7 @@ function wire() {
     let id = base;
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
     const sku = app.models[skuOf($("plan-model").value)] ? skuOf($("plan-model").value) : "";
-    app.deviceList.push({ id, name, ip: "", sku, segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false });
+    app.deviceList.push({ id, name, ip: "", sku, segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false, protocol: "standard" });
     $("plan-name").value = "";
     $("plan-model").value = "";
     $("plan-info").replaceChildren();

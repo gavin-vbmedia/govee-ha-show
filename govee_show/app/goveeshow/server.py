@@ -18,6 +18,7 @@ from .ha import HAError, HomeAssistant
 from .mqtt import MqttBridge
 from .output import Output, run_test_pattern
 from .player import Player
+from .protocol import PROTOCOLS
 from .runner import Runner, RunnerError
 from .storage import Storage, slugify, valid_id
 
@@ -87,12 +88,16 @@ def _clean_device(d: dict) -> dict:
         raise web.HTTPBadRequest(text=f"bad device: {e}")
     if not 1 <= segments <= 255:
         raise web.HTTPBadRequest(text="segments must be 1-255")
+    protocol = str(d.get("protocol") or "standard")
+    if protocol not in PROTOCOLS:
+        raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
     dev_id = str(d.get("id") or ip)
     if not dev_id:
         raise web.HTTPBadRequest(text="a planned device needs an id")
     return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64],
             "ip": ip, "sku": str(d.get("sku", "")), "segments": segments,
-            "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient"))}
+            "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient")),
+            "protocol": protocol}
 
 
 async def put_devices(request):
@@ -124,7 +129,8 @@ async def test_device(request):
     if (old := tests.pop(d["ip"], None)):
         old.cancel()
     tests[d["ip"]] = asyncio.create_task(run_test_pattern(
-        app[OUTPUT], d["ip"], d["segments"], seconds, reverse=d["reverse"], gradient=d["gradient"]))
+        app[OUTPUT], d["ip"], d["segments"], seconds, reverse=d["reverse"], gradient=d["gradient"],
+        protocol=d["protocol"]))
     return web.json_response({"ok": True, "seconds": seconds})
 
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.10
+
+- New per-light **Protocol** option on the Devices tab, for lights that turn on but ignore the
+  Test pattern: Realtime (the default), Realtime (Razer), Realtime v2, or Whole light only, which
+  uses the official colour command for lights with no realtime mode.
+
 ## 0.2.9
 
 - Fix: a light that was switched off could miss the "realtime on" command while it powered up and
