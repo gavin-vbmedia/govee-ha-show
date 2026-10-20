@@ -65,8 +65,9 @@ def test_idle_light_is_kept_in_realtime_mode():
             sent_at.append(now)
     gaps = [b - a for a, b in zip([t0] + sent_at, sent_at + [t0 + 300])]
     assert max(gaps) < 30
+    # Razer-on only during start-up: repeating it later makes some lights blink.
     enables = [p for p in razer_packets(sock) if p[3] == 0xB1]
-    assert len(enables) >= 300 // output.REENABLE_S
+    assert len(enables) <= output.STARTUP_S / output.STARTUP_REENABLE_S + 2
 
 
 def test_razer_on_is_repeated_while_the_light_starts_up():
