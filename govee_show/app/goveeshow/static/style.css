@@ -74,6 +74,13 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 
 .preview-panel { background: #000; border-radius: 8px; padding: 8px; }
+.house-panel { display: flex; flex-direction: column; align-items: center; }
+.house-panel canvas, .house-stage canvas { display: block; border-radius: 6px; }
+.house-stage { display: flex; justify-content: center; }
+.house-stage canvas { cursor: crosshair; touch-action: none; }
+.house-lights { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.house-light { display: flex; gap: 6px; align-items: center; }
+.house-light.active > span { color: var(--accent); font-weight: 600; }
 #preview { display: block; width: 100%; height: 40px; }
 
 .effect-picker { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
@@ -145,8 +152,8 @@ button.swatch:hover { border-color: var(--text); }
 .dock.empty { display: none; }
 .dock[data-dock="top"], .dock[data-dock="bottom"] { flex-wrap: wrap; align-items: stretch; }
 .dock[data-dock="top"] > .panel, .dock[data-dock="bottom"] > .panel { flex: 0 1 auto; }
-.dock[data-dock="top"] > :is([data-panel="preview"], [data-panel="inspector"], [data-panel="timeline"]),
-.dock[data-dock="bottom"] > :is([data-panel="preview"], [data-panel="inspector"], [data-panel="timeline"]) { flex-basis: 100%; }
+.dock[data-dock="top"] > :is([data-panel="preview"], [data-panel="house"], [data-panel="inspector"], [data-panel="timeline"]),
+.dock[data-dock="bottom"] > :is([data-panel="preview"], [data-panel="house"], [data-panel="inspector"], [data-panel="timeline"]) { flex-basis: 100%; }
 .dock[data-dock="left"], .dock[data-dock="right"], .dock[data-dock="middle"] { flex-direction: column; }
 .dock[data-dock="left"], .dock[data-dock="right"] { width: 320px; flex: none; }
 .dock[data-dock="middle"] { flex: 1; min-width: 0; }

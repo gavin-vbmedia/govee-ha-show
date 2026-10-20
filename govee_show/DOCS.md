@@ -167,16 +167,34 @@ actions:
 Send `input: {action: stop}` to stop. The exact input for the open show is shown on the
 **Settings** tab. A show with no speaker plays the lights only.
 
+## See it on your house
+
+The **House** tab puts your lights on a photo of your house, and the editor's **House** panel then
+plays the show on it, so you can design without standing outside.
+
+1. Take a photo from where people will watch, ideally at dusk, and press **Upload photo**. It's
+   scaled down to 2000 pixels across and kept in the add-on's config folder.
+2. Press **Trace** next to a light and click along where it runs on the photo, starting at the end
+   with the plug. Click once at each corner or bend; the light's segments are spread evenly along
+   the line, each drawn as a few bulbs.
+3. Press **Done** (or Enter). Drag a point to move it, right-click a point to remove it, and press
+   Backspace while tracing to undo the last point.
+
+While you trace, each light is drawn in a rainbow from red at the plug to the far end, so you can
+check it runs the same way as the real light. If it's backwards, retrace it from the other end,
+or tick **Reverse** on the Devices tab if the effects themselves run the wrong way. **Darken**
+dims the photo so the lights stand out. Each light's **Brightness %** applies here as well.
+
 ## Arrange the editor
 
-Drag any editor panel (Show, Song, Playback, Beats, Preview, Timeline and Selection) by its
+Drag any editor panel (Show, Song, Playback, Beats, Preview, House, Timeline and Selection) by its
 title to move it to the top, left, middle, right or bottom, or to change its order there; a blue
 bar shows where it will land. The **⋯** button in its corner does the same from a menu, with
 **Earlier** and **Later** to change the order, which also works on a touch screen. Top and
 bottom run the full width; left, middle and right sit side by side between them. Any panel except
 the Timeline can also be **Hidden**; with Selection hidden, clips can still be moved, resized,
-copied and deleted on the timeline, but adding or editing effects needs it back. The **Layout** section of the **Settings** tab
-lists every panel in one place, which is where a hidden panel is brought back, and has **Reset
+copied and deleted on the timeline, but adding or editing effects needs it back. The **Layout**
+section of the **Settings** tab lists every panel in one place, which is where a hidden panel is brought back, and has **Reset
 layout**. The layout is saved in your browser, so each computer or phone keeps its own.
 
 ## Experimental: Govee scenes
