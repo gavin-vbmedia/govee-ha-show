@@ -461,16 +461,28 @@ def _house(settings: dict) -> dict:
 
 
 def _clean_style(style) -> dict | None:
-    """How a light looks on the house photo: {"style": "icicle", "drops": n, "length": l} draws
-    n drops hanging from its line, the longest l of the photo's height. Plain lines need nothing."""
-    if not isinstance(style, dict) or style.get("style") != "icicle":
+    """How a light looks on the house photo. {"style": "icicle", "drops": n, "length": l} draws n
+    drops hanging from its line, the longest l of the photo's height. {"style": "spots", "beam": b,
+    "aims": [[dx, dy], ...]} draws each point as a spotlight shining dx across and dy down the
+    photo, its beam b wide for its length. Plain lines need nothing."""
+    if not isinstance(style, dict):
         return None
     try:
-        drops = min(max(int(style.get("drops", 40)), 1), MAX_BULBS)
-        length = round(min(max(float(style.get("length", 0.06)), 0.01), 0.5), 4)
-    except (TypeError, ValueError):
-        raise web.HTTPBadRequest(text="icicle drops and length must be numbers")
-    return {"style": "icicle", "drops": drops, "length": length}
+        if style.get("style") == "icicle":
+            drops = min(max(int(style.get("drops", 40)), 1), MAX_BULBS)
+            length = round(min(max(float(style.get("length", 0.06)), 0.01), 0.5), 4)
+            return {"style": "icicle", "drops": drops, "length": length}
+        if style.get("style") == "spots":
+            beam = round(min(max(float(style.get("beam", 0.5)), 0.1), 1.5), 3)
+            aims = style.get("aims") or []
+            if not isinstance(aims, list) or len(aims) > MAX_POINTS:
+                raise ValueError
+            aims = [[round(min(max(float(a[0]), -1), 1), 4), round(min(max(float(a[1]), -1), 1), 4)]
+                    for a in aims]
+            return {"style": "spots", "beam": beam, "aims": aims}
+    except (TypeError, ValueError, IndexError):
+        raise web.HTTPBadRequest(text="a light's style settings must be numbers")
+    return None
 
 
 async def put_house(request):

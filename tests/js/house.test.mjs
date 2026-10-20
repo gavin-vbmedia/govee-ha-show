@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { bulbLayout, bulbPositions, bulbSegment, icicleDrops } from "../../govee_show/app/goveeshow/static/js/house.js";
+import { bulbLayout, bulbPositions, bulbSegment, icicleDrops, spotColour } from "../../govee_show/app/goveeshow/static/js/house.js";
 
 const close = (a, b) => a.every((p, i) => Math.abs(p[0] - b[i][0]) < 1e-9 && Math.abs(p[1] - b[i][1]) < 1e-9);
 
@@ -42,4 +42,15 @@ test("icicle drops spread along the line with staggered lengths", () => {
   assert.ok(close(drops.slice(0, 2).map((d) => d.top), [[0, 0], [1, 0]]));
   assert.equal(drops[0].f, 1);
   assert.ok(drops[1].f < 1 && drops[1].n < drops[0].n);
+});
+
+test("each spot shows its share of the segments, blended", () => {
+  // 4 segments: red, red, blue, blue. Two spots get one colour each; flipped by Reverse.
+  const rgb = Uint8Array.from([200, 0, 0, 200, 0, 0, 0, 0, 100, 0, 0, 100]);
+  assert.deepEqual(spotColour(0, 2, rgb, 4, false), [200, 0, 0]);
+  assert.deepEqual(spotColour(1, 2, rgb, 4, false), [0, 0, 100]);
+  assert.deepEqual(spotColour(0, 2, rgb, 4, true), [0, 0, 100]);
+  // One spot blends them all; more spots than segments share a segment.
+  assert.deepEqual(spotColour(0, 1, rgb, 4, false), [100, 0, 50]);
+  assert.deepEqual(spotColour(7, 8, rgb, 4, false), [0, 0, 100]);
 });

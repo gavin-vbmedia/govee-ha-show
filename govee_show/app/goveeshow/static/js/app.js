@@ -503,22 +503,40 @@ function houseStretchEditor(d) {
   return box;
 }
 
-// Line or Icicle, and for icicles how many drops and how far the longest hangs.
+// Line, Icicle (how many drops and how far the longest hangs) or Spots (how wide the beams are).
 function houseStyleControls(d) {
   const style = house.styles[d.id];
   const sel = document.createElement("select");
   sel.title = "How the light looks on the photo";
-  sel.innerHTML = `<option value="line">Line</option><option value="icicle">Icicle</option>`;
+  sel.innerHTML = `<option value="line">Line</option><option value="icicle">Icicle</option>
+    <option value="spots">Spots</option>`;
   sel.value = style?.style || "line";
   sel.addEventListener("change", () => {
-    house.setStyle(d.id, sel.value === "icicle"
-      ? { style: "icicle", drops: Math.max(d.segments * 3, 10), length: 0.06 } : null);
+    house.setStyle(d.id, {
+      icicle: { style: "icicle", drops: Math.max(d.segments * 3, 10), length: 0.06 },
+      spots: { style: "spots", beam: 0.5, aims: [] },
+    }[sel.value] || null);
+    house.stretch = null;
     renderHouseLights();
   });
   const l0 = document.createElement("label");
   l0.className = "row";
   l0.append("Style ", sel);
   if (!style) return [l0];
+  if (style.style === "spots") {
+    const beam = document.createElement("input");
+    beam.type = "range";
+    beam.min = "0.1";
+    beam.max = "1.5";
+    beam.step = "0.05";
+    beam.value = style.beam;
+    beam.title = "How wide each spotlight's beam is";
+    beam.addEventListener("input", () => { style.beam = Number(beam.value); house.setStyle(d.id, style); });
+    const l1 = document.createElement("label");
+    l1.className = "row";
+    l1.append("Beam ", beam);
+    return [l0, l1];
+  }
   const drops = document.createElement("input");
   drops.type = "number";
   drops.min = "1";
@@ -544,6 +562,13 @@ function houseStyleControls(d) {
   l2.className = "row";
   l2.append("Length ", length);
   return [l0, l1, l2];
+}
+
+function hint(text) {
+  const el = document.createElement("span");
+  el.className = "hint";
+  el.textContent = text;
+  return el;
 }
 
 // The House tab's sidebar: a card per light. The selected light (or the one being traced) is
@@ -573,7 +598,7 @@ function renderHouseLights() {
     const state = document.createElement("span");
     state.className = "hint";
     state.textContent = house.active === d.id ? "Tracing…"
-      : !pts ? "Not traced" : house.styles[d.id]?.style === "icicle" ? "Icicle" : "Traced";
+      : !pts ? "Not traced" : { icicle: "Icicle", spots: `${pts} spots` }[house.styles[d.id]?.style] || "Traced";
     head.append(name, state);
     card.append(head);
     if (!open) {
@@ -594,6 +619,7 @@ function renderHouseLights() {
       actions.append(button(pts ? "Retrace" : "Trace", () => {
         if (pts && !confirm(`Trace ${d.name} again from the start?`)) return;
         delete house.paths[d.id];
+        if (house.styles[d.id]?.aims) house.styles[d.id].aims = [];
         house.active = house.selected = d.id;
         house.stretch = null;
         house.save();
@@ -613,11 +639,12 @@ function renderHouseLights() {
     card.append(actions, ...houseStyleControls(d));
     const stretch = houseStretchEditor(d);
     if (stretch) card.append(stretch);
-    else if (pts > 1 && !house.active) {
-      const tip = document.createElement("span");
-      tip.className = "hint";
-      tip.textContent = "Click a line on the photo to mark part of it out of view.";
-      card.append(tip);
+    else if (house.active === d.id && house.styles[d.id]?.style === "spots") {
+      card.append(hint("Click where each spotlight sits, starting nearest the plug."));
+    } else if (pts && !house.active && house.styles[d.id]?.style === "spots") {
+      card.append(hint("Drag a spot's round handle to aim it."));
+    } else if (pts > 1 && !house.active) {
+      card.append(hint("Click a line on the photo to mark part of it out of view."));
     }
     return card;
   }));

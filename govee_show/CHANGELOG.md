@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.29
+
+- House view: spotlights, such as the H7093. Set a light's **Style** to **Spots**, press Trace and
+  click where each spotlight sits. Each one shines a soft wash of colour onto the photo; drag its
+  round handle to aim it, and set **Beam** for how wide the beams are. Each spot shows its share
+  of the light's segments.
+
 ## 0.2.28
 
 - The House tab lists your lights in a sidebar beside the photo instead of a row above it, so it
