@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.5
+
+- Colour palettes: 18 presets (Christmas, Halloween, Bonfire Night, Pride, Ocean, Fire and more)
+  plus your own on the new Palettes tab. Click a palette colour to use it in an effect, apply a
+  palette to an effect, or recolour every effect on a light or the whole show.
+
 ## 0.2.4
 
 - Copy and paste effects: Ctrl+C / Ctrl+V for a clip or a whole light (click its name), and

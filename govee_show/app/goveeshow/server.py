@@ -7,6 +7,7 @@ import asyncio
 import ipaddress
 import logging
 import os
+import re
 from pathlib import Path
 
 from aiohttp import web
@@ -250,6 +251,34 @@ async def put_speaker_delay(request):
     return web.json_response({"entity_id": entity, "delay_ms": delay})
 
 
+# colour palettes ------------------------------------------------------------
+# The presets ship in palettes.js; only the user's own palettes are stored here.
+_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+async def get_palettes(request):
+    return web.json_response(request.app[STORAGE].load_settings().get("palettes", []))
+
+
+async def put_palettes(request):
+    body = await request.json()
+    if not isinstance(body, list) or len(body) > 100:
+        raise web.HTTPBadRequest(text="expected a list of up to 100 palettes")
+    palettes = []
+    for p in body:
+        name = str(p.get("name", "")).strip()[:60] if isinstance(p, dict) else ""
+        colors = p.get("colors") if isinstance(p, dict) else None
+        if not name or not isinstance(colors, list) or not 1 <= len(colors) <= 12 \
+                or not all(isinstance(c, str) and _HEX.match(c) for c in colors):
+            raise web.HTTPBadRequest(text="each palette needs a name and 1 to 12 #rrggbb colours")
+        palettes.append({"name": name, "colors": [c.lower() for c in colors]})
+    storage = request.app[STORAGE]
+    settings = storage.load_settings()
+    settings["palettes"] = palettes
+    storage.save_settings(settings)
+    return web.json_response(palettes)
+
+
 # player ------------------------------------------------------------------
 async def player_status(request):
     return web.json_response(request.app[RUNNER].status())
@@ -344,6 +373,8 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/audio/file", get_audio)
     r.add_get("/api/speakers", list_speakers)
     r.add_put("/api/speakers/delay", put_speaker_delay)
+    r.add_get("/api/palettes", get_palettes)
+    r.add_put("/api/palettes", put_palettes)
     r.add_post("/api/command", run_command)
     r.add_get("/api/player", player_status)
     r.add_post("/api/player/play", player_play)

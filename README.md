@@ -14,6 +14,8 @@ editor inside Home Assistant, with no external sequencing software or separate h
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping
 - Draggable effects (solid, two and three colours, fade, chase, rainbow, strobe, twinkle, wipe) with a live,
   segment-level preview
+- Colour palettes: presets for holidays and moods, plus your own, to recolour an effect, a light
+  or the whole show in one click
 - Copy and paste effects between lights (Ctrl+C / Ctrl+V), or copy a whole light's effects to
   one or every other light
 - Save and load shows; each show is baked into precomputed frames for reliable playback

@@ -1,6 +1,7 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
 import { EFFECTS, FPS, bake, defaultParams, renderTrack, showDuration } from "./effects.js";
+import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
 
 const $ = (id) => document.getElementById(id);
@@ -49,6 +50,9 @@ const app = {
   selected: null, // {track, clip}; clip is null when a whole light is selected
   clipboard: null, // {clips, track, whole}
   paletteEffect: "solid",
+  palettes: [], // the user's own colour palettes; presets are in palettes.js
+  colourPalette: prefs.get("colourPalette", PRESET_PALETTES[0].name),
+  lastColourKey: null, // colour field a palette swatch fills
   snap: prefs.get("snap", true),
   peaks: null,
   audioDuration: 0,
@@ -418,7 +422,20 @@ function renderInspector() {
       app.changed({ live: true });
     });
     el.addEventListener("change", () => app.changed());
+    if (p.type === "color") el.addEventListener("focus", () => { app.lastColourKey = p.key; });
     field(p.label, el);
+  }
+  const colourKeys = EFFECTS[clip.effect].params.filter((p) => p.type === "color").map((p) => p.key);
+  if (colourKeys.length) {
+    box.append(paletteRow((c) => {
+      const key = colourKeys.includes(app.lastColourKey) ? app.lastColourKey : colourKeys[0];
+      clip[key] = c;
+      app.lastColourKey = key;
+      app.changed();
+    }, button("Apply palette", () => {
+      applyPalette(clip, currentPalette().colors);
+      app.changed();
+    }, "ghost")));
   }
   box.append(button("Copy", copySelection, "ghost"),
     button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"),
@@ -486,6 +503,11 @@ function renderTrackInspector(i) {
       copyClipsTo(clips, i, targets, replace.checked);
     }, "primary"));
   }
+  if (clips.length) {
+    box.append(paletteRow(null,
+      button("Recolour this light", () => recolour([i]), "ghost"),
+      button("Recolour all lights", () => recolour(app.show.tracks.map((_, k) => k)), "ghost")));
+  }
   box.append(button("Copy (Ctrl+C)", copySelection, "ghost"));
   const p = button("Paste here (Ctrl+V)", paste, "ghost");
   p.disabled = !app.clipboard;
@@ -496,6 +518,153 @@ function renderTrackInspector(i) {
       app.changed();
     }, "ghost danger"));
   }
+}
+
+// colour palettes ---------------------------------------------------------------
+const allPalettes = () => [...PRESET_PALETTES, ...app.palettes];
+const currentPalette = () => allPalettes().find((p) => p.name === app.colourPalette) || PRESET_PALETTES[0];
+
+function swatch(color, onclick) {
+  const el = document.createElement(onclick ? "button" : "span");
+  el.className = "swatch";
+  el.style.background = color;
+  el.title = color;
+  if (onclick) el.addEventListener("click", () => onclick(color));
+  return el;
+}
+
+// Palette picker for the inspector. Clicking a swatch calls onSwatch with its colour.
+function paletteRow(onSwatch, ...actions) {
+  const row = document.createElement("div");
+  row.className = "palette-row";
+  const sel = document.createElement("select");
+  const groups = [["Presets", PRESET_PALETTES], ["Your palettes", app.palettes]];
+  for (const [label, list] of groups) {
+    if (!list.length) continue;
+    const g = document.createElement("optgroup");
+    g.label = label;
+    for (const p of list) g.append(new Option(p.name, p.name, false, p.name === currentPalette().name));
+    sel.append(g);
+  }
+  const swatches = document.createElement("span");
+  swatches.className = "swatches";
+  const fill = () => swatches.replaceChildren(...currentPalette().colors.map((c) => swatch(c, onSwatch)));
+  sel.addEventListener("change", () => {
+    app.colourPalette = sel.value;
+    prefs.set("colourPalette", sel.value);
+    fill();
+  });
+  fill();
+  const label = document.createElement("label");
+  label.append("Palette", sel);
+  row.append(label, swatches, ...actions);
+  if (onSwatch) row.title = "Click a colour to use it in the colour field you last picked";
+  return row;
+}
+
+// Each light steps through the palette clip by clip, in time order, so lights stay matched.
+function recolour(tracks) {
+  const colors = currentPalette().colors;
+  let n = 0;
+  for (const t of tracks) {
+    const clips = [...app.show.tracks[t].clips].sort((a, b) => a.start - b.start);
+    let k = 0;
+    for (const c of clips) if (applyPalette(c, colors, k)) { k++; n++; }
+  }
+  if (!n) { status("No effects with colours to recolour", true); return; }
+  status(`Recoloured ${n} effect${n > 1 ? "s" : ""} with ${currentPalette().name}`);
+  app.changed();
+}
+
+async function loadPalettes() {
+  try { app.palettes = await api("api/palettes"); } catch { app.palettes = []; }
+  renderPalettes();
+  renderInspector();
+}
+
+let savePalettesTimer = null;
+function savePalettes() {
+  clearTimeout(savePalettesTimer);
+  savePalettesTimer = setTimeout(async () => {
+    try {
+      await api("api/palettes", { method: "PUT", json: app.palettes });
+      status("Palettes saved");
+      renderInspector();
+    } catch (e) { status(`Couldn't save palettes: ${e.message}`, true); }
+  }, 300);
+}
+
+function uniqueName(base) {
+  const names = new Set(allPalettes().map((p) => p.name));
+  let name = base;
+  for (let i = 2; names.has(name); i++) name = `${base} ${i}`;
+  return name;
+}
+
+function renderPalettes() {
+  const mine = $("my-palettes"), presets = $("preset-palettes");
+  const addMine = (p) => {
+    app.palettes.push(p);
+    savePalettes();
+    renderPalettes();
+  };
+  presets.replaceChildren(...PRESET_PALETTES.map((p) => {
+    const row = document.createElement("div");
+    row.className = "palette-item";
+    const name = document.createElement("span");
+    name.className = "palette-name";
+    name.textContent = p.name;
+    const sw = document.createElement("span");
+    sw.className = "swatches";
+    sw.append(...p.colors.map((c) => swatch(c)));
+    row.append(name, sw, button("Copy to my palettes", () =>
+      addMine({ name: uniqueName(`My ${p.name}`), colors: [...p.colors] }), "ghost"));
+    return row;
+  }));
+  if (!app.palettes.length) {
+    mine.innerHTML = `<p class="hint">None yet. Press New palette, or copy a preset and change it.</p>`;
+    return;
+  }
+  mine.replaceChildren(...app.palettes.map((p, i) => {
+    const row = document.createElement("div");
+    row.className = "palette-item";
+    const name = document.createElement("input");
+    name.value = p.name;
+    name.maxLength = 60;
+    name.addEventListener("change", () => {
+      const v = name.value.trim();
+      if (!v || allPalettes().some((q) => q !== p && q.name === v)) {
+        status("Give each palette its own name", true);
+        name.value = p.name;
+        return;
+      }
+      if (app.colourPalette === p.name) app.colourPalette = v;
+      p.name = v;
+      savePalettes();
+    });
+    const sw = document.createElement("span");
+    sw.className = "swatches";
+    p.colors.forEach((c, k) => {
+      const el = document.createElement("input");
+      el.type = "color";
+      el.value = c;
+      el.addEventListener("change", () => { p.colors[k] = el.value; savePalettes(); });
+      sw.append(el);
+    });
+    const add = button("+", () => { p.colors.push(p.colors.at(-1)); savePalettes(); renderPalettes(); }, "ghost");
+    add.title = "Add a colour";
+    add.disabled = p.colors.length >= 12;
+    const remove = button("−", () => { p.colors.pop(); savePalettes(); renderPalettes(); }, "ghost");
+    remove.title = "Remove the last colour";
+    remove.disabled = p.colors.length <= 1;
+    const del = button("Delete", () => {
+      app.palettes.splice(i, 1);
+      savePalettes();
+      renderPalettes();
+    }, "ghost danger");
+    row.append(name, sw, add, remove, del);
+    return row;
+  }));
 }
 
 function deleteSelected() {
@@ -825,6 +994,7 @@ function wire() {
       for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t === tab);
       $("view-editor").hidden = tab.dataset.view !== "editor";
       $("view-devices").hidden = tab.dataset.view !== "devices";
+      $("view-palettes").hidden = tab.dataset.view !== "palettes";
       if (tab.dataset.view === "editor") { layoutPreview(); timeline.layout(); }
     });
   }
@@ -885,6 +1055,11 @@ function wire() {
   $("btn-zoom-out").addEventListener("click", () => { timeline.zoom(1 / 1.5); prefs.set("pps", app.pps); });
 
   $("btn-scan").addEventListener("click", scan);
+  $("btn-new-palette").addEventListener("click", () => {
+    app.palettes.push({ name: uniqueName("My palette"), colors: ["#ff0000", "#00ff00", "#0000ff"] });
+    savePalettes();
+    renderPalettes();
+  });
   $("plan-model").addEventListener("change", planModelChanged);
   $("plan-form").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -934,6 +1109,7 @@ async function init() {
     await loadDevices();
     loadSpeakers();
     loadModels();
+    loadPalettes();
     const shows = await api("api/shows");
     const last = prefs.get("lastShow", null);
     const id = shows.some((s) => s.id === last) ? last : shows[0]?.id;

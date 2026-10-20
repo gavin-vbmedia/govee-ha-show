@@ -159,3 +159,14 @@ async def test_planned_devices_save_but_dont_play(client):
     # Linking keeps the id, so shows built for the planned light carry over.
     linked = await (await client.put("/api/devices", json=[{**planned, "ip": "192.168.1.60"}])).json()
     assert linked[0]["id"] == "planned-porch" and linked[0]["ip"] == "192.168.1.60"
+
+
+async def test_custom_palettes_round_trip_and_validation(client):
+    assert await (await client.get("/api/palettes")).json() == []
+    mine = [{"name": "Porch party", "colors": ["#FF0000", "#00ff00"]}]
+    resp = await client.put("/api/palettes", json=mine)
+    assert resp.status == 200
+    assert await (await client.get("/api/palettes")).json() == [{"name": "Porch party", "colors": ["#ff0000", "#00ff00"]}]
+    for bad in ({"name": "x"}, [{"name": "", "colors": ["#ff0000"]}], [{"name": "x", "colors": []}],
+                [{"name": "x", "colors": ["red"]}], [{"name": "x", "colors": ["#000000"] * 13}]):
+        assert (await client.put("/api/palettes", json=bad)).status == 400

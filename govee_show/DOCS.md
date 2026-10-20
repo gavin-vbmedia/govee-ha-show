@@ -39,6 +39,13 @@ real segment count differs, just change it: effects scale to any number of segme
 - **Two colours** and **Three colours** are solid effects with more than one colour. **Split**
   divides the light into halves or thirds; **Alternate** repeats the colours along it, with
   **Segments per colour** setting how wide each block is.
+- Colour palettes: an effect's settings include a **Palette** picker. Click one of its colours to
+  put it in the colour field you last clicked (or the first one), or press **Apply palette** to
+  fill all of them in order. Click a light's name to **Recolour this light** or **Recolour all
+  lights**: each light steps through the palette effect by effect, so lights stay matched.
+  Backgrounds are left alone. The **Palettes** tab lists the presets and your own palettes: press
+  **New palette**, or **Copy to my palettes** on a preset, then rename it and change its colours
+  (up to 12). Your palettes are saved in the add-on and available in every show.
 - Copy effects between lights: select a clip (or click a light's name to select all its effects),
   press **Ctrl+C**, click another light's name and press **Ctrl+V**. Pasted effects keep their
   times so the lights stay in step; pasting onto the same light puts them at the playhead. With a

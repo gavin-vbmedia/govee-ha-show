@@ -15,6 +15,7 @@
   <nav>
     <button class="tab active" data-view="editor">Editor</button>
     <button class="tab" data-view="devices">Devices</button>
+    <button class="tab" data-view="palettes">Palettes</button>
   </nav>
   <span id="status" class="status"></span>
 </header>
@@ -119,6 +120,18 @@
     <thead><tr><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th></th></tr></thead>
     <tbody id="device-rows"></tbody>
   </table>
+</main>
+
+<main id="view-palettes" class="view" hidden>
+  <p class="hint">Use a palette from an effect's settings: click a colour to drop it into a colour field, or
+    <b>Apply palette</b> to fill them all. Click a light's name to <b>Recolour</b> every effect on it, or on every light.</p>
+  <section class="toolbar">
+    <h2>Your palettes</h2>
+    <button id="btn-new-palette" class="primary">New palette</button>
+  </section>
+  <div id="my-palettes" class="palette-list"></div>
+  <h2>Presets</h2>
+  <div id="preset-palettes" class="palette-list"></div>
 </main>
 </body>
 </html>
