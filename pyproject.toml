@@ -1,0 +1,12 @@
+# Development tooling only. The add-on version lives in govee_show/config.yaml and
+# govee_show/app/goveeshow/__init__.py; CI checks they match this one.
+[project]
+name = "govee-show"
+version = "0.2.0"
+requires-python = ">=3.12"
+dependencies = ["aiohttp"]
+
+[tool.pytest.ini_options]
+pythonpath = ["govee_show/app"]
+testpaths = ["tests"]
+asyncio_mode = "auto"  # pytest-aiohttp runs the async tests

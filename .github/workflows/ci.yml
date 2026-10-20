@@ -1,0 +1,28 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pip install -r govee_show/requirements.txt pytest pytest-aiohttp
+      - run: python -m pytest -q
+      - run: node --test tests/js/*.mjs
+      - name: Versions match
+        run: |
+          v_py=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
+          v_addon=$(sed -n 's/^version: "\(.*\)"/\1/p' govee_show/config.yaml)
+          v_pkg=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' govee_show/app/goveeshow/__init__.py)
+          echo "pyproject=$v_py config.yaml=$v_addon package=$v_pkg"
+          [ "$v_py" = "$v_addon" ] && [ "$v_py" = "$v_pkg" ]
