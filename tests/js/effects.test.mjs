@@ -42,6 +42,42 @@ test("two and three colours split the light or alternate along it", () => {
   assert.deepEqual(colours(renderTrack([{ ...trio, layout: "alternate", size: 2 }], 0, 7), 7), [1, 1, 2, 2, 3, 3, 1]);
 });
 
+test("two and three colours move along the light as a marquee", () => {
+  const colours = (buf, n) => Array.from({ length: n }, (_, i) => px(buf, i)[0]);
+  const duo = { ...newClip("duo", 0, 2), color: "#010000", color2: "#020000", layout: "alternate", speed: 1 };
+  assert.deepEqual(colours(renderTrack([duo], 0, 4), 4), [1, 2, 1, 2]);
+  assert.deepEqual(colours(renderTrack([duo], 1, 4), 4), [2, 1, 2, 1]);
+});
+
+test("pulse, gradient and colour cycle blend between their colours", () => {
+  const pulse = { ...newClip("pulse", 0, 2), color: "#ff0000", background: "#000000", rate: 1 };
+  assert.deepEqual(px(renderTrack([pulse], 0, 1), 0), [0, 0, 0]);
+  assert.deepEqual(px(renderTrack([pulse], 0.5, 1), 0), [255, 0, 0]);
+  const grad = { ...newClip("gradient", 0, 2), color: "#000000", color2: "#ff0000", count: "2" };
+  const g = renderTrack([grad], 0, 3);
+  assert.deepEqual([px(g, 0)[0], px(g, 1)[0], px(g, 2)[0]], [0, 128, 255]);
+  const cycle = { ...newClip("cycle", 0, 4), color: "#010000", color2: "#020000", count: "2", blend: "step" };
+  assert.deepEqual([0.5, 1.5, 2.5].map((t) => px(renderTrack([cycle], t, 1), 0)[0]), [1, 2, 1]);
+});
+
+test("comet has a fading tail and scanner bounces between the ends", () => {
+  const comet = { ...newClip("comet", 0, 2), color: "#ff0000", background: "#000000", length: 2, speed: 0.25 };
+  const c = renderTrack([comet], 1, 8); // head at segment 2
+  assert.deepEqual([px(c, 2)[0], px(c, 1)[0], px(c, 0)[0], px(c, 3)[0]], [255, 128, 0, 0]);
+  const scan = { ...newClip("scanner", 0, 5), color: "#ff0000", width: 1, speed: 0.5 };
+  assert.equal(px(renderTrack([scan], 0, 5), 0)[0], 255);
+  assert.equal(px(renderTrack([scan], 2, 5), 4)[0], 255);
+  assert.equal(px(renderTrack([scan], 4, 5), 0)[0], 255);
+});
+
+test("lightning strikes at roughly its rate and is otherwise the background", () => {
+  const clip = { ...newClip("lightning", 0, 1000), rate: 1 };
+  let strikes = 0;
+  for (let t = 0; t < 1000; t += 0.1) if (px(renderTrack([clip], t + 0.001, 1), 0)[0] > 200) strikes++;
+  assert.ok(strikes > 800 && strikes < 1200, `${strikes} strikes in 1000 s`);
+  assert.deepEqual(px(renderTrack([clip], 0.099, 1), 0).slice(0, 2), [0, 0]);
+});
+
 test("twinkle is deterministic so bakes are repeatable", () => {
   const clip = newClip("twinkle", 0, 10);
   assert.deepEqual(renderTrack([clip], 3.3, 20), renderTrack([clip], 3.3, 20));

@@ -15,42 +15,58 @@
   <nav>
     <button class="tab active" data-view="editor">Editor</button>
     <button class="tab" data-view="devices">Devices</button>
+    <button class="tab" data-view="palettes">Palettes</button>
   </nav>
   <span id="status" class="status"></span>
 </header>
 
 <main id="view-editor" class="view">
-  <section class="toolbar">
-    <div class="group">
-      <select id="show-select" title="Open a show"></select>
-      <input id="show-name" placeholder="Show name" size="16">
-      <button id="btn-save" title="Save and bake (Ctrl+S)">Save</button>
-      <button id="btn-delete" class="ghost" title="Delete this show">Delete</button>
+  <section class="toolbar sections">
+    <div class="section">
+      <span class="section-label">Show</span>
+      <div class="group">
+        <select id="show-select" title="Open a show"></select>
+        <input id="show-name" placeholder="Show name" size="16">
+        <button id="btn-save" class="primary" title="Save and bake (Ctrl+S)">Save</button>
+        <button id="btn-delete" class="ghost danger" title="Delete this show">Delete</button>
+      </div>
     </div>
-    <div class="group">
-      <select id="audio-select" title="Song"></select>
-      <label class="button ghost" title="Upload a song to the add-on">Upload<input id="audio-upload" type="file" accept="audio/*" hidden></label>
-      <label id="duration-wrap" title="Show length when there is no song">Length <input id="duration" type="number" min="1" step="1" value="60"> s</label>
+    <div class="section">
+      <span class="section-label">Song</span>
+      <div class="group">
+        <select id="audio-select" title="Song"></select>
+        <label class="button ghost" title="Upload a song to the add-on">Upload<input id="audio-upload" type="file" accept="audio/*" hidden></label>
+        <label id="duration-wrap" title="Show length when there is no song">Length <input id="duration" type="number" min="1" step="1" value="60"> s</label>
+      </div>
     </div>
-    <div class="group transport">
-      <button id="btn-home" title="Back to start (Home)">⏮</button>
-      <button id="btn-play" class="primary" title="Play / pause (Space)">▶ Play</button>
-      <span id="clock" class="clock">0:00.00</span>
-      <select id="output-select" title="Where the song plays. A speaker is also what automations use for this show.">
-        <option value="">Song in this browser</option>
-      </select>
-      <label id="lights-wrap" title="Send to the lights while playing in the browser"><input id="lights" type="checkbox" checked> Lights</label>
+    <div class="section">
+      <span class="section-label">Playback</span>
+      <div class="group transport">
+        <button id="btn-home" title="Back to start (Home)">⏮</button>
+        <button id="btn-play" class="primary" title="Play / pause (Space)">▶ Play</button>
+        <span id="clock" class="clock">0:00.00</span>
+        <select id="output-select" title="Where the song plays. A speaker is also what automations use for this show.">
+          <option value="">Song in this browser</option>
+        </select>
+        <label id="lights-wrap" title="Send to the lights while playing in the browser"><input id="lights" type="checkbox" checked> Lights</label>
+      </div>
     </div>
-    <div class="group">
-      <button id="btn-tap" title="Add a beat at the playhead (B)">Tap beat</button>
-      <label title="Fill beats from a tempo, starting at the playhead">BPM <input id="bpm" type="number" min="20" max="300" step="0.1" placeholder="120" size="4"></label>
-      <button id="btn-fill-beats" class="ghost">Fill</button>
-      <button id="btn-clear-beats" class="ghost">Clear beats</button>
-      <label><input id="snap" type="checkbox" checked> Snap</label>
+    <div class="section">
+      <span class="section-label">Beats</span>
+      <div class="group">
+        <button id="btn-tap" title="Add a beat at the playhead (B)">Tap beat</button>
+        <label title="Fill beats from a tempo, starting at the playhead">BPM <input id="bpm" type="number" min="20" max="300" step="0.1" placeholder="120" size="4"></label>
+        <button id="btn-fill-beats" class="ghost">Fill</button>
+        <button id="btn-clear-beats" class="ghost">Clear</button>
+        <label title="Snap clips and selections to beats and other clips"><input id="snap" type="checkbox" checked> Snap</label>
+      </div>
     </div>
-    <div class="group">
-      <button id="btn-zoom-out" title="Zoom out (-)">−</button>
-      <button id="btn-zoom-in" title="Zoom in (+)">+</button>
+    <div class="section">
+      <span class="section-label">Zoom</span>
+      <div class="group">
+        <button id="btn-zoom-out" title="Zoom out (-)">−</button>
+        <button id="btn-zoom-in" title="Zoom in (+)">+</button>
+      </div>
     </div>
   </section>
 
@@ -58,7 +74,7 @@
     <canvas id="preview"></canvas>
   </section>
 
-  <section class="palette" id="palette" title="Pick an effect, then drag on a track to place it"></section>
+  <section class="palette" id="palette" title="Drag across a light to select a stretch of time, then click an effect to add it there"></section>
 
   <section class="timeline-wrap">
     <div id="timeline-scroll" class="timeline-scroll">
@@ -72,9 +88,7 @@
   </section>
 
   <section class="inspector" id="inspector">
-    <p class="hint">Select a clip to edit it. Drag on a track to add the selected effect. Drag clip edges to resize,
-      Delete removes, D duplicates, Ctrl+Z undoes.
-      Click a light's name to select all its effects; Ctrl+C copies and Ctrl+V pastes onto the selected light. Click the beat lane to add or remove a beat; hold Shift to drag without snapping.</p>
+    <p class="hint">Drag across a light to select a stretch of time, then click an effect to add it there.</p>
   </section>
 
   <details class="settings">
@@ -119,6 +133,18 @@
     <thead><tr><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th></th></tr></thead>
     <tbody id="device-rows"></tbody>
   </table>
+</main>
+
+<main id="view-palettes" class="view" hidden>
+  <p class="hint">Use a palette from an effect's settings: click a colour to drop it into a colour field, or
+    <b>Apply palette</b> to fill them all. Click a light's name to <b>Recolour</b> every effect on it, or on every light.</p>
+  <section class="toolbar">
+    <h2>Your palettes</h2>
+    <button id="btn-new-palette" class="primary">New palette</button>
+  </section>
+  <div id="my-palettes" class="palette-list"></div>
+  <h2>Presets</h2>
+  <div id="preset-palettes" class="palette-list"></div>
 </main>
 </body>
 </html>

@@ -33,19 +33,49 @@ real segment count differs, just change it: effects scale to any number of segme
 - Add beat markers: press **B** (or **Tap beat**) in time with the music while it plays, type a
   **BPM** and press **Fill**, or click the beat lane. Clips snap to beats and to each other
   (hold Shift to place freely).
-- Pick an effect from the palette and drag on a device's track to place it. Drag a clip to move it
-  (including onto another device), drag its edges to resize, and edit colours and speed below the
-  timeline. The preview strip shows every segment of every device as the playhead moves.
+- To add an effect, drag across a light's track to select a stretch of time (drag up or down to
+  cover several lights; a plain click selects up to the next beat). Then click an effect in the
+  effects bar, or pick one and press **Add effect** below the timeline. To clear a stretch, select
+  it and press **Delete effects here** or the Delete key: effects inside it are removed and ones
+  crossing its edges are trimmed. Hold **Alt** to start a selection on top of an existing clip.
+- Click a clip to edit it. Drag it to move it (including onto another device), drag its edges to
+  resize, and edit colours and speed below the timeline. The preview strip shows every segment of every device as the playhead moves.
 - **Two colours** and **Three colours** are solid effects with more than one colour. **Split**
   divides the light into halves or thirds; **Alternate** repeats the colours along it, with
-  **Segments per colour** setting how wide each block is.
+  **Segments per colour** setting how wide each block is. Set **Move** to slide the colours along
+  the light like marquee lights (negative numbers go the other way).
+- The other effects:
+
+  | Effect | What it does |
+  | --- | --- |
+  | Solid | One colour |
+  | Pulse | Breathes between a colour and the background |
+  | Gradient | Blends two or three colours along the light; **Move** makes it slide back and forth |
+  | Colour cycle | The whole light changes through two to four colours, fading or stepping |
+  | Fade | Fades from one colour to another over the clip |
+  | Chase | A block of colour running along the light |
+  | Rainbow | A moving rainbow |
+  | Comet | A bright head with a fading tail running along the light |
+  | Scanner | A dot bouncing from end to end |
+  | Flicker | Candle or fire flicker between two colours |
+  | Lightning | Random bright flashes over a dark background |
+  | Strobe | Flashes on and off |
+  | Twinkle | Segments sparkle at random |
+  | Wipe | Fills the light with colour over the clip |
+- Colour palettes: an effect's settings include a **Palette** picker. Click one of its colours to
+  put it in the colour field you last clicked (or the first one), or press **Apply palette** to
+  fill all of them in order. Click a light's name to **Recolour this light** or **Recolour all
+  lights**: each light steps through the palette effect by effect, so lights stay matched.
+  Backgrounds are left alone. The **Palettes** tab lists the presets and your own palettes: press
+  **New palette**, or **Copy to my palettes** on a preset, then rename it and change its colours
+  (up to 12). Your palettes are saved in the add-on and available in every show.
 - Copy effects between lights: select a clip (or click a light's name to select all its effects),
   press **Ctrl+C**, click another light's name and press **Ctrl+V**. Pasted effects keep their
   times so the lights stay in step; pasting onto the same light puts them at the playhead. With a
   light selected you can also **Copy all effects to** another light or all of them, optionally
   replacing what they had. Effects scale to each light's segment count.
 
-Shortcuts: Space play/pause, B beat, Delete remove clip, D duplicate, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z / Ctrl+Shift+Z undo
+Shortcuts: Space play/pause, B beat, Delete remove clip or clear the selection, Esc deselect, D duplicate, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z / Ctrl+Shift+Z undo
 and redo, Ctrl+S save, + and − zoom, Ctrl+scroll zoom.
 
 ## 3. Play it

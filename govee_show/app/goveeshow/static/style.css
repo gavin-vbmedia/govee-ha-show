@@ -66,6 +66,12 @@ button.tab.active { background: var(--accent); color: var(--accent-text); }
 label { display: inline-flex; align-items: center; gap: 4px; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.toolbar.sections { gap: 8px; align-items: stretch; }
+.section {
+  display: flex; flex-direction: column; gap: 4px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px;
+}
+.section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .clock { font-variant-numeric: tabular-nums; min-width: 6.5em; font-family: ui-monospace, monospace; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
@@ -100,3 +106,14 @@ table.devices td input[type="number"] { width: 5em; }
 .badge { font-size: 12px; margin-left: 6px; }
 .badge.ok { color: #16a34a; }
 .badge.warn { color: #d97706; }
+
+h2 { font-size: 15px; margin: 6px 0 0; }
+.palette-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; width: 100%; }
+.swatches { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.swatch { display: inline-block; width: 26px; height: 26px; padding: 0; border-radius: 6px;
+  border: 1px solid var(--line); }
+button.swatch:hover { border-color: var(--text); }
+.palette-list { display: flex; flex-direction: column; gap: 6px; }
+.palette-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.palette-name { min-width: 11em; }

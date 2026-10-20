@@ -1,6 +1,7 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
-import { EFFECTS, FPS, bake, defaultParams, renderTrack, showDuration } from "./effects.js";
+import { EFFECTS, FPS, bake, defaultParams, newClip, renderTrack, showDuration } from "./effects.js";
+import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
 
 const $ = (id) => document.getElementById(id);
@@ -46,9 +47,14 @@ const app = {
   pps: prefs.get("pps", 60),
   time: 0,
   playing: false,
-  selected: null, // {track, clip}; clip is null when a whole light is selected
+  // {track, clip}; clip is null when a whole light is selected, and range is set
+  // ({tracks, start, end}) when a stretch of time is selected on one or more lights.
+  selected: null,
   clipboard: null, // {clips, track, whole}
   paletteEffect: "solid",
+  palettes: [], // the user's own colour palettes; presets are in palettes.js
+  colourPalette: prefs.get("colourPalette", PRESET_PALETTES[0].name),
+  lastColourKey: null, // colour field a palette swatch fills
   snap: prefs.get("snap", true),
   peaks: null,
   audioDuration: 0,
@@ -339,6 +345,8 @@ function renderPalette() {
     const b = button(fx.label, () => {
       app.paletteEffect = key;
       renderPalette();
+      if (app.selected?.range) addToRange(key);
+      else renderInspector();
     }, key === app.paletteEffect ? "active" : "");
     box.append(b);
   }
@@ -348,13 +356,14 @@ function renderInspector() {
   const box = $("inspector");
   const sel = app.selected;
   const track = sel && app.show.tracks[sel.track];
+  if (track && sel.range) { renderRangeInspector(sel.range); return; }
   if (track && !sel.clip) { renderTrackInspector(sel.track); return; }
   if (!sel || !track || !track.clips.includes(sel.clip)) {
     app.selected = null;
-    box.innerHTML = `<p class="hint">Select a clip to edit it. Drag on a track to add the selected effect. Drag clip
-      edges to resize, Delete removes, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's
-      name to copy all its effects to other lights. Click the beat lane to add or remove a beat; hold Shift to drag
-      without snapping.</p>`;
+    box.innerHTML = `<p class="hint">Drag across a light (or several) to select a stretch of time, then click an
+      effect above to add it there, or press Delete to clear it (hold Alt to start a selection on top of a clip). Click a clip to edit it: drag it to move, drag its
+      edges to resize, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's name to copy or
+      recolour all its effects. Click the beat lane to add or remove a beat; hold Shift to drag without snapping.</p>`;
     return;
   }
   const clip = sel.clip;
@@ -418,7 +427,20 @@ function renderInspector() {
       app.changed({ live: true });
     });
     el.addEventListener("change", () => app.changed());
+    if (p.type === "color") el.addEventListener("focus", () => { app.lastColourKey = p.key; });
     field(p.label, el);
+  }
+  const colourKeys = EFFECTS[clip.effect].params.filter((p) => p.type === "color").map((p) => p.key);
+  if (colourKeys.length) {
+    box.append(paletteRow((c) => {
+      const key = colourKeys.includes(app.lastColourKey) ? app.lastColourKey : colourKeys[0];
+      clip[key] = c;
+      app.lastColourKey = key;
+      app.changed();
+    }, button("Apply palette", () => {
+      applyPalette(clip, currentPalette().colors);
+      app.changed();
+    }, "ghost")));
   }
   box.append(button("Copy", copySelection, "ghost"),
     button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"),
@@ -432,7 +454,7 @@ const clone = (clip) => JSON.parse(JSON.stringify(clip));
 
 function copySelection() {
   const sel = app.selected;
-  if (!sel) { status("Select a clip or a light to copy", true); return; }
+  if (!sel || sel.range) { status("Select a clip or a light to copy", true); return; }
   const clips = sel.clip ? [sel.clip] : app.show.tracks[sel.track].clips;
   if (!clips.length) { status("Nothing to copy on this light", true); return; }
   app.clipboard = { clips: clips.map(clone), track: sel.track, whole: !sel.clip };
@@ -486,6 +508,11 @@ function renderTrackInspector(i) {
       copyClipsTo(clips, i, targets, replace.checked);
     }, "primary"));
   }
+  if (clips.length) {
+    box.append(paletteRow(null,
+      button("Recolour this light", () => recolour([i]), "ghost"),
+      button("Recolour all lights", () => recolour(app.show.tracks.map((_, k) => k)), "ghost")));
+  }
   box.append(button("Copy (Ctrl+C)", copySelection, "ghost"));
   const p = button("Paste here (Ctrl+V)", paste, "ghost");
   p.disabled = !app.clipboard;
@@ -498,8 +525,230 @@ function renderTrackInspector(i) {
   }
 }
 
+// colour palettes ---------------------------------------------------------------
+const allPalettes = () => [...PRESET_PALETTES, ...app.palettes];
+const currentPalette = () => allPalettes().find((p) => p.name === app.colourPalette) || PRESET_PALETTES[0];
+
+function swatch(color, onclick) {
+  const el = document.createElement(onclick ? "button" : "span");
+  el.className = "swatch";
+  el.style.background = color;
+  el.title = color;
+  if (onclick) el.addEventListener("click", () => onclick(color));
+  return el;
+}
+
+// Palette picker for the inspector. Clicking a swatch calls onSwatch with its colour.
+function paletteRow(onSwatch, ...actions) {
+  const row = document.createElement("div");
+  row.className = "palette-row";
+  const sel = document.createElement("select");
+  const groups = [["Presets", PRESET_PALETTES], ["Your palettes", app.palettes]];
+  for (const [label, list] of groups) {
+    if (!list.length) continue;
+    const g = document.createElement("optgroup");
+    g.label = label;
+    for (const p of list) g.append(new Option(p.name, p.name, false, p.name === currentPalette().name));
+    sel.append(g);
+  }
+  const swatches = document.createElement("span");
+  swatches.className = "swatches";
+  const fill = () => swatches.replaceChildren(...currentPalette().colors.map((c) => swatch(c, onSwatch)));
+  sel.addEventListener("change", () => {
+    app.colourPalette = sel.value;
+    prefs.set("colourPalette", sel.value);
+    fill();
+  });
+  fill();
+  const label = document.createElement("label");
+  label.append("Palette", sel);
+  row.append(label, swatches, ...actions);
+  if (onSwatch) row.title = "Click a colour to use it in the colour field you last picked";
+  return row;
+}
+
+// Each light steps through the palette clip by clip, in time order, so lights stay matched.
+function recolour(tracks) {
+  const colors = currentPalette().colors;
+  let n = 0;
+  for (const t of tracks) {
+    const clips = [...app.show.tracks[t].clips].sort((a, b) => a.start - b.start);
+    let k = 0;
+    for (const c of clips) if (applyPalette(c, colors, k)) { k++; n++; }
+  }
+  if (!n) { status("No effects with colours to recolour", true); return; }
+  status(`Recoloured ${n} effect${n > 1 ? "s" : ""} with ${currentPalette().name}`);
+  app.changed();
+}
+
+async function loadPalettes() {
+  try { app.palettes = await api("api/palettes"); } catch { app.palettes = []; }
+  renderPalettes();
+  renderInspector();
+}
+
+let savePalettesTimer = null;
+function savePalettes() {
+  clearTimeout(savePalettesTimer);
+  savePalettesTimer = setTimeout(async () => {
+    try {
+      await api("api/palettes", { method: "PUT", json: app.palettes });
+      status("Palettes saved");
+      renderInspector();
+    } catch (e) { status(`Couldn't save palettes: ${e.message}`, true); }
+  }, 300);
+}
+
+function uniqueName(base) {
+  const names = new Set(allPalettes().map((p) => p.name));
+  let name = base;
+  for (let i = 2; names.has(name); i++) name = `${base} ${i}`;
+  return name;
+}
+
+function renderPalettes() {
+  const mine = $("my-palettes"), presets = $("preset-palettes");
+  const addMine = (p) => {
+    app.palettes.push(p);
+    savePalettes();
+    renderPalettes();
+  };
+  presets.replaceChildren(...PRESET_PALETTES.map((p) => {
+    const row = document.createElement("div");
+    row.className = "palette-item";
+    const name = document.createElement("span");
+    name.className = "palette-name";
+    name.textContent = p.name;
+    const sw = document.createElement("span");
+    sw.className = "swatches";
+    sw.append(...p.colors.map((c) => swatch(c)));
+    row.append(name, sw, button("Copy to my palettes", () =>
+      addMine({ name: uniqueName(`My ${p.name}`), colors: [...p.colors] }), "ghost"));
+    return row;
+  }));
+  if (!app.palettes.length) {
+    mine.innerHTML = `<p class="hint">None yet. Press New palette, or copy a preset and change it.</p>`;
+    return;
+  }
+  mine.replaceChildren(...app.palettes.map((p, i) => {
+    const row = document.createElement("div");
+    row.className = "palette-item";
+    const name = document.createElement("input");
+    name.value = p.name;
+    name.maxLength = 60;
+    name.addEventListener("change", () => {
+      const v = name.value.trim();
+      if (!v || allPalettes().some((q) => q !== p && q.name === v)) {
+        status("Give each palette its own name", true);
+        name.value = p.name;
+        return;
+      }
+      if (app.colourPalette === p.name) app.colourPalette = v;
+      p.name = v;
+      savePalettes();
+    });
+    const sw = document.createElement("span");
+    sw.className = "swatches";
+    p.colors.forEach((c, k) => {
+      const el = document.createElement("input");
+      el.type = "color";
+      el.value = c;
+      el.addEventListener("change", () => { p.colors[k] = el.value; savePalettes(); });
+      sw.append(el);
+    });
+    const add = button("+", () => { p.colors.push(p.colors.at(-1)); savePalettes(); renderPalettes(); }, "ghost");
+    add.title = "Add a colour";
+    add.disabled = p.colors.length >= 12;
+    const remove = button("−", () => { p.colors.pop(); savePalettes(); renderPalettes(); }, "ghost");
+    remove.title = "Remove the last colour";
+    remove.disabled = p.colors.length <= 1;
+    const del = button("Delete", () => {
+      app.palettes.splice(i, 1);
+      savePalettes();
+      renderPalettes();
+    }, "ghost danger");
+    row.append(name, sw, add, remove, del);
+    return row;
+  }));
+}
+
+// selected stretch of time ---------------------------------------------------------
+const rangeTracks = (r) => r.tracks.filter((t) => app.show.tracks[t]);
+
+function renderRangeInspector(r) {
+  const box = $("inspector");
+  box.replaceChildren();
+  const tracks = rangeTracks(r);
+  const h = document.createElement("h3");
+  h.textContent = `Selected ${fmtTime(r.start)} to ${fmtTime(r.end)} on `
+    + (tracks.length === 1 ? trackName(tracks[0]) : `${tracks.length} lights`);
+  box.append(h);
+  const timeInput = (key) => {
+    const el = document.createElement("input");
+    el.type = "number";
+    el.step = "0.01";
+    el.min = "0";
+    el.value = r[key].toFixed(2);
+    el.addEventListener("change", () => {
+      const v = Number(el.value);
+      if (!Number.isFinite(v)) return;
+      if (key === "start") r.start = Math.min(Math.max(0, v), r.end - 0.05);
+      else r.end = Math.max(v, r.start + 0.05);
+      app.select(app.selected);
+    });
+    const l = document.createElement("label");
+    l.append(key === "start" ? "Start" : "End", el);
+    return l;
+  };
+  const effect = document.createElement("select");
+  for (const [key, fx] of Object.entries(EFFECTS)) effect.add(new Option(fx.label, key, false, key === app.paletteEffect));
+  const l = document.createElement("label");
+  l.append("Effect", effect);
+  const overlaps = tracks.some((t) => app.show.tracks[t].clips.some((c) => c.start < r.end && c.end > r.start));
+  const del = button("Delete effects here", deleteRange, "ghost danger");
+  del.disabled = !overlaps;
+  box.append(timeInput("start"), timeInput("end"), l, button("Add effect", () => addToRange(effect.value), "primary"), del);
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "Tip: with a stretch selected, clicking an effect above adds it straight away.";
+  box.append(hint);
+}
+
+function addToRange(effect) {
+  const r = app.selected.range, tracks = rangeTracks(r);
+  const added = tracks.map((t) => {
+    const clip = newClip(effect, r.start, r.end);
+    app.show.tracks[t].clips.push(clip);
+    return { track: t, clip };
+  });
+  // One light: edit the new clip straight away. Several: keep the selection to add more.
+  if (added.length === 1) app.selected = added[0];
+  status(`Added ${EFFECTS[effect].label} to ${added.length === 1 ? trackName(tracks[0]) : `${added.length} lights`}`);
+  app.changed();
+}
+
+// Clears the selected stretch: clips inside it go, clips crossing its edges are trimmed.
+function deleteRange() {
+  const r = app.selected.range;
+  let n = 0;
+  for (const t of rangeTracks(r)) {
+    const kept = [];
+    for (const c of app.show.tracks[t].clips) {
+      if (c.end <= r.start || c.start >= r.end) { kept.push(c); continue; }
+      n++;
+      if (c.start < r.start) kept.push({ ...c, end: r.start });
+      if (c.end > r.end) kept.push({ ...c, start: r.end });
+    }
+    app.show.tracks[t].clips = kept;
+  }
+  if (!n) { status("No effects in the selection"); return; }
+  status(`Cleared ${n} effect${n > 1 ? "s" : ""} from the selection`);
+  app.changed();
+}
+
 function deleteSelected() {
   const sel = app.selected;
+  if (sel?.range) { deleteRange(); return; }
   if (!sel?.clip) return;
   const clips = app.show.tracks[sel.track].clips;
   clips.splice(clips.indexOf(sel.clip), 1);
@@ -825,6 +1074,7 @@ function wire() {
       for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t === tab);
       $("view-editor").hidden = tab.dataset.view !== "editor";
       $("view-devices").hidden = tab.dataset.view !== "devices";
+      $("view-palettes").hidden = tab.dataset.view !== "palettes";
       if (tab.dataset.view === "editor") { layoutPreview(); timeline.layout(); }
     });
   }
@@ -885,6 +1135,11 @@ function wire() {
   $("btn-zoom-out").addEventListener("click", () => { timeline.zoom(1 / 1.5); prefs.set("pps", app.pps); });
 
   $("btn-scan").addEventListener("click", scan);
+  $("btn-new-palette").addEventListener("click", () => {
+    app.palettes.push({ name: uniqueName("My palette"), colors: ["#ff0000", "#00ff00", "#0000ff"] });
+    savePalettes();
+    renderPalettes();
+  });
   $("plan-model").addEventListener("change", planModelChanged);
   $("plan-form").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -934,6 +1189,7 @@ async function init() {
     await loadDevices();
     loadSpeakers();
     loadModels();
+    loadPalettes();
     const shows = await api("api/shows");
     const last = prefs.get("lastShow", null);
     const id = shows.some((s) => s.id === last) ? last : shows[0]?.id;
