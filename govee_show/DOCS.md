@@ -188,7 +188,8 @@ plays the show on it, so you can design without standing outside.
    scaled down to 2000 pixels across and kept in the add-on's config folder.
 2. Press **Trace** next to a light and click along where it runs on the photo, starting at the end
    with the plug. Click once at each corner or bend; the light's segments are spread evenly along
-   the line, each drawn as a few bulbs.
+   the line. Set **Bulbs** on the Devices tab to the light's real bulb count and the House view
+   draws exactly that many, shared evenly across its segments; left blank, it draws 4 per segment.
 3. Press **Done** (or Enter). Drag a point to move it, right-click a point to remove it, and press
    Backspace while tracing to undo the last point.
 

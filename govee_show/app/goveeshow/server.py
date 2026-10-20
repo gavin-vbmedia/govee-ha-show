@@ -106,6 +106,12 @@ def _clean_device(d: dict) -> dict:
         raise web.HTTPBadRequest(text="brightness must be a number")
     if not 1 <= brightness <= 100:
         raise web.HTTPBadRequest(text="brightness must be 1-100")
+    try:
+        bulbs = int(d["bulbs"]) if d.get("bulbs") else None
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="bulbs must be a number")
+    if bulbs is not None and not 1 <= bulbs <= 2000:
+        raise web.HTTPBadRequest(text="bulbs must be 1-2000")
     protocol = str(d.get("protocol") or "standard")
     if protocol not in PROTOCOLS:
         raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
@@ -115,7 +121,7 @@ def _clean_device(d: dict) -> dict:
     return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64],
             "ip": ip, "sku": str(d.get("sku", "")), "segments": segments,
             "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient")),
-            "protocol": protocol, "brightness": brightness}
+            "protocol": protocol, "brightness": brightness, "bulbs": bulbs}
 
 
 async def put_devices(request):

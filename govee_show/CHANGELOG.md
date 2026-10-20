@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.25
+
+- New **Bulbs** column on the Devices tab. The House view draws exactly that many bulbs along the
+  light, shared evenly across its segments, so it matches the real string. Blank keeps the guess
+  of 4 bulbs per segment.
+
 ## 0.2.24
 
 - New **Speakers** tab. Test a Home Assistant media player there (it plays a short chime the way a
