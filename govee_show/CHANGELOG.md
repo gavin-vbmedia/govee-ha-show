@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.20
+
+- Fix: the Brightness slider's handle stopped short of the end at 100%. Sliders no longer pick up
+  the padding and border meant for text boxes.
+
 ## 0.2.19
 
 - The Effects bar is gone. Select a stretch of a light and the Selection panel shows a button for

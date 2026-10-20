@@ -55,6 +55,7 @@ button, .button, select, input {
   padding: 5px 10px;
 }
 input[type="checkbox"] { padding: 0; }
+input[type="range"] { padding: 0; border: 0; background: none; accent-color: var(--accent); }
 input[type="color"] { padding: 0 2px; width: 44px; height: 30px; }
 input[type="number"] { width: 6em; }
 button, .button { cursor: pointer; }
