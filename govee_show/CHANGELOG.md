@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.19
+
+- The Effects bar is gone. Select a stretch of a light and the Selection panel shows a button for
+  each effect: one click adds it.
+- Selecting a clip loops it on its own above its settings, so edits show straight away. Tick
+  **Show on the light** to loop it on the real light too while the show is stopped.
+
 ## 0.2.18
 
 - Experimental **Govee scenes**: switch on in Settings → Experimental to add a Govee scene effect.

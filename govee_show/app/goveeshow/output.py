@@ -228,3 +228,31 @@ async def run_probe(output: Output, ip: str, segment: int, seconds: float = 300,
     # than switching it off in between. It is only released when Find stops or times out.
     await asyncio.sleep(seconds)
     output.release(ip)
+
+
+class LivePreview:
+    """Frames pushed from the editor while a clip is being edited, so it can be seen on the real light.
+
+    The editor sends a frame every so often while the preview is on; once they stop for IDLE_S the
+    light is let go and goes back to whatever it was doing.
+    """
+
+    IDLE_S = 1.5
+
+    def __init__(self, output: Output, ip: str):
+        self.output, self.ip = output, ip
+        self.last = time.monotonic()
+        self.task = asyncio.create_task(self._watch())
+
+    def show(self, rgb: bytes, segments: int, **settings):
+        self.output.claim(self.ip, segments, **settings).update(rgb)
+        self.last = time.monotonic()
+
+    def stop(self):
+        self.task.cancel()
+        self.output.release(self.ip)
+
+    async def _watch(self):
+        while time.monotonic() - self.last < self.IDLE_S:
+            await asyncio.sleep(0.1)
+        self.output.release(self.ip)

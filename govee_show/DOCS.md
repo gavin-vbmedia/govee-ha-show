@@ -52,12 +52,16 @@ real segment count differs, just change it: effects scale to any number of segme
   **BPM** and press **Fill**, or click the beat lane. Clips snap to beats and to each other
   (hold Shift to place freely).
 - To add an effect, drag across a light's track to select a stretch of time (drag up or down to
-  cover several lights; a plain click selects up to the next beat). Then click an effect in the
-  effects bar, or pick one and press **Add effect** below the timeline. To clear a stretch, select
+  cover several lights; a plain click selects up to the next beat). The Selection panel then shows a
+  button for every effect: click one to add it there. To clear a stretch, select
   it and press **Delete effects here** or the Delete key: effects inside it are removed and ones
   crossing its edges are trimmed. Hold **Alt** to start a selection on top of an existing clip.
 - Click a clip to edit it. Drag it to move it (including onto another device), drag its edges to
-  resize, and edit colours and speed below the timeline. The preview strip shows every segment of every device as the playhead moves.
+  resize, and edit colours and speed below the timeline. While a clip is selected it loops on its
+  own in a strip above its settings, so changes show straight away without playing the show. With
+  **Show on the light** ticked it also loops on the real light while the show is stopped, and the
+  light goes back to normal when you click away. The preview strip shows every segment of every
+  device as the playhead moves.
 - Every effect has a **Brightness %** slider, so one section can glow softly and the next hit full
   brightness. Use **Fade** between two colours, one of them darker, for a gradual change.
 - **Two colours** and **Three colours** are solid effects with more than one colour. **Split**

@@ -4,11 +4,11 @@
 export const DOCKS = { top: "Top", left: "Left", right: "Right", bottom: "Bottom" };
 export const PANELS = {
   show: "Show", song: "Song", playback: "Playback", beats: "Beats", zoom: "Zoom",
-  preview: "Preview", effects: "Effects", inspector: "Selection",
+  preview: "Preview", inspector: "Selection",
 };
 export const DEFAULT_LAYOUT = {
   show: "top", song: "top", playback: "top", beats: "top", zoom: "top",
-  preview: "top", effects: "top", inspector: "bottom",
+  preview: "top", inspector: "bottom",
 };
 const KEY = "goveeshow.layout";
 

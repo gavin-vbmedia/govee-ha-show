@@ -1,5 +1,5 @@
 name: Govee Light Show
-version: "0.2.18"
+version: "0.2.19"
 slug: govee_show
 description: Create, preview and play music-synchronised Govee light shows.
 url: https://github.com/gavin-vbmedia/govee-ha-show
