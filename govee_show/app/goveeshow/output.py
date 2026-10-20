@@ -13,7 +13,9 @@ from .protocol import CMD_PORT, average, colorwc_msg, razer_colors, razer_enable
 
 log = logging.getLogger(__name__)
 
-KEEPALIVE_S = 20  # device drops out of razer mode after ~60s of silence
+# Some lights drop out of realtime mode within a second or two of the last colour packet, so an
+# unchanged frame is re-sent this often. It is a small packet, so this costs next to nothing.
+KEEPALIVE_S = 0.5
 REENABLE_S = 60
 # A light that was off is still starting up when the first razer-on arrives and can ignore it,
 # so repeat it often for the first few seconds before settling to once a minute.
@@ -83,6 +85,7 @@ class OutputDevice:
         if self.realtime and now - self.last_enable > (STARTUP_REENABLE_S if starting else REENABLE_S):
             self._send(razer_msg(razer_enable(True)))
             self.last_enable = now
+            self.last_sent = 0.0  # repaint straight after, in case realtime-on reset the light
         frame = self.pending if self.pending is not None else self.last_frame
         if frame is None or now - self.last_sent < self.min_interval:
             return  # rate limited; latest pending frame wins
@@ -188,7 +191,7 @@ async def run_probe(output: Output, ip: str, segment: int, seconds: float = 300,
     """
     dev = output.claim(ip, segment, gradient=gradient, protocol=protocol)
     dev.update(probe_frame(segment))
-    try:
-        await asyncio.sleep(seconds)
-    finally:
-        output.release(ip)
+    # Cancelled means the next question has started: keep the light in realtime mode for it rather
+    # than switching it off in between. It is only released when Find stops or times out.
+    await asyncio.sleep(seconds)
+    output.release(ip)

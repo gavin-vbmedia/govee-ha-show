@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.12
+
+- Fix: Find segments only flashed the segment. Between questions it switched realtime mode off and
+  on, and an unchanged colour was only re-sent every 20 seconds. The light now stays in realtime
+  mode until Find stops, and colours are re-sent every half second, which also keeps lights that
+  hold one colour during a show from slipping back to their own scene.
+
 ## 0.2.11
 
 - **Find segments**: press **Find** next to a light's segment count and answer "can you see any

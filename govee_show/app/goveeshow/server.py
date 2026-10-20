@@ -150,7 +150,6 @@ async def probe_device(request):
     app = request.app
     tests = app[TESTS]
     if (old := tests.pop(d["ip"], None)):
-        # Wait for it to let go of the light, or its clean-up would switch off the next step.
         old.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await old
