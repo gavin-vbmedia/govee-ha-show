@@ -67,11 +67,6 @@ button.tab.active { background: var(--accent); color: var(--accent-text); }
 label { display: inline-flex; align-items: center; gap: 4px; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
-.toolbar.sections { gap: 8px; align-items: stretch; }
-.section {
-  display: flex; flex-direction: column; gap: 4px;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px;
-}
 .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .clock { font-variant-numeric: tabular-nums; min-width: 6.5em; font-family: ui-monospace, monospace; }
@@ -90,14 +85,14 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .timeline-stage canvas { position: absolute; left: 0; top: 0; display: block; }
 #timeline-overlay { pointer-events: none; }
 
-.inspector {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
-  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; min-height: 52px;
-}
+.inspector { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; min-height: 36px; }
 .inspector h3 { margin: 0; font-size: 14px; width: 100%; }
 
-.settings { color: var(--muted); }
-.settings label { margin: 6px 12px 0 0; color: var(--text); }
+.settings { max-width: 860px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.card p { margin: 8px 0; }
+.layout-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 16px; margin-top: 8px; }
+.layout-rows label { justify-content: space-between; }
 
 table.devices { border-collapse: collapse; background: var(--panel); border-radius: 8px; overflow: hidden; }
 table.devices th, table.devices td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
@@ -121,3 +116,32 @@ button.swatch:hover { border-color: var(--text); }
 .region-wrap { display: inline-flex; align-items: center; gap: 4px; color: var(--region); font-size: 13px; font-weight: 600; }
 .region-wrap button { padding: 1px 7px; }
 .save-state { color: var(--muted); font-size: 12px; min-width: 9em; }
+
+/* editor layout: panels in docks around the timeline */
+.panel {
+  display: flex; flex-direction: column; gap: 6px; min-width: 0;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px;
+}
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
+.panel-move { padding: 0 6px; line-height: 1.2; border-color: transparent; color: var(--muted); }
+.panel-move:hover { color: var(--text); }
+.dock { display: flex; gap: 8px; }
+.dock[data-dock="top"], .dock[data-dock="bottom"] { flex-wrap: wrap; align-items: stretch; }
+.dock[data-dock="top"] > .panel, .dock[data-dock="bottom"] > .panel { flex: 0 1 auto; }
+.dock[data-dock="top"] > [data-panel="preview"], .dock[data-dock="top"] > [data-panel="effects"],
+.dock[data-dock="top"] > [data-panel="inspector"], .dock[data-dock="bottom"] > [data-panel="preview"],
+.dock[data-dock="bottom"] > [data-panel="effects"], .dock[data-dock="bottom"] > [data-panel="inspector"] { flex-basis: 100%; }
+.dock[data-dock="left"], .dock[data-dock="right"] { flex-direction: column; width: 320px; flex: none; }
+.editor-middle { display: flex; gap: 10px; align-items: flex-start; }
+.editor-middle > .timeline-wrap { flex: 1; min-width: 0; }
+.panel-menu {
+  position: absolute; z-index: 10; display: flex; flex-direction: column; gap: 4px; min-width: 150px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.panel-menu button { text-align: left; }
+.panel-menu button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+@media (max-width: 800px) {
+  .editor-middle { flex-direction: column; align-items: stretch; }
+  .dock[data-dock="left"], .dock[data-dock="right"] { width: auto; }
+}

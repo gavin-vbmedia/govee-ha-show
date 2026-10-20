@@ -45,3 +45,24 @@ def test_test_frame_has_one_white_dot():
     frame = output.test_frame(10, 0.6)
     whites = [i for i in range(10) if frame[i * 3: i * 3 + 3] == b"\xff\xff\xff"]
     assert whites == [2]
+
+
+def test_idle_light_is_kept_in_realtime_mode():
+    # A light left dark for minutes of a show still gets the same black frame every frame;
+    # the device must keep hearing from us well inside Govee's ~60 s fallback.
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.5", 3, sock)
+    dev.enable()
+    t0 = dev.last_enable
+    sent_at = []
+    for i in range(int(300 / 0.025)):  # five minutes at 40 fps
+        now = t0 + i * 0.025
+        dev.update(bytes(9))
+        before = len(sock.sent)
+        dev.tick(now)
+        if len(sock.sent) > before:
+            sent_at.append(now)
+    gaps = [b - a for a, b in zip([t0] + sent_at, sent_at + [t0 + 300])]
+    assert max(gaps) < 30
+    enables = [p for p in razer_packets(sock) if p[3] == 0xB1]
+    assert len(enables) >= 300 // output.REENABLE_S

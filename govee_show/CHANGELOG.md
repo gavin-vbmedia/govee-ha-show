@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.7
+
+- Arrange the editor: move any panel to the top, left, right or bottom of the timeline with its ⋯
+  button, or from Settings → Layout. Saved per browser.
+- New Settings tab with the light offset / speaker delay, the automation instructions and the
+  layout, replacing the "Playback and automation" dropdown.
+
 ## 0.2.6
 
 - Play region: drag along the time ruler (or press "Play this part" on a selection) to play just

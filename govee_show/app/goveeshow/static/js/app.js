@@ -1,6 +1,7 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
 import { EFFECTS, FPS, bake, defaultParams, newClip, renderTrack, showDuration } from "./effects.js";
+import { Layout } from "./layout.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
 
@@ -1005,6 +1006,7 @@ function renderOutput() {
     : "Use this to line the lights up with the audio if they lead or lag.";
   $("offset").value = current ? (sp?.delay_ms ?? 0) : prefs.get("offset", 0);
   $("automation-input").textContent = JSON.stringify({ action: "play", show: app.showId || app.show.name });
+  $("automation-show").textContent = `"${app.show.name}"`;
 }
 
 async function offsetChanged(e) {
@@ -1158,6 +1160,7 @@ function wire() {
       $("view-editor").hidden = tab.dataset.view !== "editor";
       $("view-devices").hidden = tab.dataset.view !== "devices";
       $("view-palettes").hidden = tab.dataset.view !== "palettes";
+      $("view-settings").hidden = tab.dataset.view !== "settings";
       if (tab.dataset.view === "editor") { layoutPreview(); timeline.layout(); }
     });
   }
@@ -1273,6 +1276,8 @@ function wire() {
 
 async function init() {
   wire();
+  const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
+  $("btn-reset-layout").addEventListener("click", () => layout.reset());
   renderPalette();
   try {
     await loadDevices();
