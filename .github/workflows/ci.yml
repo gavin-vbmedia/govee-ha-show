@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -26,3 +26,21 @@ jobs:
           v_pkg=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' govee_show/app/goveeshow/__init__.py)
           echo "pyproject=$v_py config.yaml=$v_addon package=$v_pkg"
           [ "$v_py" = "$v_addon" ] && [ "$v_py" = "$v_pkg" ]
+
+  image:
+    # Build the add-on the way the Supervisor does, so a bad base image fails here, not in HA.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --build-arg BUILD_ARCH=amd64 -t govee-show-test govee_show
+      - name: Starts and serves the editor
+        run: |
+          docker run -d --name gs -e GOVEE_SHOW_ALLOW_ALL=1 -e GOVEE_SHOW_CONFIG=/tmp/c -e GOVEE_SHOW_MEDIA=/tmp/m -p 8099:8099 govee-show-test
+          for i in $(seq 1 20); do curl -s -o /dev/null localhost:8099/api/info && break; sleep 1; done
+          docker logs gs
+          # 200 (not 403) also proves the container's environment reaches the app.
+          curl -fsS localhost:8099/api/info
+      - name: aarch64 base image exists
+        run: |
+          base=$(sed -n 's/^FROM \(.*\)$/\1/p' govee_show/Dockerfile | sed 's/${BUILD_ARCH}/aarch64/')
+          docker manifest inspect "$base" > /dev/null
