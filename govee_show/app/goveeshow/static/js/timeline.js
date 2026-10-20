@@ -121,6 +121,12 @@ export class Timeline {
     this.app.show.tracks.forEach((tr, i) => {
       const y = TOP + i * TRACK_H;
       const dev = this.app.devices[tr.device];
+      if (this.app.selected?.track === i && !this.app.selected.clip) {
+        ctx.fillStyle = col("--accent");
+        ctx.globalAlpha = 0.18;
+        ctx.fillRect(0, y, HEADER_W, TRACK_H);
+        ctx.globalAlpha = 1;
+      }
       ctx.fillStyle = col("--text");
       ctx.font = "600 13px system-ui, sans-serif";
       ctx.fillText(clipText(ctx, dev ? dev.name : "Missing device", HEADER_W - 16), 10, y + 20);
@@ -254,7 +260,12 @@ export class Timeline {
 
   down(e) {
     const [x, y] = this.pos(e);
-    if (x < HEADER_W) return;
+    if (x < HEADER_W) {
+      // Clicking a light's name selects the whole light, for copying its effects.
+      const ti = this.trackAt(y);
+      if (ti >= 0) this.app.select({ track: ti, clip: null });
+      return;
+    }
     this.canvas.setPointerCapture(e.pointerId);
     const app = this.app;
     if (y < RULER_H + WAVE_H) {

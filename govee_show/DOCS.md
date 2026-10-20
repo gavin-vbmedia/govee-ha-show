@@ -36,8 +36,13 @@ real segment count differs, just change it: effects scale to any number of segme
 - Pick an effect from the palette and drag on a device's track to place it. Drag a clip to move it
   (including onto another device), drag its edges to resize, and edit colours and speed below the
   timeline. The preview strip shows every segment of every device as the playhead moves.
+- Copy effects between lights: select a clip (or click a light's name to select all its effects),
+  press **Ctrl+C**, click another light's name and press **Ctrl+V**. Pasted effects keep their
+  times so the lights stay in step; pasting onto the same light puts them at the playhead. With a
+  light selected you can also **Copy all effects to** another light or all of them, optionally
+  replacing what they had. Effects scale to each light's segment count.
 
-Shortcuts: Space play/pause, B beat, Delete remove clip, D duplicate, Ctrl+Z / Ctrl+Shift+Z undo
+Shortcuts: Space play/pause, B beat, Delete remove clip, D duplicate, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z / Ctrl+Shift+Z undo
 and redo, Ctrl+S save, + and − zoom, Ctrl+scroll zoom.
 
 ## 3. Play it
