@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.13
+
+- Fix: lights that hold one colour, including Find segments, could still flicker back to their own
+  scene. Unchanged colours are now streamed 10 times a second instead of twice.
+
 ## 0.2.12
 
 - Fix: Find segments only flashed the segment. Between questions it switched realtime mode off and
