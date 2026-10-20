@@ -33,9 +33,13 @@ real segment count differs, just change it: effects scale to any number of segme
 - Add beat markers: press **B** (or **Tap beat**) in time with the music while it plays, type a
   **BPM** and press **Fill**, or click the beat lane. Clips snap to beats and to each other
   (hold Shift to place freely).
-- Pick an effect from the palette and drag on a device's track to place it. Drag a clip to move it
-  (including onto another device), drag its edges to resize, and edit colours and speed below the
-  timeline. The preview strip shows every segment of every device as the playhead moves.
+- To add an effect, drag across a light's track to select a stretch of time (drag up or down to
+  cover several lights; a plain click selects up to the next beat). Then click an effect in the
+  effects bar, or pick one and press **Add effect** below the timeline. To clear a stretch, select
+  it and press **Delete effects here** or the Delete key: effects inside it are removed and ones
+  crossing its edges are trimmed. Hold **Alt** to start a selection on top of an existing clip.
+- Click a clip to edit it. Drag it to move it (including onto another device), drag its edges to
+  resize, and edit colours and speed below the timeline. The preview strip shows every segment of every device as the playhead moves.
 - **Two colours** and **Three colours** are solid effects with more than one colour. **Split**
   divides the light into halves or thirds; **Alternate** repeats the colours along it, with
   **Segments per colour** setting how wide each block is. Set **Move** to slide the colours along
@@ -71,7 +75,7 @@ real segment count differs, just change it: effects scale to any number of segme
   light selected you can also **Copy all effects to** another light or all of them, optionally
   replacing what they had. Effects scale to each light's segment count.
 
-Shortcuts: Space play/pause, B beat, Delete remove clip, D duplicate, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z / Ctrl+Shift+Z undo
+Shortcuts: Space play/pause, B beat, Delete remove clip or clear the selection, Esc deselect, D duplicate, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z / Ctrl+Shift+Z undo
 and redo, Ctrl+S save, + and − zoom, Ctrl+scroll zoom.
 
 ## 3. Play it

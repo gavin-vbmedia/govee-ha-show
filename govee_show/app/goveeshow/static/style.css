@@ -66,6 +66,12 @@ button.tab.active { background: var(--accent); color: var(--accent-text); }
 label { display: inline-flex; align-items: center; gap: 4px; }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+.toolbar.sections { gap: 8px; align-items: stretch; }
+.section {
+  display: flex; flex-direction: column; gap: 4px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px;
+}
+.section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .clock { font-variant-numeric: tabular-nums; min-width: 6.5em; font-family: ui-monospace, monospace; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }

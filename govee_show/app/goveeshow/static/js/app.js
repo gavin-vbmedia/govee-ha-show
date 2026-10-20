@@ -1,6 +1,6 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
-import { EFFECTS, FPS, bake, defaultParams, renderTrack, showDuration } from "./effects.js";
+import { EFFECTS, FPS, bake, defaultParams, newClip, renderTrack, showDuration } from "./effects.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
 
@@ -47,7 +47,9 @@ const app = {
   pps: prefs.get("pps", 60),
   time: 0,
   playing: false,
-  selected: null, // {track, clip}; clip is null when a whole light is selected
+  // {track, clip}; clip is null when a whole light is selected, and range is set
+  // ({tracks, start, end}) when a stretch of time is selected on one or more lights.
+  selected: null,
   clipboard: null, // {clips, track, whole}
   paletteEffect: "solid",
   palettes: [], // the user's own colour palettes; presets are in palettes.js
@@ -343,6 +345,8 @@ function renderPalette() {
     const b = button(fx.label, () => {
       app.paletteEffect = key;
       renderPalette();
+      if (app.selected?.range) addToRange(key);
+      else renderInspector();
     }, key === app.paletteEffect ? "active" : "");
     box.append(b);
   }
@@ -352,13 +356,14 @@ function renderInspector() {
   const box = $("inspector");
   const sel = app.selected;
   const track = sel && app.show.tracks[sel.track];
+  if (track && sel.range) { renderRangeInspector(sel.range); return; }
   if (track && !sel.clip) { renderTrackInspector(sel.track); return; }
   if (!sel || !track || !track.clips.includes(sel.clip)) {
     app.selected = null;
-    box.innerHTML = `<p class="hint">Select a clip to edit it. Drag on a track to add the selected effect. Drag clip
-      edges to resize, Delete removes, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's
-      name to copy all its effects to other lights. Click the beat lane to add or remove a beat; hold Shift to drag
-      without snapping.</p>`;
+    box.innerHTML = `<p class="hint">Drag across a light (or several) to select a stretch of time, then click an
+      effect above to add it there, or press Delete to clear it (hold Alt to start a selection on top of a clip). Click a clip to edit it: drag it to move, drag its
+      edges to resize, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's name to copy or
+      recolour all its effects. Click the beat lane to add or remove a beat; hold Shift to drag without snapping.</p>`;
     return;
   }
   const clip = sel.clip;
@@ -449,7 +454,7 @@ const clone = (clip) => JSON.parse(JSON.stringify(clip));
 
 function copySelection() {
   const sel = app.selected;
-  if (!sel) { status("Select a clip or a light to copy", true); return; }
+  if (!sel || sel.range) { status("Select a clip or a light to copy", true); return; }
   const clips = sel.clip ? [sel.clip] : app.show.tracks[sel.track].clips;
   if (!clips.length) { status("Nothing to copy on this light", true); return; }
   app.clipboard = { clips: clips.map(clone), track: sel.track, whole: !sel.clip };
@@ -667,8 +672,83 @@ function renderPalettes() {
   }));
 }
 
+// selected stretch of time ---------------------------------------------------------
+const rangeTracks = (r) => r.tracks.filter((t) => app.show.tracks[t]);
+
+function renderRangeInspector(r) {
+  const box = $("inspector");
+  box.replaceChildren();
+  const tracks = rangeTracks(r);
+  const h = document.createElement("h3");
+  h.textContent = `Selected ${fmtTime(r.start)} to ${fmtTime(r.end)} on `
+    + (tracks.length === 1 ? trackName(tracks[0]) : `${tracks.length} lights`);
+  box.append(h);
+  const timeInput = (key) => {
+    const el = document.createElement("input");
+    el.type = "number";
+    el.step = "0.01";
+    el.min = "0";
+    el.value = r[key].toFixed(2);
+    el.addEventListener("change", () => {
+      const v = Number(el.value);
+      if (!Number.isFinite(v)) return;
+      if (key === "start") r.start = Math.min(Math.max(0, v), r.end - 0.05);
+      else r.end = Math.max(v, r.start + 0.05);
+      app.select(app.selected);
+    });
+    const l = document.createElement("label");
+    l.append(key === "start" ? "Start" : "End", el);
+    return l;
+  };
+  const effect = document.createElement("select");
+  for (const [key, fx] of Object.entries(EFFECTS)) effect.add(new Option(fx.label, key, false, key === app.paletteEffect));
+  const l = document.createElement("label");
+  l.append("Effect", effect);
+  const overlaps = tracks.some((t) => app.show.tracks[t].clips.some((c) => c.start < r.end && c.end > r.start));
+  const del = button("Delete effects here", deleteRange, "ghost danger");
+  del.disabled = !overlaps;
+  box.append(timeInput("start"), timeInput("end"), l, button("Add effect", () => addToRange(effect.value), "primary"), del);
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "Tip: with a stretch selected, clicking an effect above adds it straight away.";
+  box.append(hint);
+}
+
+function addToRange(effect) {
+  const r = app.selected.range, tracks = rangeTracks(r);
+  const added = tracks.map((t) => {
+    const clip = newClip(effect, r.start, r.end);
+    app.show.tracks[t].clips.push(clip);
+    return { track: t, clip };
+  });
+  // One light: edit the new clip straight away. Several: keep the selection to add more.
+  if (added.length === 1) app.selected = added[0];
+  status(`Added ${EFFECTS[effect].label} to ${added.length === 1 ? trackName(tracks[0]) : `${added.length} lights`}`);
+  app.changed();
+}
+
+// Clears the selected stretch: clips inside it go, clips crossing its edges are trimmed.
+function deleteRange() {
+  const r = app.selected.range;
+  let n = 0;
+  for (const t of rangeTracks(r)) {
+    const kept = [];
+    for (const c of app.show.tracks[t].clips) {
+      if (c.end <= r.start || c.start >= r.end) { kept.push(c); continue; }
+      n++;
+      if (c.start < r.start) kept.push({ ...c, end: r.start });
+      if (c.end > r.end) kept.push({ ...c, start: r.end });
+    }
+    app.show.tracks[t].clips = kept;
+  }
+  if (!n) { status("No effects in the selection"); return; }
+  status(`Cleared ${n} effect${n > 1 ? "s" : ""} from the selection`);
+  app.changed();
+}
+
 function deleteSelected() {
   const sel = app.selected;
+  if (sel?.range) { deleteRange(); return; }
   if (!sel?.clip) return;
   const clips = app.show.tracks[sel.track].clips;
   clips.splice(clips.indexOf(sel.clip), 1);

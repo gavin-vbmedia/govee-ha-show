@@ -7,6 +7,9 @@
   palette to an effect, or recolour every effect on a light or the whole show.
 - New effects: Pulse, Gradient, Colour cycle, Comet, Scanner, Flicker and Lightning.
 - Two colours and Three colours can move along the light like theatre marquee lights.
+- Dragging on the timeline now selects a stretch of time (on one or several lights) instead of
+  adding an effect straight away. Click an effect to add it there, or delete to clear it.
+- Tidier top bar, grouped into Show, Song, Playback, Beats and Zoom.
 
 ## 0.2.4
 

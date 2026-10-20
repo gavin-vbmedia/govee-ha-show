@@ -3,7 +3,7 @@
 // The canvas stays the size of the viewport (sticky inside a wide scroll area),
 // so long songs at high zoom never hit browser canvas size limits.
 
-import { EFFECTS, newClip, renderTrack } from "./effects.js";
+import { EFFECTS, renderTrack } from "./effects.js";
 
 const HEADER_W = 150;
 const RULER_H = 22;
@@ -121,7 +121,7 @@ export class Timeline {
     this.app.show.tracks.forEach((tr, i) => {
       const y = TOP + i * TRACK_H;
       const dev = this.app.devices[tr.device];
-      if (this.app.selected?.track === i && !this.app.selected.clip) {
+      if (this.app.selected?.track === i && !this.app.selected.clip && !this.app.selected.range) {
         ctx.fillStyle = col("--accent");
         ctx.globalAlpha = 0.18;
         ctx.fillRect(0, y, HEADER_W, TRACK_H);
@@ -134,6 +134,7 @@ export class Timeline {
       ctx.font = "12px system-ui, sans-serif";
       ctx.fillText(dev ? `${dev.segments} segments${dev.ip ? "" : " · planned"}` : tr.device, 10, y + 36);
     });
+    this.drawRange(col);
     ctx.strokeStyle = col("--line");
     ctx.beginPath(); ctx.moveTo(HEADER_W + 0.5, 0); ctx.lineTo(HEADER_W + 0.5, h); ctx.stroke();
     for (let i = 0; i <= this.app.show.tracks.length; i++) {
@@ -174,6 +175,26 @@ export class Timeline {
       ctx.fillStyle = "#fff";
       ctx.fillText(label, tx + 1, top + 13);
     }
+  }
+
+  // The selected stretch of time, across one or more lights.
+  drawRange(col) {
+    const r = this.app.selected?.range;
+    if (!r) return;
+    const { ctx, w } = this;
+    const x0 = Math.max(this.x(r.start), HEADER_W), x1 = Math.min(this.x(r.end), w);
+    if (x1 <= x0) return;
+    const y0 = TOP + r.tracks[0] * TRACK_H, y1 = TOP + (r.tracks.at(-1) + 1) * TRACK_H;
+    ctx.fillStyle = col("--accent");
+    ctx.globalAlpha = 0.22;
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = col("--accent");
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 3]);
+    ctx.strokeRect(this.x(r.start) + 1, y0 + 1, this.x(r.end) - this.x(r.start) - 2, y1 - y0 - 2);
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
   }
 
   drawWave(col) {
@@ -281,19 +302,26 @@ export class Timeline {
       app.changed();
       return;
     }
-    const hit = this.hitClip(x, y);
+    // Alt-drag selects a stretch of time even over clips, e.g. to cut a piece out of one.
+    const hit = e.altKey ? null : this.hitClip(x, y);
     if (hit) {
       app.select({ track: hit.track, clip: hit.clip });
       this.drag = { ...hit, t0: this.t(x), start: hit.clip.start, end: hit.clip.end, moved: false };
       return;
     }
+    // Otherwise drag to select a stretch of time, across lights too, then add or delete effects there.
     const ti = this.trackAt(y);
     if (ti < 0) return;
     const t = Math.max(0, this.snapTime(this.t(x), e));
-    const clip = newClip(app.paletteEffect, t, t + MIN_LEN);
-    app.show.tracks[ti].clips.push(clip);
-    app.select({ track: ti, clip });
-    this.drag = { mode: "create", track: ti, clip, anchor: t, moved: false };
+    this.drag = { mode: "range", track: ti, anchor: t, moved: false };
+    this.setRange(ti, ti, t, t + MIN_LEN);
+  }
+
+  setRange(a, b, start, end) {
+    const tracks = [];
+    for (let i = Math.min(a, b); i <= Math.max(a, b); i++) tracks.push(i);
+    this.app.selected = { track: tracks[0], clip: null, range: { tracks, start, end } };
+    this.draw();
   }
 
   move(e) {
@@ -302,16 +330,19 @@ export class Timeline {
     if (!d) {
       const hit = this.hitClip(x, y);
       this.canvas.style.cursor = !hit ? (y < RULER_H + WAVE_H && x > HEADER_W ? "text" : "crosshair")
-        : hit.mode === "move" ? "grab" : "ew-resize";
+        : hit.mode === "move" && !e.altKey ? "grab" : e.altKey ? "crosshair" : "ew-resize";
       return;
     }
     const t = this.t(x);
     if (d.mode === "seek") { this.app.seek(Math.max(0, t)); return; }
     d.moved = true;
     const c = d.clip;
-    if (d.mode === "create") {
-      const s = Math.max(0, this.snapTime(t, e, c));
-      [c.start, c.end] = s >= d.anchor ? [d.anchor, Math.max(s, d.anchor + MIN_LEN)] : [s, d.anchor];
+    if (d.mode === "range") {
+      const s = Math.max(0, this.snapTime(t, e));
+      const ti = this.trackAt(Math.min(Math.max(y, TOP), this.h - 1));
+      const [a, b] = s >= d.anchor ? [d.anchor, Math.max(s, d.anchor + MIN_LEN)] : [s, d.anchor];
+      this.setRange(d.track, ti >= 0 ? ti : d.track, a, b);
+      return;
     } else if (d.mode === "start") {
       c.start = Math.min(Math.max(0, this.snapTime(t, e, c)), c.end - MIN_LEN);
     } else if (d.mode === "end") {
@@ -339,12 +370,17 @@ export class Timeline {
     const d = this.drag;
     this.drag = null;
     if (!d || d.mode === "seek") return;
-    if (d.mode === "create" && !d.moved) {
-      // A plain click places a clip up to the next beat, or two seconds long.
-      const next = this.app.show.beats.find((b) => b > d.anchor + MIN_LEN);
-      d.clip.end = next ?? d.anchor + 2;
+    if (d.mode === "range") {
+      const r = this.app.selected.range;
+      if (!d.moved || (r.end - r.start) * this.app.pps < 4) {
+        // A plain click selects up to the next beat, or two seconds.
+        const next = this.app.show.beats.find((b) => b > d.anchor + MIN_LEN);
+        r.end = next ?? d.anchor + 2;
+      }
+      this.app.select(this.app.selected);
+      return;
     }
-    if (d.moved || d.mode === "create") this.app.changed();
+    if (d.moved) this.app.changed();
   }
 
   wheel(e) {
