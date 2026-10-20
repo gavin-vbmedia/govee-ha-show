@@ -236,3 +236,12 @@ async def test_house_photo_and_paths(client):
 
     assert (await client.delete("/api/house/photo")).status == 200
     assert (await client.get("/api/house/photo")).status == 404
+
+
+async def test_default_show_speaker(client):
+    assert (await (await client.get("/api/speakers")).json())["show_speaker"] is None
+    resp = await client.put("/api/speakers/show", json={"entity_id": "media_player.porch"})
+    assert (await resp.json()) == {"show_speaker": "media_player.porch"}
+    assert (await (await client.get("/api/speakers")).json())["show_speaker"] == "media_player.porch"
+    assert (await client.put("/api/speakers/show", json={"entity_id": "light.porch"})).status == 400
+    assert (await (await client.put("/api/speakers/show", json={"entity_id": None})).json()) == {"show_speaker": None}

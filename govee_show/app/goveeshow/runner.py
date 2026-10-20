@@ -51,7 +51,8 @@ class Runner:
         """Play a baked show.
 
         media_player plays the song on that HA entity and follows it. With
-        use_show_speaker the show's saved speaker is used when none is given.
+        use_show_speaker the show's own speaker, or else the default show speaker from
+        Settings, is used when none is given.
         Without a speaker only the lights run (the browser plays the song itself).
         """
         async with self._lock:
@@ -61,7 +62,8 @@ class Runner:
                 raise RunnerError(f"show '{show_id}' doesn't exist or hasn't been saved in the editor")
             baked = decode(blob)
             if use_show_speaker and not media_player:
-                media_player = show.get("media_player") or None
+                media_player = (show.get("media_player")
+                                or self.storage.load_settings().get("show_speaker") or None)
             await self._stop()
             devices = self.storage.devices_by_id()
             if not media_player:

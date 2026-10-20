@@ -68,6 +68,7 @@ const app = {
   clockStart: 0,
   syncTimer: null,
   speakers: [],
+  defaultSpeaker: null, // where automations play a show that has no speaker of its own
   models: {}, // Govee SKU -> {name, realtime, segments?}
   remote: false, // playing on a Home Assistant speaker; the add-on keeps time
 
@@ -1293,25 +1294,36 @@ async function upload(file) {
 }
 
 // speakers --------------------------------------------------------------------
-const speaker = () => app.show.media_player || "";
+// Two speakers: the one the editor plays on while you design (kept per browser), and the show
+// speaker that automations play the show on (the show's own, or the default in Settings).
+const speaker = () => prefs.get("editorSpeaker", "");
+const speakerName = (id) => app.speakers.find((s) => s.entity_id === id)?.name || id;
 
 async function loadSpeakers() {
   try {
     const body = await api("api/speakers");
     app.speakers = body.speakers;
+    app.defaultSpeaker = body.show_speaker || null;
   } catch { app.speakers = []; }
   renderOutput();
 }
 
-function renderOutput() {
-  const sel = $("output-select");
-  sel.replaceChildren(new Option("Song in this browser", ""));
-  const current = speaker();
-  for (const s of app.speakers) sel.add(new Option(`Speaker: ${s.name}`, s.entity_id, false, s.entity_id === current));
+// Fills a speaker <select>; a saved choice that HA no longer lists stays, marked unavailable.
+function speakerOptions(sel, first, current, label = (s) => s.name) {
+  sel.replaceChildren(new Option(first, ""));
+  for (const s of app.speakers) sel.add(new Option(label(s), s.entity_id));
   if (current && !app.speakers.some((s) => s.entity_id === current)) {
-    sel.add(new Option(`Speaker: ${current} (unavailable)`, current, false, true));
+    sel.add(new Option(`${current} (unavailable)`, current));
   }
-  sel.value = current;
+  sel.value = current || "";
+}
+
+function renderOutput() {
+  const current = speaker();
+  speakerOptions($("output-select"), "Song in this browser", current, (s) => `Speaker: ${s.name}`);
+  speakerOptions($("show-speaker"), app.defaultSpeaker ? `Default (${speakerName(app.defaultSpeaker)})`
+    : "Default (lights only)", app.show.media_player);
+  speakerOptions($("default-speaker"), "None (lights only)", app.defaultSpeaker);
   const sp = app.speakers.find((s) => s.entity_id === current);
   $("lights-wrap").hidden = !!current;
   $("offset-label").textContent = current ? "Speaker delay" : "Light offset";
@@ -1552,8 +1564,19 @@ function wire() {
   $("offset").addEventListener("change", offsetChanged);
   $("output-select").addEventListener("change", async (e) => {
     await stop();
+    prefs.set("editorSpeaker", e.target.value);
+    renderOutput();
+  });
+  $("show-speaker").addEventListener("change", (e) => {
     app.show.media_player = e.target.value || null;
     app.changed();
+    renderOutput();
+  });
+  $("default-speaker").addEventListener("change", async (e) => {
+    try {
+      const body = await api("api/speakers/show", { method: "PUT", json: { entity_id: e.target.value || null } });
+      app.defaultSpeaker = body.show_speaker;
+    } catch (err) { status(`Couldn't save the default speaker: ${err.message}`, true); }
     renderOutput();
   });
   $("btn-zoom-in").addEventListener("click", () => { timeline.zoom(1.5); prefs.set("pps", app.pps); });

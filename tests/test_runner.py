@@ -73,6 +73,20 @@ async def test_automation_plays_on_the_shows_speaker(runner):
     assert not runner.status()["playing"]
 
 
+async def test_automation_falls_back_to_the_default_show_speaker(runner):
+    show = runner.storage.load_show("party")
+    show["media_player"] = None
+    runner.storage.save_show("party", show)
+    runner.storage.save_baked("party", baked.encode(40, [{"device": "a", "segments": 1}], [b"\xff\x00\x00"] * 400))
+    await runner.play("party", use_show_speaker=True)
+    assert runner.ha.calls == [] and runner.status()["playing"]  # no default yet: lights only
+    settings = runner.storage.load_settings()
+    settings["show_speaker"] = "media_player.porch"
+    runner.storage.save_settings(settings)
+    await runner.play("party", use_show_speaker=True)
+    assert runner.ha.calls[-1][1]["entity_id"] == "media_player.porch"
+
+
 async def test_lights_stop_when_speaker_stops(runner, monkeypatch):
     monkeypatch.setattr("goveeshow.runner.FOLLOW_EVERY_S", 0.05)
     await runner.play("party", use_show_speaker=True)
