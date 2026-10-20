@@ -1726,8 +1726,9 @@ function wire() {
     } catch (err) { status(`Couldn't save the default speaker: ${err.message}`, true); }
     renderOutput();
   });
-  $("btn-zoom-in").addEventListener("click", () => { timeline.zoom(1.5); prefs.set("pps", app.pps); });
-  $("btn-zoom-out").addEventListener("click", () => { timeline.zoom(1 / 1.5); prefs.set("pps", app.pps); });
+  app.zoomed = () => prefs.set("pps", app.pps);
+  $("btn-zoom-in").addEventListener("click", () => timeline.zoom(1.5));
+  $("btn-zoom-out").addEventListener("click", () => timeline.zoom(1 / 1.5));
 
   $("btn-scan").addEventListener("click", scan);
   $("btn-new-palette").addEventListener("click", () => {

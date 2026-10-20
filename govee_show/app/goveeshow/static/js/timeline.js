@@ -31,7 +31,7 @@ export class Timeline {
     this.canvas.addEventListener("pointerdown", (e) => this.down(e));
     this.canvas.addEventListener("pointermove", (e) => this.move(e));
     this.canvas.addEventListener("pointerup", (e) => this.up(e));
-    this.canvas.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
+    this.scroll.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
     new ResizeObserver(() => this.layout()).observe(this.scroll);
   }
 
@@ -49,6 +49,8 @@ export class Timeline {
     const h = TOP + Math.max(this.app.show?.tracks.length || 0, 1) * TRACK_H;
     this.inner.style.width = `${HEADER_W + this.duration * this.app.pps + 40}px`;
     this.inner.style.height = `${h}px`;
+    // The stage must be only as wide as the view, or it has no room to stick and scrolls away.
+    Object.assign(this.canvas.parentElement.style, { width: `${w}px`, height: `${h}px` });
     const dpr = window.devicePixelRatio || 1;
     for (const c of [this.canvas, this.overlay]) {
       c.width = Math.round(w * dpr);
@@ -62,11 +64,18 @@ export class Timeline {
     this.draw();
   }
 
-  zoom(factor, anchorX = HEADER_W + (this.w - HEADER_W) / 2) {
+  // Zooms keeping the time under anchorX in place: the pointer for the wheel, otherwise the
+  // playhead when it's in view, or the middle.
+  zoom(factor, anchorX) {
+    if (anchorX == null) {
+      const px = this.x(this.app.time);
+      anchorX = px >= HEADER_W && px <= this.w ? px : HEADER_W + (this.w - HEADER_W) / 2;
+    }
     const t = this.t(anchorX);
     this.app.pps = Math.min(Math.max(this.app.pps * factor, 4), 800);
     this.layout();
     this.scroll.scrollLeft = HEADER_W + t * this.app.pps - anchorX;
+    this.app.zoomed?.();
   }
 
   // Keep the playhead visible while playing.
@@ -421,13 +430,17 @@ export class Timeline {
     if (d.moved) this.app.changed();
   }
 
+  // Ctrl+wheel (or a trackpad pinch) zooms round the pointer, in proportion to how far the wheel
+  // turned so pinches stay smooth; a plain wheel scrolls along the timeline.
   wheel(e) {
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? this.w : 1; // lines, pages, pixels
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      this.zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15, this.pos(e)[0]);
+      const dy = Math.min(Math.max(e.deltaY * unit, -100), 100);
+      this.zoom(Math.exp(-dy * 0.004), this.pos(e)[0]);
     } else if (!e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
       e.preventDefault();
-      this.scroll.scrollLeft += e.deltaY;
+      this.scroll.scrollLeft += e.deltaY * unit;
     }
   }
 }

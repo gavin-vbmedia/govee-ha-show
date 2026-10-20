@@ -7,6 +7,11 @@
   House tab, choose Out of view and say how many bulbs are on it (0 for a lead). Those bulbs keep
   their place in the light's segments but aren't drawn, so the bulbs in view show the right part
   of each effect.
+- Fixed the timeline's zoom and scrolling. Once zoomed in, the timeline could scroll its own
+  drawing out of sight, leaving a blank strip. The mouse wheel also only worked over part of it
+  and Ctrl+wheel jumped in big steps. Now the wheel scrolls anywhere on the timeline, Ctrl+wheel or
+  a trackpad pinch zooms smoothly round the pointer, the + and − buttons and keys zoom round the
+  playhead when it's in view, and the zoom level is remembered however you change it.
 
 ## 0.2.25
 
