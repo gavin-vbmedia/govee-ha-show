@@ -473,10 +473,23 @@ function renderInspector() {
   h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${dev ? dev.name : "missing device"}`;
   box.append(h);
 
+  // Settings are grouped so a clip with many of them stays readable.
+  const group = (title) => {
+    const g = document.createElement("fieldset");
+    g.className = "insp-group";
+    const legend = document.createElement("legend");
+    legend.className = "section-label";
+    legend.textContent = title;
+    g.append(legend);
+    return g;
+  };
+  const groups = { clip: group("Clip"), colours: group("Colours"), settings: group("Effect settings"),
+    brightness: group("Brightness") };
+  let target = groups.clip;
   const field = (label, el) => {
     const l = document.createElement("label");
     l.append(label, el);
-    box.append(l);
+    target.append(l);
     return el;
   };
 
@@ -510,6 +523,7 @@ function renderInspector() {
   field("End", timeInput("end"));
 
   for (const p of EFFECTS[clip.effect].params) {
+    target = p.type === "color" ? groups.colours : p.type === "range" ? groups.brightness : groups.settings;
     let el;
     if (p.type === "select") {
       el = document.createElement("select");
@@ -529,11 +543,22 @@ function renderInspector() {
     });
     el.addEventListener("change", () => app.changed());
     if (p.type === "color") el.addEventListener("focus", () => { app.lastColourKey = p.key; });
+    if (p.type === "range") {
+      const shown = document.createElement("span");
+      shown.className = "range-value";
+      const show = () => { shown.textContent = `${el.value}%`; };
+      el.addEventListener("input", show);
+      show();
+      const wrap = document.createElement("span");
+      wrap.append(el, shown);
+      field("", wrap);
+      continue;
+    }
     field(p.label, el);
   }
   const colourKeys = EFFECTS[clip.effect].params.filter((p) => p.type === "color").map((p) => p.key);
   if (colourKeys.length) {
-    box.append(paletteRow((c) => {
+    groups.colours.append(paletteRow((c) => {
       const key = colourKeys.includes(app.lastColourKey) ? app.lastColourKey : colourKeys[0];
       clip[key] = c;
       app.lastColourKey = key;
@@ -543,9 +568,14 @@ function renderInspector() {
       app.changed();
     }, "ghost")));
   }
-  box.append(button("Copy", copySelection, "ghost"),
+  // Only groups with something in them (a legend alone) are shown.
+  box.append(...Object.values(groups).filter((g) => g.children.length > 1));
+  const actions = document.createElement("div");
+  actions.className = "insp-actions";
+  actions.append(button("Copy", copySelection, "ghost"),
     button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"),
     button("Delete clip", deleteSelected, "ghost danger"));
+  box.append(actions);
 }
 
 // copy and paste ----------------------------------------------------------------
