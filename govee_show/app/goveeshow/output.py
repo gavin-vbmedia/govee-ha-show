@@ -29,8 +29,9 @@ WHOLE_FPS = 10  # colorwc fades each change, so faster than this just blurs
 class OutputDevice:
     def __init__(self, ip: str, segments: int, sock: socket.socket, *,
                  reverse: bool = False, gradient: bool = False, protocol: str = "standard",
-                 max_fps: int = MAX_FPS):
+                 brightness: int = 100, max_fps: int = MAX_FPS):
         self.ip = ip
+        self.brightness = brightness  # per-light cap, 1-100, applied to every frame
         self.protocol = protocol
         self.realtime = protocol != "whole"
         if not self.realtime:
@@ -72,6 +73,8 @@ class OutputDevice:
         seg = bytes(rgb[:n]).ljust(n, b"\0")
         if self.reverse:
             seg = b"".join(seg[i: i + 3] for i in range(n - 3, -1, -3))
+        if self.brightness < 100:
+            seg = bytes(v * self.brightness // 100 for v in seg)
         self.pending = seg
 
     def packet(self, frame: bytes) -> bytes:
@@ -115,15 +118,18 @@ class Output:
         self.sock.close()
 
     def claim(self, ip: str, segments: int, *, reverse=False, gradient=False,
-              protocol="standard") -> OutputDevice:
+              protocol="standard", brightness=100) -> OutputDevice:
         dev = self.devices.get(ip)
+        if dev:
+            dev.brightness = brightness  # takes effect from the next frame, no need to restart
         if dev and dev.segments != segments and (dev.reverse, dev.gradient, dev.protocol) == (reverse, gradient, protocol):
             # Only the length changed: keep realtime mode on rather than switching off and on again.
             dev.segments, dev.pending, dev.last_frame = segments, None, None
         if dev is None or (dev.segments, dev.reverse, dev.gradient, dev.protocol) != (segments, reverse, gradient, protocol):
             if dev:
                 dev.disable()
-            dev = OutputDevice(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol)
+            dev = OutputDevice(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol,
+                               brightness=brightness)
             self.devices[ip] = dev
         if not dev.enabled:
             dev.enable()
@@ -160,8 +166,10 @@ def test_frame(segments: int, t: float) -> bytes:
 
 
 async def run_test_pattern(output: Output, ip: str, segments: int, seconds: float = 15,
-                           *, reverse=False, gradient=False, protocol="standard", fps: int = 30):
-    dev = output.claim(ip, segments, reverse=reverse, gradient=gradient, protocol=protocol)
+                           *, reverse=False, gradient=False, protocol="standard", brightness=100,
+                           fps: int = 30):
+    dev = output.claim(ip, segments, reverse=reverse, gradient=gradient, protocol=protocol,
+                       brightness=brightness)
     # Logged so a light that ignores the pattern can be compared against other tools.
     first = test_frame(segments, 0)
     packet = (razer_colors(first, gradient, protocol).hex(" ") if dev.realtime

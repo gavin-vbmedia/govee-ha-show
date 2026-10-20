@@ -96,3 +96,14 @@ test("bake writes the GVSF layout the player reads", () => {
   assert.equal(blob.length, 9 + hlen + 10 * 6);
   assert.deepEqual([...blob.subarray(9 + hlen, 9 + hlen + 6)], [1, 2, 3, 1, 2, 3]);
 });
+
+test("every effect has a brightness slider that scales its output", () => {
+  for (const key of Object.keys(EFFECTS)) {
+    assert.equal(EFFECTS[key].params.filter((p) => p.key === "brightness").length, 1, key);
+  }
+  const clip = { ...newClip("solid", 0, 1), color: "#ff8000", brightness: 50 };
+  assert.deepEqual(px(renderTrack([clip], 0.5, 1), 0), [128, 64, 0]);
+  // An older rainbow clip saved with its own brightness keeps that level.
+  const rainbow = { ...newClip("rainbow", 0, 1), speed: 0, brightness: 40 };
+  assert.deepEqual(px(renderTrack([rainbow], 0, 4), 0), [102, 0, 0]);
+});

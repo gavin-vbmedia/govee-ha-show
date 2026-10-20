@@ -89,6 +89,12 @@ def _clean_device(d: dict) -> dict:
         raise web.HTTPBadRequest(text=f"bad device: {e}")
     if not 1 <= segments <= 255:
         raise web.HTTPBadRequest(text="segments must be 1-255")
+    try:
+        brightness = int(d.get("brightness", 100))
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="brightness must be a number")
+    if not 1 <= brightness <= 100:
+        raise web.HTTPBadRequest(text="brightness must be 1-100")
     protocol = str(d.get("protocol") or "standard")
     if protocol not in PROTOCOLS:
         raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
@@ -98,7 +104,7 @@ def _clean_device(d: dict) -> dict:
     return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64],
             "ip": ip, "sku": str(d.get("sku", "")), "segments": segments,
             "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient")),
-            "protocol": protocol}
+            "protocol": protocol, "brightness": brightness}
 
 
 async def put_devices(request):
@@ -131,7 +137,7 @@ async def test_device(request):
         old.cancel()
     tests[d["ip"]] = asyncio.create_task(run_test_pattern(
         app[OUTPUT], d["ip"], d["segments"], seconds, reverse=d["reverse"], gradient=d["gradient"],
-        protocol=d["protocol"]))
+        protocol=d["protocol"], brightness=d["brightness"]))
     return web.json_response({"ok": True, "seconds": seconds})
 
 

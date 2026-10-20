@@ -39,7 +39,7 @@ class Player:
 
     async def play(self, show_id: str, baked: Baked, devices: dict, position: float = 0.0,
                    offset: float = 0.0):
-        """devices maps a track's device id to its stored config (ip, reverse, gradient, protocol).
+        """devices maps a track's device id to its stored config (ip, reverse, gradient, protocol, brightness).
 
         Planned devices (no IP yet) are skipped.
         """
@@ -52,7 +52,8 @@ class Player:
             if d:
                 self.output.claim(d["ip"], t.segments, reverse=d.get("reverse", False),
                                   gradient=d.get("gradient", False),
-                                  protocol=d.get("protocol", "standard"))
+                                  protocol=d.get("protocol", "standard"),
+                                  brightness=d.get("brightness", 100))
                 claimed.add(d["ip"])
         for ip in set(self.output.devices) - claimed:
             self.output.release(ip)

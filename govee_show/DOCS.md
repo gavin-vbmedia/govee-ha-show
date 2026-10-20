@@ -16,6 +16,9 @@ Govee doesn't report how many segments a device has, so press **Test**: a rainbo
 dot stepping along it. Set **Segments** so the dot visits every segment once per lap, and tick
 **Reverse** if it runs the wrong way. Most strips and outdoor lights have 10 to 15 segments.
 
+**Brightness %** caps a light in every show, which helps when one string is much brighter than
+the rest. It applies straight away, to the preview too, without re-saving your shows.
+
 **Light still on its reel?** Press **Find** next to **Segments** instead. It lights a single
 segment and asks whether you can see any light at all. A light with fewer segments has nowhere to
 show it, so each answer halves the range, and after about 7 answers the count is filled in. Set
@@ -55,6 +58,8 @@ real segment count differs, just change it: effects scale to any number of segme
   crossing its edges are trimmed. Hold **Alt** to start a selection on top of an existing clip.
 - Click a clip to edit it. Drag it to move it (including onto another device), drag its edges to
   resize, and edit colours and speed below the timeline. The preview strip shows every segment of every device as the playhead moves.
+- Every effect has a **Brightness %** slider, so one section can glow softly and the next hit full
+  brightness. Use **Fade** between two colours, one of them darker, for a gradual change.
 - **Two colours** and **Three colours** are solid effects with more than one colour. **Split**
   divides the light into halves or thirds; **Alternate** repeats the colours along it, with
   **Segments per colour** setting how wide each block is. Set **Move** to slide the colours along
