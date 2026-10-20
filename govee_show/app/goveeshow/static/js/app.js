@@ -726,20 +726,28 @@ function drawClipPreview() {
   const clip = sel.clip, len = Math.max(clip.end - clip.start, 0.05);
   const t = clip.start + ((performance.now() - clipPreview.started) / 1000) % len;
   const rgb = renderTrack([clip], t, dev.segments);
-  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
-  if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
-  const ctx = c.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  const cap = (dev.brightness ?? 100) / 100, n = dev.segments, bw = w / n;
-  for (let i = 0; i < n; i++) {
-    const [r, g, b] = [rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2]].map((v) => Math.round(v * cap));
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    ctx.fillRect(i * bw + 1, 2, Math.max(bw - 2, 1), h - 4);
-  }
+  drawStrip(c, rgb, dev.segments, (dev.brightness ?? 100) / 100);
   const onLight = previewOnLight() && dev.ip && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
   if (onLight) sendPreview(dev, rgb);
   else if (clipPreview.dev) stopLightPreview();
+}
+
+// A row of segments in their colours, filling the canvas.
+function drawStrip(c, rgb, n, cap = 1) {
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+  }
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const bw = w / n, gap = bw >= 4 ? 1 : 0, pad = h > 12 ? 2 : 0;
+  for (let i = 0; i < n; i++) {
+    const [r, g, b] = [rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2]].map((v) => Math.round(v * cap));
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(i * bw + gap, pad, Math.max(bw - gap * 2, 0.5), h - pad * 2);
+  }
 }
 
 // The add-on applies the light's brightness cap, so the clip's own colours are sent.
@@ -772,16 +780,41 @@ const experimentalOn = () => prefs.get("experimental.scenes", false);
 const visibleEffects = (keep) => Object.entries(EFFECTS).filter(([k, fx]) => !fx.experimental || experimentalOn() || k === keep);
 
 // One button per effect; the last one used is outlined so a run of the same effect is quick to add.
-function effectPicker(onPick) {
+// A button per effect, each with a strip looping that effect with its default settings, as long
+// as the selection (within reason) and on `dev`'s segments, so you can see them before picking.
+const pickerPreview = { items: [], started: 0 };
+
+function effectPicker(onPick, dev = null, length = 3) {
   const box = document.createElement("div");
   box.className = "effect-picker";
+  const len = Math.min(Math.max(length, 1), 6);
+  pickerPreview.items = [];
+  pickerPreview.started = performance.now();
   for (const [key, fx] of visibleEffects()) {
-    box.append(button(fx.label, () => {
+    const b = button("", () => {
       app.paletteEffect = key;
       onPick(key);
-    }, key === app.paletteEffect ? "active" : ""));
+    }, key === app.paletteEffect ? "active" : "");
+    const strip = document.createElement("canvas");
+    strip.className = "fx-strip";
+    const label = document.createElement("span");
+    label.textContent = fx.label;
+    b.append(strip, label);
+    box.append(b);
+    pickerPreview.items.push({ canvas: strip, clip: newClip(key, 0, len), dev });
   }
   return box;
+}
+
+function drawPickerPreviews() {
+  const items = pickerPreview.items;
+  // offsetParent is null while the Selection panel is hidden.
+  if (!items.length || !items[0].canvas.isConnected || !items[0].canvas.offsetParent) return;
+  const secs = (performance.now() - pickerPreview.started) / 1000;
+  for (const { canvas, clip, dev } of items) {
+    const n = dev?.segments || 15;
+    drawStrip(canvas, renderTrack([clip], secs % clip.end, n), n, (dev?.brightness ?? 100) / 100);
+  }
 }
 
 function renderInspector() {
@@ -1205,7 +1238,7 @@ function renderRangeInspector(r) {
   const add = document.createElement("p");
   add.className = "hint";
   add.textContent = "Pick an effect to add it here:";
-  box.append(add, effectPicker(addToRange));
+  box.append(add, effectPicker(addToRange, app.devices[app.show.tracks[tracks[0]]?.device], r.end - r.start));
 }
 
 function addToRange(effect) {
@@ -1742,6 +1775,7 @@ function frame() {
   drawPreview();
   drawHouse();
   drawClipPreview();
+  drawPickerPreviews();
   requestAnimationFrame(frame);
 }
 
