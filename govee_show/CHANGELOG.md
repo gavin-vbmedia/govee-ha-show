@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4
+
+- Copy and paste effects: Ctrl+C / Ctrl+V for a clip or a whole light (click its name), and
+  "Copy all effects to" another light or every light, optionally replacing theirs.
+- New Two colours and Three colours effects: split a light into halves or thirds, or alternate the
+  colours along it.
+
 ## 0.2.3
 
 - Model picker for planned lights (about 290 Govee models): fills in the name and shows whether

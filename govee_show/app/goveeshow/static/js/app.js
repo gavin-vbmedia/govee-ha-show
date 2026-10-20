@@ -46,7 +46,8 @@ const app = {
   pps: prefs.get("pps", 60),
   time: 0,
   playing: false,
-  selected: null,
+  selected: null, // {track, clip}; clip is null when a whole light is selected
+  clipboard: null, // {clips, track, whole}
   paletteEffect: "solid",
   snap: prefs.get("snap", true),
   peaks: null,
@@ -347,11 +348,13 @@ function renderInspector() {
   const box = $("inspector");
   const sel = app.selected;
   const track = sel && app.show.tracks[sel.track];
+  if (track && !sel.clip) { renderTrackInspector(sel.track); return; }
   if (!sel || !track || !track.clips.includes(sel.clip)) {
     app.selected = null;
     box.innerHTML = `<p class="hint">Select a clip to edit it. Drag on a track to add the selected effect. Drag clip
-      edges to resize, Delete removes, D duplicates, Ctrl+Z undoes. Click the beat lane to add or remove a beat;
-      hold Shift to drag without snapping.</p>`;
+      edges to resize, Delete removes, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's
+      name to copy all its effects to other lights. Click the beat lane to add or remove a beat; hold Shift to drag
+      without snapping.</p>`;
     return;
   }
   const clip = sel.clip;
@@ -417,12 +420,87 @@ function renderInspector() {
     el.addEventListener("change", () => app.changed());
     field(p.label, el);
   }
-  box.append(button("Delete clip", deleteSelected, "ghost danger"));
+  box.append(button("Copy", copySelection, "ghost"),
+    button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"),
+    button("Delete clip", deleteSelected, "ghost danger"));
+}
+
+// copy and paste ----------------------------------------------------------------
+const trackName = (i) => app.devices[app.show.tracks[i]?.device]?.name || "missing light";
+const otherTracks = (i) => app.show.tracks.map((_, k) => k).filter((k) => k !== i);
+const clone = (clip) => JSON.parse(JSON.stringify(clip));
+
+function copySelection() {
+  const sel = app.selected;
+  if (!sel) { status("Select a clip or a light to copy", true); return; }
+  const clips = sel.clip ? [sel.clip] : app.show.tracks[sel.track].clips;
+  if (!clips.length) { status("Nothing to copy on this light", true); return; }
+  app.clipboard = { clips: clips.map(clone), track: sel.track, whole: !sel.clip };
+  status(`Copied ${clips.length} effect${clips.length > 1 ? "s" : ""}`);
+  renderInspector();
+}
+
+// Onto another light, effects keep their times so the lights match.
+// Onto the same light, they go to the playhead.
+function paste() {
+  const cb = app.clipboard, sel = app.selected;
+  if (!cb) { status("Copy a clip or a light first", true); return; }
+  if (!sel) { status("Select the light to paste onto", true); return; }
+  let shift = 0;
+  if (sel.track === cb.track && !cb.whole) shift = app.time - Math.min(...cb.clips.map((c) => c.start));
+  const pasted = cb.clips.map((c) => ({ ...clone(c), start: c.start + shift, end: c.end + shift }));
+  app.show.tracks[sel.track].clips.push(...pasted);
+  app.selected = pasted.length === 1 ? { track: sel.track, clip: pasted[0] } : { track: sel.track, clip: null };
+  status(`Pasted ${pasted.length} effect${pasted.length > 1 ? "s" : ""} onto ${trackName(sel.track)}`);
+  app.changed();
+}
+
+function copyClipsTo(clips, from, targets, replace = false) {
+  if (!targets.length) { status("There are no other lights", true); return; }
+  for (const t of targets) {
+    if (replace) app.show.tracks[t].clips = [];
+    app.show.tracks[t].clips.push(...clips.map(clone));
+  }
+  status(`Copied ${clips.length} effect${clips.length > 1 ? "s" : ""} from ${trackName(from)} to `
+    + (targets.length === 1 ? trackName(targets[0]) : `${targets.length} lights`));
+  app.changed();
+}
+
+function renderTrackInspector(i) {
+  const box = $("inspector");
+  const clips = app.show.tracks[i].clips;
+  box.replaceChildren();
+  const h = document.createElement("h3");
+  h.textContent = `${trackName(i)}: ${clips.length} effect${clips.length === 1 ? "" : "s"}`;
+  box.append(h);
+  if (app.show.tracks.length > 1 && clips.length) {
+    const target = document.createElement("select");
+    target.add(new Option("All other lights", "all"));
+    for (const k of otherTracks(i)) target.add(new Option(trackName(k), k));
+    const replace = document.createElement("input");
+    replace.type = "checkbox";
+    const label = document.createElement("label");
+    label.append(replace, " Replace their effects");
+    box.append("Copy all effects to ", target, label, button("Copy", () => {
+      const targets = target.value === "all" ? otherTracks(i) : [Number(target.value)];
+      copyClipsTo(clips, i, targets, replace.checked);
+    }, "primary"));
+  }
+  box.append(button("Copy (Ctrl+C)", copySelection, "ghost"));
+  const p = button("Paste here (Ctrl+V)", paste, "ghost");
+  p.disabled = !app.clipboard;
+  box.append(p);
+  if (clips.length) {
+    box.append(button("Clear this light", () => {
+      app.show.tracks[i].clips = [];
+      app.changed();
+    }, "ghost danger"));
+  }
 }
 
 function deleteSelected() {
   const sel = app.selected;
-  if (!sel) return;
+  if (!sel?.clip) return;
   const clips = app.show.tracks[sel.track].clips;
   clips.splice(clips.indexOf(sel.clip), 1);
   app.selected = null;
@@ -431,7 +509,7 @@ function deleteSelected() {
 
 function duplicateSelected() {
   const sel = app.selected;
-  if (!sel) return;
+  if (!sel?.clip) return;
   const len = sel.clip.end - sel.clip.start;
   const copy = { ...sel.clip, start: sel.clip.end, end: sel.clip.end + len };
   app.show.tracks[sel.track].clips.push(copy);
@@ -835,6 +913,8 @@ function wire() {
     if (typing || $("view-editor").hidden) return;
     if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); restore(e.shiftKey ? 1 : -1); }
     else if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); restore(1); }
+    else if (mod && e.key.toLowerCase() === "c") { e.preventDefault(); copySelection(); }
+    else if (mod && e.key.toLowerCase() === "v") { e.preventDefault(); paste(); }
     else if (e.key === " ") { e.preventDefault(); app.playing ? stop() : play(); }
     else if (e.key === "b" || e.key === "B") tapBeat();
     else if (e.key === "Delete" || e.key === "Backspace") deleteSelected();

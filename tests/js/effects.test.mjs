@@ -33,6 +33,15 @@ test("fade interpolates and wipe fills in order", () => {
     [[255, 255, 255], [255, 255, 255], [0, 0, 0], [0, 0, 0]]);
 });
 
+test("two and three colours split the light or alternate along it", () => {
+  const colours = (buf, n) => Array.from({ length: n }, (_, i) => px(buf, i)[0]);
+  const duo = { ...newClip("duo", 0, 1), color: "#010000", color2: "#020000" };
+  assert.deepEqual(colours(renderTrack([duo], 0, 4), 4), [1, 1, 2, 2]);
+  const trio = { ...newClip("trio", 0, 1), color: "#010000", color2: "#020000", color3: "#030000" };
+  assert.deepEqual(colours(renderTrack([trio], 0, 7), 7), [1, 1, 1, 2, 2, 3, 3]);
+  assert.deepEqual(colours(renderTrack([{ ...trio, layout: "alternate", size: 2 }], 0, 7), 7), [1, 1, 2, 2, 3, 3, 1]);
+});
+
 test("twinkle is deterministic so bakes are repeatable", () => {
   const clip = newClip("twinkle", 0, 10);
   assert.deepEqual(renderTrack([clip], 3.3, 20), renderTrack([clip], 3.3, 20));
