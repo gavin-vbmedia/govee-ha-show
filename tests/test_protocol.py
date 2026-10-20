@@ -16,7 +16,8 @@ def test_checksum_is_xor_of_preceding_bytes():
         cs ^= b
     assert pkt[-1] == cs
     assert pkt[:4] == bytes([0xBB, 0x00, 2 + 6, 0xB0])
-    assert pkt[4:6] == bytes([0, 2])  # gradient off, two segments
+    assert pkt[4:6] == bytes([1, 2])  # gradient off, two segments (matches OpenRGB)
+    assert protocol.razer_colors(bytes(3), gradient=True)[4] == 0
 
 
 def test_colors_truncate_partial_segment():

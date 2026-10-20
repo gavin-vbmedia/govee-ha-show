@@ -136,6 +136,9 @@ def test_frame(segments: int, t: float) -> bytes:
 async def run_test_pattern(output: Output, ip: str, segments: int, seconds: float = 15,
                            *, reverse=False, gradient=False, fps: int = 30):
     dev = output.claim(ip, segments, reverse=reverse, gradient=gradient)
+    # Logged so a light that ignores the pattern can be compared against other tools.
+    log.info("Test pattern on %s: %d segments, first colour packet %s", ip, segments,
+             razer_colors(test_frame(segments, 0), gradient).hex(" "))
     t0 = time.monotonic()
     try:
         while (t := time.monotonic() - t0) < seconds:
