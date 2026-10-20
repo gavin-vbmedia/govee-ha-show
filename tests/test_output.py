@@ -66,3 +66,15 @@ def test_idle_light_is_kept_in_realtime_mode():
     assert max(gaps) < 30
     enables = [p for p in razer_packets(sock) if p[3] == 0xB1]
     assert len(enables) >= 300 // output.REENABLE_S
+
+
+def test_razer_on_is_repeated_while_the_light_starts_up():
+    # Turning a light on and enabling realtime mode in the same instant can lose the enable.
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.5", 1, sock)
+    dev.enable()
+    t0 = dev.enabled_at
+    for i in range(1, 200):  # ten seconds of ticks
+        dev.tick(t0 + i * 0.05)
+    times_enabled = len([p for p in razer_packets(sock) if p[3] == 0xB1])
+    assert 8 <= times_enabled <= 12  # about twice a second for 5 s, then quiet

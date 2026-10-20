@@ -15,6 +15,10 @@ log = logging.getLogger(__name__)
 
 KEEPALIVE_S = 20  # device drops out of razer mode after ~60s of silence
 REENABLE_S = 60
+# A light that was off is still starting up when the first razer-on arrives and can ignore it,
+# so repeat it often for the first few seconds before settling to once a minute.
+STARTUP_S = 5
+STARTUP_REENABLE_S = 0.5
 MAX_FPS = 40
 
 
@@ -31,6 +35,7 @@ class OutputDevice:
         self.last_frame: bytes | None = None
         self.last_sent = 0.0
         self.last_enable = 0.0
+        self.enabled_at = 0.0
         self.enabled = False
 
     def _send(self, payload: bytes):
@@ -43,7 +48,7 @@ class OutputDevice:
         self._send(wrap("turn", {"value": 1}))
         self._send(wrap("brightness", {"value": 100}))  # let the show own brightness
         self._send(razer_msg(razer_enable(True)))
-        self.last_enable = time.monotonic()
+        self.last_enable = self.enabled_at = time.monotonic()
         self.enabled = True
 
     def disable(self):
@@ -62,7 +67,8 @@ class OutputDevice:
     def tick(self, now: float):
         if not self.enabled:
             return
-        if now - self.last_enable > REENABLE_S:
+        starting = now - self.enabled_at < STARTUP_S
+        if now - self.last_enable > (STARTUP_REENABLE_S if starting else REENABLE_S):
             self._send(razer_msg(razer_enable(True)))
             self.last_enable = now
         frame = self.pending if self.pending is not None else self.last_frame
