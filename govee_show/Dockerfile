@@ -1,5 +1,6 @@
-ARG BUILD_FROM
-FROM ${BUILD_FROM}
+# The Supervisor passes BUILD_ARCH (amd64 or aarch64).
+ARG BUILD_ARCH=amd64
+FROM ghcr.io/home-assistant/${BUILD_ARCH}-base-python:3.13-alpine3.22
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.txt

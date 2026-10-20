@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Fix install: use a Home Assistant base image tag that exists (Python 3.13, Alpine 3.22) and
+  move build settings into the Dockerfile (build.yaml is deprecated).
+
 ## 0.2.1
 
 - Planned lights: add a light you don't have yet (name and segment count) and build shows with it.
