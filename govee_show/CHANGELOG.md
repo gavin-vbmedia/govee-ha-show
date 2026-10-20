@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.16
+
+- Fix: lights blinked about once a minute during long effects. The "realtime on" command was
+  repeated every minute and some lights blink when they hear it. It's now only sent while a
+  light starts up, and the constant stream of colours keeps the light in realtime mode.
+
 ## 0.2.15
 
 - The clip settings below the timeline are grouped into Clip, Colours, Effect settings and

@@ -1,7 +1,8 @@
 """Stream per-segment colours to Govee devices over the razer protocol.
 
-Each device is rate limited (latest frame wins), kept in razer mode with a
-periodic keepalive, and re-enabled every minute in case it rebooted.
+Each device is rate limited (latest frame wins) and kept in razer mode by streaming
+frames continuously. Razer-on is only sent while a light starts up: repeating it later
+makes some lights blink.
 """
 import asyncio
 import colorsys
@@ -17,9 +18,10 @@ log = logging.getLogger(__name__)
 # of the last colour packet, so an unchanged frame is streamed 10 times a second, as SignalRGB
 # does. It is a small packet, so this costs next to nothing.
 KEEPALIVE_S = 0.1
-REENABLE_S = 60
 # A light that was off is still starting up when the first razer-on arrives and can ignore it,
-# so repeat it often for the first few seconds before settling to once a minute.
+# so repeat it for the first few seconds. After that it isn't repeated: the H70C5 blinks each
+# time it hears razer-on, and the constant stream of frames already keeps it in realtime mode.
+# A light that loses power mid-show picks realtime up again when the next show starts.
 STARTUP_S = 5
 STARTUP_REENABLE_S = 0.5
 MAX_FPS = 40
@@ -86,7 +88,7 @@ class OutputDevice:
         if not self.enabled:
             return
         starting = now - self.enabled_at < STARTUP_S
-        if self.realtime and now - self.last_enable > (STARTUP_REENABLE_S if starting else REENABLE_S):
+        if self.realtime and starting and now - self.last_enable > STARTUP_REENABLE_S:
             self._send(razer_msg(razer_enable(True)))
             self.last_enable = now
             self.last_sent = 0.0  # repaint straight after, in case realtime-on reset the light
