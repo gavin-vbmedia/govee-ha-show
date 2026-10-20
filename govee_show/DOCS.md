@@ -169,9 +169,11 @@ Send `input: {action: stop}` to stop. The exact input for the open show is shown
 
 ## Arrange the editor
 
-Every editor panel (Show, Song, Playback, Beats, Zoom, Preview, Effects and Selection) has a **⋯**
-button in its corner: use it to move the panel to the top, left, right or bottom of the timeline.
-The **Layout** section of the **Settings** tab lists every panel in one place and has **Reset
+Every editor panel (Show, Song, Playback, Beats, Zoom, Preview, Timeline and Selection) has a **⋯**
+button in its corner: use it to move the panel to the top, left, middle, right or bottom. Top and
+bottom run the full width; left, middle and right sit side by side between them. Any panel except
+the Timeline and Selection can also be **Hidden**. The **Layout** section of the **Settings** tab
+lists every panel in one place, which is where a hidden panel is brought back, and has **Reset
 layout**. The layout is saved in your browser, so each computer or phone keeps its own.
 
 ## Experimental: Govee scenes
