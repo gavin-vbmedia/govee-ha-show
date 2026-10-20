@@ -5,6 +5,10 @@
 
 export const FPS = 40;
 
+// The House lane's track id. Its clips run across every light by where its segments sit on the
+// house photo, on top of each light's own effects.
+export const HOUSE = "@house";
+
 export function hexToRgb(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
   const n = m ? parseInt(m[1], 16) : 0;
@@ -213,6 +217,78 @@ export const EFFECTS = {
   },
 };
 
+// House effects colour a segment by where it sits on the house photo: u runs 0 to 1 from the
+// leftmost traced light to the rightmost, v from the highest to the lowest. renderAt returns a
+// colour, with an optional 4th value for how much of it to lay over the light's own effects
+// (0 to 1), or null to leave them be. On a plain strip (the clip's thumbnail, the effect picker)
+// render() shows the effect as if the strip ran left to right across the house.
+const DIRECTIONS = ["left to right", "right to left", "top to bottom", "bottom to top", "out from centre",
+  "in to centre"];
+const houseDirection = choice("direction", "Direction", "left to right", DIRECTIONS);
+const outside = choice("outside", "Elsewhere", "background colour", ["background colour", "lights' own effects"]);
+
+function along(dir, u, v) {
+  switch (dir) {
+    case "right to left": return 1 - u;
+    case "top to bottom": return v;
+    case "bottom to top": return 1 - v;
+    case "out from centre": return Math.min(Math.hypot(u - 0.5, v - 0.5) / Math.SQRT1_2, 1);
+    case "in to centre": return 1 - Math.min(Math.hypot(u - 0.5, v - 0.5) / Math.SQRT1_2, 1);
+    default: return u;
+  }
+}
+
+// Colour `c` at strength a (0..1), over the background colour or over the light's own effects.
+function layer(p, c, a) {
+  if (p.outside === "lights' own effects") return a > 0 ? [...c, a] : null;
+  return mix(hexToRgb(p.background), c, a);
+}
+
+function houseEffect(fx) {
+  return {
+    ...fx,
+    house: true,
+    render: (p, t, dur, n, i) => {
+      const u = n > 1 ? i / (n - 1) : 0.5;
+      const c = fx.renderAt(p, t, dur, u, u);
+      return !c ? [0, 0, 0] : c.length > 3 ? c.slice(0, 3).map((v) => v * c[3]) : c;
+    },
+  };
+}
+
+Object.assign(EFFECTS, {
+  sweep: houseEffect({
+    label: "Sweep",
+    params: [color("color", "Colour", "#ffffff"), color("background", "Background", "#000000"), houseDirection,
+      num("width", "Band width (share of the house)", 0.25, 0.02, 1, 0.01),
+      num("sweeps", "Sweeps in the clip", 1, 1, 50, 1), outside],
+    renderAt: (p, t, dur, u, v) => {
+      const w = Math.max(Number(p.width) || 0.25, 0.01);
+      const f = mod((t / dur) * Math.max(1, Math.round(p.sweeps || 1)), 1);
+      const centre = -w + f * (1 + 2 * w);
+      const a = smooth(Math.max(0, 1 - Math.abs(along(p.direction, u, v) - centre) / w));
+      return layer(p, hexToRgb(p.color), a);
+    },
+  }),
+  housewipe: houseEffect({
+    label: "House wipe",
+    params: [color("color", "Colour", "#ff0000"), color("background", "Background", "#000000"), houseDirection,
+      num("soft", "Soft edge (share of the house)", 0.05, 0, 0.5, 0.01), outside],
+    renderAt: (p, t, dur, u, v) => {
+      const soft = Math.max(Number(p.soft) || 0, 0.001);
+      const front = (t / dur) * (1 + soft);
+      const a = Math.min(Math.max((front - along(p.direction, u, v)) / soft, 0), 1);
+      return layer(p, hexToRgb(p.color), a);
+    },
+  }),
+  wave: houseEffect({
+    label: "Rainbow wave",
+    params: [houseDirection, num("size", "Rainbows across the house", 1, 0.1, 10, 0.1),
+      num("speed", "Speed (rainbows per second)", 0.5, -10, 10, 0.1)],
+    renderAt: (p, t, dur, u, v) => hsv(mod(along(p.direction, u, v) * p.size - t * p.speed, 1), 1, 1),
+  }),
+});
+
 // Every effect gets a Brightness slider, applied after it renders. Rainbow had its own with the
 // same key, so its older clips keep their level.
 const BRIGHTNESS = { key: "brightness", label: "Brightness %", type: "range", default: 100, min: 0, max: 100, step: 1 };
@@ -224,6 +300,27 @@ export function defaultParams(effect) {
 
 export function newClip(effect, start, end) {
   return { effect, start, end, ...defaultParams(effect) };
+}
+
+// Lays the House lane's clips over a light's frame. pos holds each segment's [u, v] on the house,
+// or null for one that isn't on the photo (those keep their own colours).
+export function applyHouse(clips, time, pos, out) {
+  for (const clip of clips) {
+    if (time < clip.start || time >= clip.end) continue;
+    const fx = EFFECTS[clip.effect];
+    if (!fx?.house) continue;
+    const p = { ...defaultParams(clip.effect), ...clip };
+    const t = time - clip.start, dur = clip.end - clip.start;
+    const level = Math.min(Math.max(Number(p.brightness ?? 100), 0), 100) / 100;
+    for (let i = 0; i < pos.length; i++) {
+      if (!pos[i]) continue;
+      const c = fx.renderAt(p, t, dur, pos[i][0], pos[i][1]);
+      if (!c) continue;
+      const a = c.length > 3 ? c[3] : 1;
+      for (let k = 0; k < 3; k++) out[i * 3 + k] = clamp(out[i * 3 + k] * (1 - a) + c[k] * level * a);
+    }
+  }
+  return out;
 }
 
 // Clips later in the list sit on top. Uncovered segments are black.
@@ -255,8 +352,10 @@ export function showDuration(show) {
 }
 
 // Bake every frame into the layout the Python player reads (see baked.py).
-// devices maps device id -> {segments}. Tracks without a known device are skipped.
-export function bake(show, devices, fps = FPS) {
+// devices maps device id -> {segments}. Tracks without a known device are skipped. positions maps
+// device id -> each segment's [u, v] on the house (or null), for the House lane's clips.
+export function bake(show, devices, fps = FPS, positions = {}) {
+  const houseClips = (show.tracks || []).find((tr) => tr.device === HOUSE)?.clips || [];
   const tracks = (show.tracks || []).filter((tr) => devices[tr.device]);
   const header = {
     fps,
@@ -285,7 +384,8 @@ export function bake(show, devices, fps = FPS) {
     const time = f / fps;
     tracks.forEach((tr, k) => {
       const n = header.tracks[k].segments;
-      renderTrack(tr.clips, time, n, out.subarray(off, off + n * 3));
+      const frame = renderTrack(tr.clips, time, n, out.subarray(off, off + n * 3));
+      if (houseClips.length && positions[tr.device]) applyHouse(houseClips, time, positions[tr.device], frame);
       off += n * 3;
     });
   }

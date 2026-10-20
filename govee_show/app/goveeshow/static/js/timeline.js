@@ -3,7 +3,7 @@
 // The canvas stays the size of the viewport (sticky inside a wide scroll area),
 // so long songs at high zoom never hit browser canvas size limits.
 
-import { EFFECTS, renderTrack } from "./effects.js";
+import { EFFECTS, HOUSE, renderTrack } from "./effects.js";
 
 const HEADER_W = 150;
 const RULER_H = 22;
@@ -137,12 +137,14 @@ export class Timeline {
         ctx.fillRect(0, y, HEADER_W, TRACK_H);
         ctx.globalAlpha = 1;
       }
-      ctx.fillStyle = col("--text");
+      const house = tr.device === HOUSE;
+      ctx.fillStyle = col(house ? "--accent" : "--text");
       ctx.font = "600 13px system-ui, sans-serif";
-      ctx.fillText(clipText(ctx, dev ? dev.name : "Missing device", HEADER_W - 16), 10, y + 20);
+      ctx.fillText(clipText(ctx, house ? "House" : dev ? dev.name : "Missing device", HEADER_W - 16), 10, y + 20);
       ctx.fillStyle = col("--muted");
       ctx.font = "12px system-ui, sans-serif";
-      ctx.fillText(dev ? `${dev.segments} segments${dev.ip ? "" : " · planned"}` : tr.device, 10, y + 36);
+      const sub = house ? "Across all lights" : dev ? `${dev.segments} segments${dev.ip ? "" : " · planned"}` : tr.device;
+      ctx.fillText(sub, 10, y + 36);
     });
     this.drawRange(col);
     ctx.strokeStyle = col("--line");
@@ -398,7 +400,9 @@ export class Timeline {
       c.start = Math.max(0, s);
       c.end = c.start + len;
       const ti = this.trackAt(y);
-      if (ti >= 0 && ti !== d.track) {
+      // A clip can move to another light, but not between the House lane and the lights.
+      const kind = (k) => this.app.show.tracks[k].device === HOUSE;
+      if (ti >= 0 && ti !== d.track && kind(ti) === kind(d.track)) {
         const from = this.app.show.tracks[d.track].clips;
         from.splice(from.indexOf(c), 1);
         this.app.show.tracks[ti].clips.push(c);

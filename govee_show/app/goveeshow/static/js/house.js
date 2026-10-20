@@ -84,6 +84,43 @@ export function icicleDrops(points, drops, bulbs) {
   });
 }
 
+// The segments spot i of `spots` shows, counted from the plug: lo up to (not including) hi.
+function spotRange(i, spots, segments) {
+  const lo = Math.min(Math.floor((i * segments) / spots), segments - 1);
+  return [lo, Math.max(lo + 1, Math.min(Math.floor(((i + 1) * segments) / spots), segments))];
+}
+
+// Where each light's segments sit on the house, for the House lane's effects: the middle of each
+// segment's bulbs (or spots), scaled so the traced lights together run 0 to 1 across (u) and down
+// (v). `lights` is [{dev, bulbs}] for lines and icicles or [{dev, spots}] for spotlights; a
+// segment with nothing in view is null.
+export function segmentPositions(lights) {
+  const raw = {};
+  for (const { dev, bulbs, spots } of lights) {
+    const n = dev.segments, sum = Array.from({ length: n }, () => [0, 0, 0]);
+    const add = (s, [x, y]) => { sum[s][0] += x; sum[s][1] += y; sum[s][2]++; };
+    if (spots) {
+      spots.forEach((p, i) => {
+        const [lo, hi] = spotRange(i, spots.length, n);
+        for (let j = lo; j < hi; j++) add(dev.reverse ? n - 1 - j : j, p);
+      });
+    } else {
+      bulbs.forEach((b, j) => { if (b) add(bulbSegment(j, bulbs.length, n, dev.reverse), b.top || b); });
+    }
+    raw[dev.id] = sum.map(([x, y, k]) => (k ? [x / k, y / k] : null));
+  }
+  const all = Object.values(raw).flat().filter(Boolean);
+  if (!all.length) return {};
+  const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
+  const [x0, y0] = [Math.min(...xs), Math.min(...ys)];
+  const [sx, sy] = [Math.max(...xs) - x0 || 1, Math.max(...ys) - y0 || 1];
+  const out = {};
+  for (const [id, list] of Object.entries(raw)) {
+    out[id] = list.map((p) => (p ? [(p[0] - x0) / sx, (p[1] - y0) / sy] : null));
+  }
+  return out;
+}
+
 // Spotlights: where spot i points, as an offset across and down the photo from where it sits.
 export const DEFAULT_AIM = [0, -0.15];
 export const aimOf = (style, i) => style.aims?.[i] || DEFAULT_AIM;
@@ -91,8 +128,7 @@ export const aimOf = (style, i) => style.aims?.[i] || DEFAULT_AIM;
 // The colour of spot `i` of `spots`: its share of the light's segments, counted from the plug
 // (flipped by Reverse), averaged. `rgb` is the frame, 3 bytes per segment.
 export function spotColour(i, spots, rgb, segments, reverse) {
-  const lo = Math.min(Math.floor((i * segments) / spots), segments - 1);
-  const hi = Math.max(lo + 1, Math.min(Math.floor(((i + 1) * segments) / spots), segments));
+  const [lo, hi] = spotRange(i, spots, segments);
   const sum = [0, 0, 0];
   for (let j = lo; j < hi; j++) {
     const s = reverse ? segments - 1 - j : j;
@@ -218,6 +254,18 @@ export class House {
       this.cache.set(dev.id, c = { key, bulbs });
     }
     return c.bulbs;
+  }
+
+  // Each light's segment positions for the House lane (see segmentPositions).
+  positions() {
+    const lights = [];
+    for (const dev of this.devices) {
+      const pts = this.paths[dev.id];
+      if (!pts?.length) continue;
+      if (this.styles[dev.id]?.style === "spots") lights.push({ dev, spots: pts });
+      else lights.push({ dev, bulbs: this.bulbs(dev) });
+    }
+    return segmentPositions(lights);
   }
 
   setStyle(id, style) {

@@ -1,6 +1,6 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
-import { EFFECTS, FPS, bake, defaultParams, newClip, renderTrack, showDuration } from "./effects.js";
+import { EFFECTS, FPS, HOUSE, applyHouse, bake, defaultParams, newClip, renderTrack, showDuration } from "./effects.js";
 import { House } from "./house.js";
 import { Layout } from "./layout.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
@@ -153,7 +153,12 @@ function indexDevices() {
   timeline.layout();
 }
 
+// Every show has the House lane at the top, then a track per light.
 function ensureTracks() {
+  if (!app.show.tracks.some((t) => t.device === HOUSE)) {
+    app.show.tracks.unshift({ device: HOUSE, clips: [] });
+    app.selected = null; // track numbers have moved
+  }
   for (const d of app.deviceList) {
     if (!app.show.tracks.some((t) => t.device === d.id)) app.show.tracks.push({ device: d.id, clips: [] });
   }
@@ -430,10 +435,11 @@ function drawPreview() {
     pctx.fillText("Add devices on the Devices tab to see a preview here.", 4, 17);
     return;
   }
+  const pos = housePositions();
   tracks.forEach((tr, row) => {
     const dev = app.devices[tr.device];
+    const rgb = lightFrame(tr, dev, app.time, pos);
     const n = dev.segments;
-    const rgb = renderTrack(tr.clips, app.time, n);
     const cap = (dev.brightness ?? 100) / 100;
     if (cap < 1) for (let i = 0; i < rgb.length; i++) rgb[i] = Math.round(rgb[i] * cap);
     const y = row * ROW_H;
@@ -454,9 +460,37 @@ const house = new House({
   api, status,
   frameFor(dev) {
     const tr = app.show.tracks.find((t) => t.device === dev.id);
-    return tr ? renderTrack(tr.clips, app.time, dev.segments) : new Uint8Array(dev.segments * 3);
+    return tr ? lightFrame(tr, dev, app.time, housePositions()) : new Uint8Array(dev.segments * 3);
   },
 });
+
+// The House lane: its clips, and where each light's segments sit for them.
+const houseClips = () => app.show.tracks.find((t) => t.device === HOUSE)?.clips || [];
+const isHouse = (i) => app.show.tracks[i]?.device === HOUSE;
+// House effects go on the House lane and nowhere else; light effects everywhere but.
+const fitsTrack = (effect, i) => !!EFFECTS[effect]?.house === isHouse(i);
+
+function housePositions() {
+  return houseClips().length ? housePositionsAll() : {};
+}
+
+// Worked out at most every 100 ms: the preview, House panel and every light's frame share it.
+const posMemo = { at: -Infinity, value: {} };
+function housePositionsAll() {
+  const now = performance.now();
+  if (now - posMemo.at > 100) {
+    house.devices = app.deviceList;
+    Object.assign(posMemo, { at: now, value: house.positions() });
+  }
+  return posMemo.value;
+}
+
+// A light's colours at `time`: its own clips, then the House lane's over them.
+function lightFrame(tr, dev, time, pos) {
+  const rgb = renderTrack(tr.clips, time, dev.segments);
+  if (pos[dev.id]) applyHouse(houseClips(), time, pos[dev.id], rgb);
+  return rgb;
+}
 
 function drawHouse() {
   house.devices = app.deviceList;
@@ -721,10 +755,16 @@ function drawClipPreview() {
   const c = clipPreview.canvas, sel = app.selected;
   // offsetParent is null while the Selection panel is hidden: no preview, on screen or on the light.
   const track = sel?.clip && c?.isConnected && c.offsetParent && app.show.tracks[sel.track];
+  const clip = sel?.clip, len = clip && Math.max(clip.end - clip.start, 0.05);
+  const t = clip && clip.start + ((performance.now() - clipPreview.started) / 1000) % len;
+  if (track?.device === HOUSE) {
+    // A House clip on its own: as if one strip ran left to right across the house.
+    if (clipPreview.dev) stopLightPreview();
+    drawStrip(c, renderTrack([clip], t, 30), 30);
+    return;
+  }
   const dev = track && app.devices[track.device];
   if (!dev) { if (clipPreview.dev) stopLightPreview(); return; }
-  const clip = sel.clip, len = Math.max(clip.end - clip.start, 0.05);
-  const t = clip.start + ((performance.now() - clipPreview.started) / 1000) % len;
   const rgb = renderTrack([clip], t, dev.segments);
   drawStrip(c, rgb, dev.segments, (dev.brightness ?? 100) / 100);
   const onLight = previewOnLight() && dev.ip && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
@@ -777,20 +817,20 @@ async function stopLightPreview() {
 // Experimental effects (Govee scenes) only appear once switched on in Settings. `keep` stays listed
 // regardless, so a clip that already uses one can still be edited.
 const experimentalOn = () => prefs.get("experimental.scenes", false);
-const visibleEffects = (keep) => Object.entries(EFFECTS).filter(([k, fx]) => !fx.experimental || experimentalOn() || k === keep);
+// house: true for the House lane's effects, false for lights', undefined for both.
+const visibleEffects = (keep, house) => Object.entries(EFFECTS).filter(([k, fx]) =>
+  (!fx.experimental || experimentalOn() || k === keep) && (house === undefined || !!fx.house === house));
 
 // One button per effect; the last one used is outlined so a run of the same effect is quick to add.
 // A button per effect, each with a strip looping that effect with its default settings, as long
 // as the selection (within reason) and on `dev`'s segments, so you can see them before picking.
 const pickerPreview = { items: [], started: 0 };
 
-function effectPicker(onPick, dev = null, length = 3) {
+function effectPicker(onPick, dev = null, length = 3, house = false) {
   const box = document.createElement("div");
   box.className = "effect-picker";
   const len = Math.min(Math.max(length, 1), 6);
-  pickerPreview.items = [];
-  pickerPreview.started = performance.now();
-  for (const [key, fx] of visibleEffects()) {
+  for (const [key, fx] of visibleEffects(undefined, house)) {
     const b = button("", () => {
       app.paletteEffect = key;
       onPick(key);
@@ -836,7 +876,7 @@ function renderInspector() {
   const dev = app.devices[track.device];
   box.replaceChildren();
   const h = document.createElement("h3");
-  h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${dev ? dev.name : "missing device"}`;
+  h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${trackName(sel.track)}`;
   box.append(h, clipPreviewRow(clip, dev));
 
   // Settings are grouped so a clip with many of them stays readable.
@@ -860,7 +900,7 @@ function renderInspector() {
   };
 
   const effect = document.createElement("select");
-  for (const [key, fx] of visibleEffects(clip.effect)) effect.add(new Option(fx.label, key, false, key === clip.effect));
+  for (const [key, fx] of visibleEffects(clip.effect, isHouse(sel.track))) effect.add(new Option(fx.label, key, false, key === clip.effect));
   effect.addEventListener("change", () => {
     const defaults = defaultParams(effect.value);
     for (const k of Object.keys(clip)) if (!["effect", "start", "end"].includes(k) && !(k in defaults)) delete clip[k];
@@ -939,9 +979,11 @@ function renderInspector() {
   box.append(...Object.values(groups).filter((g) => g.children.length > 1));
   const actions = document.createElement("div");
   actions.className = "insp-actions";
-  actions.append(button("Copy", copySelection, "ghost"),
-    button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"),
-    button("Delete clip", deleteSelected, "ghost danger"));
+  actions.append(button("Copy", copySelection, "ghost"));
+  if (!isHouse(sel.track)) {
+    actions.append(button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"));
+  }
+  actions.append(button("Delete clip", deleteSelected, "ghost danger"));
   box.append(actions);
 }
 
@@ -978,8 +1020,10 @@ function scenePicker(clip, dev) {
 }
 
 // copy and paste ----------------------------------------------------------------
-const trackName = (i) => app.devices[app.show.tracks[i]?.device]?.name || "missing light";
-const otherTracks = (i) => app.show.tracks.map((_, k) => k).filter((k) => k !== i);
+const trackName = (i) => (isHouse(i) ? "the House lane"
+  : app.devices[app.show.tracks[i]?.device]?.name || "missing light");
+// The other lights' tracks (never the House lane, whose effects are a different kind).
+const otherTracks = (i) => app.show.tracks.map((_, k) => k).filter((k) => k !== i && !isHouse(k));
 const clone = (clip) => JSON.parse(JSON.stringify(clip));
 
 function copySelection() {
@@ -1000,7 +1044,13 @@ function paste() {
   if (!sel) { status("Select the light to paste onto", true); return; }
   let shift = 0;
   if (sel.track === cb.track && !cb.whole) shift = app.time - Math.min(...cb.clips.map((c) => c.start));
-  const pasted = cb.clips.map((c) => ({ ...clone(c), start: c.start + shift, end: c.end + shift }));
+  const fits = cb.clips.filter((c) => fitsTrack(c.effect, sel.track));
+  if (!fits.length) {
+    status(isHouse(sel.track) ? "Only House effects can go on the House lane"
+      : "House effects can only go on the House lane", true);
+    return;
+  }
+  const pasted = fits.map((c) => ({ ...clone(c), start: c.start + shift, end: c.end + shift }));
   app.show.tracks[sel.track].clips.push(...pasted);
   app.selected = pasted.length === 1 ? { track: sel.track, clip: pasted[0] } : { track: sel.track, clip: null };
   status(`Pasted ${pasted.length} effect${pasted.length > 1 ? "s" : ""} onto ${trackName(sel.track)}`);
@@ -1023,9 +1073,17 @@ function renderTrackInspector(i) {
   const clips = app.show.tracks[i].clips;
   box.replaceChildren();
   const h = document.createElement("h3");
-  h.textContent = `${trackName(i)}: ${clips.length} effect${clips.length === 1 ? "" : "s"}`;
+  h.textContent = `${isHouse(i) ? "House lane" : trackName(i)}: ${clips.length} effect${clips.length === 1 ? "" : "s"}`;
   box.append(h);
-  if (app.show.tracks.length > 1 && clips.length) {
+  if (isHouse(i)) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = Object.keys(housePositionsAll()).length
+      ? "Effects here run across all your lights by where they are on the house photo, on top of each light's own effects. Drag across this lane to add one."
+      : "Effects here run across all your lights by where they are on the house photo. Trace your lights on the House tab first.";
+    box.append(p);
+  }
+  if (!isHouse(i) && otherTracks(i).length && clips.length) {
     const target = document.createElement("select");
     target.add(new Option("All other lights", "all"));
     for (const k of otherTracks(i)) target.add(new Option(trackName(k), k));
@@ -1042,13 +1100,14 @@ function renderTrackInspector(i) {
     box.append(paletteRow(null,
       button("Recolour this light", () => recolour([i]), "ghost"),
       button("Recolour all lights", () => recolour(app.show.tracks.map((_, k) => k)), "ghost")));
+
   }
   box.append(button("Copy (Ctrl+C)", copySelection, "ghost"));
   const p = button("Paste here (Ctrl+V)", paste, "ghost");
   p.disabled = !app.clipboard;
   box.append(p);
   if (clips.length) {
-    box.append(button("Clear this light", () => {
+    box.append(button(isHouse(i) ? "Clear the House lane" : "Clear this light", () => {
       app.show.tracks[i].clips = [];
       app.changed();
     }, "ghost danger"));
@@ -1207,11 +1266,15 @@ const rangeTracks = (r) => r.tracks.filter((t) => app.show.tracks[t]);
 
 function renderRangeInspector(r) {
   const box = $("inspector");
+  pickerPreview.items = [];
+  pickerPreview.started = performance.now();
   box.replaceChildren();
   const tracks = rangeTracks(r);
   const h = document.createElement("h3");
+  const lights = tracks.filter((t) => !isHouse(t));
   h.textContent = `Selected ${fmtTime(r.start)} to ${fmtTime(r.end)} on `
-    + (tracks.length === 1 ? trackName(tracks[0]) : `${tracks.length} lights`);
+    + (tracks.length === 1 ? trackName(tracks[0]) : lights.length === tracks.length ? `${tracks.length} lights`
+      : `the House lane and ${lights.length} light${lights.length === 1 ? "" : "s"}`);
   box.append(h);
   const timeInput = (key) => {
     const el = document.createElement("input");
@@ -1237,12 +1300,23 @@ function renderRangeInspector(r) {
     button("▶ Play this part", () => { app.setRegion(r); app.seek(r.start); play(); }, "ghost"));
   const add = document.createElement("p");
   add.className = "hint";
-  add.textContent = "Pick an effect to add it here:";
-  box.append(add, effectPicker(addToRange, app.devices[app.show.tracks[tracks[0]]?.device], r.end - r.start));
+  // With the House lane in the selection, House effects go there and light effects on the lights.
+  const onHouse = tracks.some(isHouse);
+  add.textContent = !onHouse ? "Pick an effect to add it here:" : !lights.length
+    ? "Pick a House effect: it runs across all your lights by where they are on the house photo."
+    : "Pick an effect for the lights:";
+  box.append(add, effectPicker(addToRange, app.devices[app.show.tracks[lights[0] ?? tracks[0]]?.device],
+    r.end - r.start, !lights.length));
+  if (onHouse && lights.length) {
+    const more = document.createElement("p");
+    more.className = "hint";
+    more.textContent = "Or a House effect for the House lane:";
+    box.append(more, effectPicker(addToRange, null, r.end - r.start, true));
+  }
 }
 
 function addToRange(effect) {
-  const r = app.selected.range, tracks = rangeTracks(r);
+  const r = app.selected.range, tracks = rangeTracks(r).filter((t) => fitsTrack(effect, t));
   const added = tracks.map((t) => {
     const clip = newClip(effect, r.start, r.end);
     app.show.tracks[t].clips.push(clip);
@@ -1384,7 +1458,8 @@ async function save() {
     app.showId = id;
     prefs.set("lastShow", id);
   }
-  const key = JSON.stringify(app.deviceList.map((d) => [d.id, d.segments]));
+  const pos = housePositions();
+  const key = JSON.stringify([app.deviceList.map((d) => [d.id, d.segments]), pos]);
   if (app.dirty || app.bakedKey === null) {
     app.show.duration = app.duration();
     const edits = app.edits;
@@ -1393,7 +1468,7 @@ async function save() {
     app.bakedKey = null;  // saving the show clears the server's bake
   }
   if (app.bakedKey !== key) {
-    const blob = bake(app.show, app.devices);
+    const blob = bake(app.show, app.devices, FPS, pos);
     await api(`api/shows/${app.showId}/baked`, {
       method: "PUT", body: blob, headers: { "Content-Type": "application/octet-stream" },
     });
