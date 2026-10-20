@@ -52,3 +52,22 @@ def test_colorwc_uses_average_colour():
     msg = json.loads(protocol.colorwc_msg(*protocol.average(bytes([255, 0, 0, 0, 0, 255]))))
     assert msg["msg"]["cmd"] == "colorwc"
     assert msg["msg"]["data"]["color"] == {"r": 127, "g": 0, "b": 127}
+
+
+def test_scene_packets_match_govee2mqtt():
+    # Govee's "Forest" scene, as encoded by govee2mqtt's own test.
+    param = ("AyYAAQAKAgH/GQG0CgoCyBQF//8AAP//////AP//lP8AFAGWAAAAACMAAg8FAgH/FAH7AAAB+goEBP8AtP8AR///4/8AAAAA"
+             "AAAAABoAAAABAgH/BQHIFBQC7hQBAP8AAAAAAAAAAA==")
+    expected = """
+a3 00 01 07 02 03 26 00 01 00 0a 02 01 ff 19 01 b4 0a 0a d9
+a3 01 02 c8 14 05 ff ff 00 00 ff ff ff ff ff 00 ff ff 94 12
+a3 02 ff 00 14 01 96 00 00 00 00 23 00 02 0f 05 02 01 ff 0a
+a3 03 14 01 fb 00 00 01 fa 0a 04 04 ff 00 b4 ff 00 47 ff b3
+a3 04 ff e3 ff 00 00 00 00 00 00 00 00 1a 00 00 00 01 02 5d
+a3 05 01 ff 05 01 c8 14 14 02 ee 14 01 00 ff 00 00 00 00 92
+a3 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 5c
+33 05 04 d4 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 e6
+"""
+    assert [p.hex(" ") for p in protocol.scene_packets(212, param)] == expected.strip().splitlines()
+    msg = json.loads(protocol.ptreal_msg(protocol.scene_packets(212, param)))["msg"]
+    assert msg["cmd"] == "ptReal" and len(msg["data"]["command"]) == 8

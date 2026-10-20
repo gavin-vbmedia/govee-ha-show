@@ -13,7 +13,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, commands, discovery
+from . import __version__, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .mqtt import MqttBridge
@@ -176,6 +176,16 @@ async def probe_device(request):
     tests[d["ip"]] = asyncio.create_task(run_probe(
         app[OUTPUT], d["ip"], segment, gradient=d["gradient"], protocol=d["protocol"]))
     return web.json_response({"ok": True, "max": PROBE_MAX})
+
+
+async def get_scenes(request):
+    """Experimental: Govee's built-in scenes for a model, for scene clips."""
+    try:
+        found = await scenes.scenes_for(request.query.get("sku", ""),
+                                        request.app[STORAGE].config_dir / "scenes")
+    except scenes.SceneError as e:
+        raise web.HTTPBadGateway(text=str(e))
+    return web.json_response(found)
 
 
 async def stop_tests(app):
@@ -426,6 +436,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/speakers", list_speakers)
     r.add_put("/api/speakers/delay", put_speaker_delay)
     r.add_get("/api/palettes", get_palettes)
+    r.add_get("/api/scenes", get_scenes)
     r.add_put("/api/palettes", put_palettes)
     r.add_post("/api/command", run_command)
     r.add_get("/api/player", player_status)

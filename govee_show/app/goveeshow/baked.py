@@ -6,10 +6,13 @@ Layout (big endian):
   u32      header length
   bytes    header JSON: {"fps": 40, "frames": N, "tracks": [{"device": id, "segments": n}, ...]}
   N frames, each the tracks' r g b bytes concatenated in track order (segments * 3 per track)
+
+The header may also list experimental Govee scenes, which take a track's light over between two
+frames: "scenes": [{"track": index, "start": frame, "end": frame, "code": n, "param": base64}].
 """
 import json
 import struct
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 MAGIC = b"GVSF"
 VERSION = 1
@@ -32,12 +35,22 @@ class Track:
 
 
 @dataclass
+class Scene:
+    track: int
+    start: int  # first frame
+    end: int  # frame after the last
+    code: int
+    param: str
+
+
+@dataclass
 class Baked:
     fps: int
     frames: int
     tracks: list[Track]
     data: bytes
     stride: int
+    scenes: list[Scene] = field(default_factory=list)
 
     @property
     def duration(self) -> float:
@@ -48,9 +61,12 @@ class Baked:
         return self.data[start: start + track.size]
 
 
-def encode(fps: int, tracks: list[dict], frames: list[bytes]) -> bytes:
+def encode(fps: int, tracks: list[dict], frames: list[bytes], scenes: list[dict] | None = None) -> bytes:
     """Used by tests and tooling; the editor writes the same layout in JS."""
-    header = json.dumps({"fps": fps, "frames": len(frames), "tracks": tracks}).encode()
+    head = {"fps": fps, "frames": len(frames), "tracks": tracks}
+    if scenes:
+        head["scenes"] = scenes
+    header = json.dumps(head).encode()
     return MAGIC + struct.pack(">BI", VERSION, len(header)) + header + b"".join(frames)
 
 
@@ -78,4 +94,13 @@ def decode(blob: bytes) -> Baked:
     data = blob[9 + hlen:]
     if len(data) != frames * offset:
         raise BakedError(f"expected {frames * offset} bytes of frames, got {len(data)}")
-    return Baked(fps, frames, tracks, data, offset)
+    scenes = []
+    try:
+        for s in header.get("scenes") or []:
+            scene = Scene(int(s["track"]), int(s["start"]), int(s["end"]), int(s["code"]), str(s.get("param", "")))
+            if not (0 <= scene.track < len(tracks) and 0 <= scene.start < scene.end and 0 <= scene.code <= 0xFFFF):
+                raise ValueError("scene out of range")
+            scenes.append(scene)
+    except (ValueError, KeyError, TypeError) as e:
+        raise BakedError(f"bad scene: {e}") from e
+    return Baked(fps, frames, tracks, data, offset, scenes)

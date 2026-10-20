@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import time
 
 from goveeshow import output
 
@@ -155,3 +156,26 @@ def test_brightness_caps_every_frame_and_can_change_live():
     assert out.claim("10.0.0.5", 1, brightness=100) is dev
     dev.update(b"\xff\x80\x00")
     assert dev.pending == b"\xff\x80\x00"
+
+
+def test_scene_pauses_realtime_then_hands_back():
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.5", 1, sock)
+    dev.enable()
+    t = dev.enabled_at + output.STARTUP_S + 1
+    dev.update(b"\xff\x00\x00")
+    dev.tick(t)
+    dev.play_scene(212, "")
+    dev.play_scene(212, "")  # the same scene again is not re-sent
+    cmds = [m["cmd"] for m, _ in sock.sent]
+    assert cmds.count("ptReal") == 1
+    assert razer_packets(sock)[-1] == output.razer_enable(False)
+    sent = len(sock.sent)
+    dev.update(b"\x00\xff\x00")
+    dev.tick(t + 1)
+    assert len(sock.sent) == sent  # nothing streamed over the scene
+    dev.end_scene()
+    assert razer_packets(sock)[-1] == output.razer_enable(True)
+    dev.update(b"\x00\xff\x00")
+    dev.tick(time.monotonic() + 0.01)
+    assert razer_packets(sock)[-1][3] == 0xB0
