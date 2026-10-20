@@ -10,7 +10,12 @@
 - Shows saved to the add-on config folder and baked into precomputed frames on save.
 - Playback from the browser: the song plays in the browser and the add-on streams frames to the
   lights over Govee's realtime (razer) protocol, kept in sync with the audio.
-- Songs from the Home Assistant media folder or uploaded through the editor.
+- Songs from the Home Assistant media folder or uploaded through the editor (saved to
+  `/media/govee_show`).
+- Play the song on a Home Assistant media player, with the lights following it and a delay
+  setting per speaker.
+- Automations: MQTT discovery entities (show select, play and stop buttons, status sensor) when a
+  broker is set up, and play/stop commands through the `hassio.addon_stdin` action.
 
 ## 0.1.0
 

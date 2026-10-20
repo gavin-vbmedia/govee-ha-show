@@ -5,6 +5,7 @@ Open **Light Shows** from the Home Assistant sidebar to build and play shows.
 ## Requirements
 
 - Home Assistant OS or Supervised (anything with Settings → Add-ons).
+- Optional: the Mosquitto broker add-on and MQTT integration, for show entities.
 - Govee devices with **LAN Control** switched on in the Govee Home app.
 - Devices on the same network as Home Assistant, with multicast allowed.
 
@@ -31,15 +32,63 @@ and redo, Ctrl+S save, + and − zoom, Ctrl+scroll zoom.
 
 ## 3. Play it
 
-**Save** stores the show and bakes every frame for playback. **Play** plays the song in your browser
-and sends the lights the matching frames over the network (it saves first if needed). Untick
-**Lights** to preview in the browser only. If the lights lead or lag your speakers, adjust
-**Light offset** under Playback settings.
+**Save** stores the show and bakes every frame for playback (Play saves first if needed).
+
+Next to Play, choose where the song plays:
+
+- **Song in this browser**: the song plays in your browser and the add-on streams the lights in
+  sync with it. Untick **Lights** to preview in the browser only. If the lights lead or lag,
+  adjust **Light offset** under *Playback and automation*.
+- **Speaker: …** (any Home Assistant media player): the add-on starts the song on that speaker
+  and the lights with it; the editor's playhead follows along. Speakers start playing a little
+  after they report they have, so set **Speaker delay** for each speaker (often 100 to 500 ms
+  for Wi-Fi speakers) until the lights land on the beat. The speaker you pick is saved with the
+  show and is what automations use.
+
+## 4. Schedule it with automations
+
+**With MQTT** (if you have the Mosquitto broker add-on and MQTT integration set up), the add-on
+creates a **Govee Light Show** device with a **Show** select, **Play** and **Stop** buttons and a
+**Status** sensor. For example:
+
+```yaml
+triggers:
+  - trigger: sun
+    event: sunset
+actions:
+  - action: select.select_option
+    target:
+      entity_id: select.govee_light_show_show
+    data:
+      option: Halloween
+  - action: button.press
+    target:
+      entity_id: button.govee_light_show_play
+```
+
+You can also publish a show's name or id to the `govee_show/play` topic.
+
+**Without MQTT**, use the add-on's stdin:
+
+```yaml
+actions:
+  - action: hassio.addon_stdin
+    data:
+      addon: <slug>_govee_show   # pick Govee Light Show in the UI editor
+      input:
+        action: play
+        show: Halloween
+        media_player: media_player.garden   # optional; defaults to the show's speaker
+```
+
+Send `input: {action: stop}` to stop. The exact input for the open show is shown under
+*Playback and automation* in the editor. A show with no speaker plays the lights only.
 
 ## Where things are stored
 
-Shows, devices and uploaded songs live in the add-on's config folder
-(`/addon_configs/<slug>_govee_show/`), so they are included in Home Assistant backups.
+Shows, devices and settings live in the add-on's config folder
+(`/addon_configs/<slug>_govee_show/`), so they are included in Home Assistant backups. Uploaded
+songs go to `/media/govee_show/` so media players can play them.
 
 ## Notes
 

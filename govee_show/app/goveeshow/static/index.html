@@ -36,7 +36,10 @@
       <button id="btn-home" title="Back to start (Home)">⏮</button>
       <button id="btn-play" class="primary" title="Play / pause (Space)">▶ Play</button>
       <span id="clock" class="clock">0:00.00</span>
-      <label title="Send to the lights while playing"><input id="lights" type="checkbox" checked> Lights</label>
+      <select id="output-select" title="Where the song plays. A speaker is also what automations use for this show.">
+        <option value="">Song in this browser</option>
+      </select>
+      <label id="lights-wrap" title="Send to the lights while playing in the browser"><input id="lights" type="checkbox" checked> Lights</label>
     </div>
     <div class="group">
       <button id="btn-tap" title="Add a beat at the playhead (B)">Tap beat</button>
@@ -74,10 +77,13 @@
   </section>
 
   <details class="settings">
-    <summary>Playback settings</summary>
-    <label title="Positive values delay the lights relative to the audio">Light offset
+    <summary>Playback and automation</summary>
+    <p><label title="Positive values delay the lights relative to the audio"><span id="offset-label">Light offset</span>
       <input id="offset" type="number" step="10" value="0"> ms</label>
-    <span class="hint">Use this to line the lights up with your speakers if they lead or lag.</span>
+    <span class="hint" id="offset-hint">Use this to line the lights up with the audio if they lead or lag.</span></p>
+    <p class="hint">To play this show from an automation, use the <b>Govee Light Show</b> MQTT entities
+      (pick the show, then press Play), or the <code>hassio.addon_stdin</code> action with input
+      <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the speaker chosen above.</p>
   </details>
 
   <audio id="audio" preload="auto"></audio>

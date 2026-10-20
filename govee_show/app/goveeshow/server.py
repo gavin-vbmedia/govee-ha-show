@@ -11,10 +11,13 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, discovery
+from . import __version__, commands, discovery
 from .baked import BakedError, decode
+from .ha import HAError, HomeAssistant
+from .mqtt import MqttBridge
 from .output import Output, run_test_pattern
 from .player import Player
+from .runner import Runner, RunnerError
 from .storage import Storage, slugify, valid_id
 
 log = logging.getLogger(__name__)
@@ -27,6 +30,10 @@ OUTPUT = web.AppKey("output", Output)
 PLAYER = web.AppKey("player", Player)
 STORAGE = web.AppKey("storage", Storage)
 TESTS = web.AppKey("tests", dict)
+HA = web.AppKey("ha", HomeAssistant)
+RUNNER = web.AppKey("runner", Runner)
+MQTT = web.AppKey("mqtt", MqttBridge)
+BACKGROUND = web.AppKey("background", list)
 ALLOW_ALL = web.AppKey("allow_all", bool)
 
 
@@ -59,7 +66,8 @@ async def index(request):
 
 
 async def info(request):
-    return web.json_response({"version": __version__})
+    return web.json_response({"version": __version__, "ha": request.app[HA].available,
+                              "mqtt": request.app[MQTT].client is not None})
 
 
 # devices -----------------------------------------------------------------
@@ -102,7 +110,7 @@ async def test_device(request):
     d = _clean_device(body)
     seconds = min(max(float(body.get("seconds", 15)), 1), 60)
     app = request.app
-    await app[PLAYER].stop()
+    await app[RUNNER].stop()
     tests = app[TESTS]
     if (old := tests.pop(d["ip"], None)):
         old.cancel()
@@ -155,11 +163,13 @@ async def put_baked(request):
     except BakedError as e:
         raise web.HTTPBadRequest(text=str(e))
     request.app[STORAGE].save_baked(show_id, blob)
+    request.app[MQTT].refresh()
     return web.json_response({"ok": True, "bytes": len(blob)})
 
 
 async def delete_show(request):
     request.app[STORAGE].delete_show(_show_id(request))
+    request.app[MQTT].refresh()
     return web.json_response({"ok": True})
 
 
@@ -195,12 +205,46 @@ async def upload_audio(request):
                 raise web.HTTPRequestEntityTooLarge(max_size=MAX_UPLOAD, actual_size=size)
             f.write(chunk)
     os.replace(tmp, dest)
-    return web.json_response({"source": "upload", "path": dest.name})
+    storage = request.app[STORAGE]
+    return web.json_response({"source": "media", "path": str(dest.relative_to(storage.media_dir))})
+
+
+# speakers ----------------------------------------------------------------
+async def list_speakers(request):
+    ha = request.app[HA]
+    delays = request.app[STORAGE].load_settings()["speaker_delays"]
+    if not ha.available:
+        return web.json_response({"available": False, "speakers": []})
+    try:
+        states = await ha.states("media_player")
+    except HAError as e:
+        return web.json_response({"available": False, "error": str(e), "speakers": []})
+    speakers = [{"entity_id": s["entity_id"], "state": s["state"],
+                 "name": s.get("attributes", {}).get("friendly_name") or s["entity_id"],
+                 "delay_ms": delays.get(s["entity_id"], 0)} for s in states]
+    return web.json_response({"available": True,
+                              "speakers": sorted(speakers, key=lambda s: s["name"].lower())})
+
+
+async def put_speaker_delay(request):
+    body = await request.json()
+    entity = str(body.get("entity_id", ""))
+    if not entity.startswith("media_player."):
+        raise web.HTTPBadRequest(text="expected a media_player entity")
+    try:
+        delay = max(-5000, min(5000, int(body.get("delay_ms", 0))))
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="delay_ms must be a number")
+    storage = request.app[STORAGE]
+    settings = storage.load_settings()
+    settings["speaker_delays"][entity] = delay
+    storage.save_settings(settings)
+    return web.json_response({"entity_id": entity, "delay_ms": delay})
 
 
 # player ------------------------------------------------------------------
 async def player_status(request):
-    return web.json_response(request.app[PLAYER].status())
+    return web.json_response(request.app[RUNNER].status())
 
 
 async def player_play(request):
@@ -208,31 +252,43 @@ async def player_play(request):
     show_id = str(body.get("show", ""))
     if not valid_id(show_id):
         raise web.HTTPBadRequest(text="bad show id")
-    storage = request.app[STORAGE]
-    blob = storage.load_baked(show_id)
-    if blob is None:
-        raise web.HTTPConflict(text="show has not been baked; save it first")
     await stop_tests(request.app)
-    baked = decode(blob)
-    await request.app[PLAYER].play(show_id, baked, storage.devices_by_id(),
-                                   position=float(body.get("position", 0)),
-                                   offset=float(body.get("offset", 0)))
-    return web.json_response(request.app[PLAYER].status())
+    runner = request.app[RUNNER]
+    try:
+        await runner.play(show_id, media_player=body.get("media_player") or None,
+                          position=float(body.get("position", 0)),
+                          offset=float(body.get("offset", 0)))
+    except RunnerError as e:
+        raise web.HTTPConflict(text=str(e))
+    return web.json_response(runner.status())
 
 
 async def player_sync(request):
     body = await request.json()
-    drift = request.app[PLAYER].sync(float(body.get("position", 0)))
-    return web.json_response({**request.app[PLAYER].status(), "drift": round(drift, 4)})
+    runner = request.app[RUNNER]
+    drift = 0.0
+    if not runner.media_player:  # a speaker sets its own pace
+        drift = request.app[PLAYER].sync(float(body.get("position", 0)))
+    return web.json_response({**runner.status(), "drift": round(drift, 4)})
 
 
 async def player_stop(request):
-    await request.app[PLAYER].stop()
-    return web.json_response(request.app[PLAYER].status())
+    await request.app[RUNNER].stop()
+    return web.json_response(request.app[RUNNER].status())
+
+
+async def run_command(request):
+    """The same commands automations send, for trying them from the editor or curl."""
+    try:
+        result = await commands.handle(request.app[RUNNER], await request.text())
+    except (ValueError, RunnerError) as e:
+        raise web.HTTPBadRequest(text=str(e))
+    return web.json_response({"result": result, **request.app[RUNNER].status()})
 
 
 # app ---------------------------------------------------------------------
-def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False) -> web.Application:
+def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
+             read_stdin: bool = False) -> web.Application:
     app = web.Application(middlewares=[ingress_only], client_max_size=MAX_UPLOAD)
     app[ALLOW_ALL] = allow_all
     app[STORAGE] = Storage(config_dir, media_dir)
@@ -242,10 +298,23 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False) -> w
         app[OUTPUT] = Output()
         app[OUTPUT].start()
         app[PLAYER] = Player(app[OUTPUT])
+        app[HA] = HomeAssistant()
+        app[RUNNER] = Runner(app[STORAGE], app[PLAYER], app[HA])
+        app[MQTT] = MqttBridge(app[RUNNER])
+        app[BACKGROUND] = []
+        if read_stdin:
+            app[BACKGROUND].append(asyncio.create_task(commands.read_stdin(app[RUNNER])))
+        if (broker := await app[HA].mqtt_service()):
+            app[BACKGROUND].append(asyncio.create_task(app[MQTT].run(broker)))
+        else:
+            log.info("no MQTT broker found; show entities are off (automations can use add-on stdin)")
         yield
+        for task in app[BACKGROUND]:
+            task.cancel()
         await stop_tests(app)
-        await app[PLAYER].stop()
+        await app[RUNNER].stop()
         await app[OUTPUT].close()
+        await app[HA].close()
 
     app.cleanup_ctx.append(lifecycle)
     r = app.router
@@ -265,6 +334,9 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False) -> w
     r.add_get("/api/audio", list_audio)
     r.add_post("/api/audio", upload_audio)
     r.add_get("/api/audio/file", get_audio)
+    r.add_get("/api/speakers", list_speakers)
+    r.add_put("/api/speakers/delay", put_speaker_delay)
+    r.add_post("/api/command", run_command)
     r.add_get("/api/player", player_status)
     r.add_post("/api/player/play", player_play)
     r.add_post("/api/player/sync", player_sync)

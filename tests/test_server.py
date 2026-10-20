@@ -95,10 +95,11 @@ async def test_audio_listing_upload_and_path_safety(client):
     form = aiohttp.FormData()
     form.add_field("file", b"OggS", filename="../evil/song.ogg")
     ref = await (await client.post("/api/audio", data=form)).json()
-    assert ref["source"] == "upload" and ref["path"].endswith("song.ogg")
-    assert "/" not in ref["path"] and not ref["path"].startswith(".")
+    # Uploads land in /media/govee_show so HA media players can reach them.
+    assert ref["source"] == "media" and ref["path"].startswith("govee_show/")
+    assert ref["path"].endswith("song.ogg") and ".." not in ref["path"]
     listed = await (await client.get("/api/audio")).json()
-    assert {"source": "upload", "path": ref["path"]} in listed
+    assert {"source": "media", "path": ref["path"]} in listed
     form = aiohttp.FormData()
     form.add_field("file", b"x", filename="script.sh")
     assert (await client.post("/api/audio", data=form)).status == 400
@@ -118,3 +119,23 @@ async def test_play_requires_bake_then_streams(client):
     assert (await (await client.get("/api/player")).json())["position"] >= 5
     status = await (await client.post("/api/player/stop")).json()
     assert status["playing"] is False
+
+
+async def test_speakers_without_home_assistant(client, monkeypatch):
+    body = await (await client.get("/api/speakers")).json()
+    assert body["speakers"] == []
+    resp = await client.put("/api/speakers/delay", json={"entity_id": "media_player.garden", "delay_ms": 250})
+    assert (await resp.json())["delay_ms"] == 250
+    assert (await client.put("/api/speakers/delay", json={"entity_id": "light.x"})).status == 400
+
+
+async def test_command_endpoint(client):
+    await client.put("/api/devices", json=[{"id": "a", "ip": "127.0.0.1", "segments": 1}])
+    await client.put("/api/shows/xmas", json={"name": "Christmas Eve", "tracks": []})
+    blob = baked.encode(40, [{"device": "a", "segments": 1}], [b"\x00\x00\xff"] * 400)
+    await client.put("/api/shows/xmas/baked", data=blob)
+    body = await (await client.post("/api/command", data='{"action": "play", "show": "christmas eve"}')).json()
+    assert body["playing"] and body["show"] == "xmas" and body["name"] == "Christmas Eve"
+    body = await (await client.post("/api/command", data="stop")).json()
+    assert body["playing"] is False
+    assert (await client.post("/api/command", data='{"action": "play", "show": "nope"}')).status == 400

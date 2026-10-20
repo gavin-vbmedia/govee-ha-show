@@ -16,7 +16,7 @@ def main():
     allow_all = os.environ.get("GOVEE_SHOW_ALLOW_ALL") == "1"
     port = int(os.environ.get("GOVEE_SHOW_PORT", "8099"))
     logging.getLogger(__name__).info("Govee Light Show %s on port %d", __version__, port)
-    web.run_app(make_app(config_dir, media_dir, allow_all=allow_all), port=port,
+    web.run_app(make_app(config_dir, media_dir, allow_all=allow_all, read_stdin=True), port=port,
                 access_log=None, print=None)
 
 

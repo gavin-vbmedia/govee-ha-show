@@ -13,14 +13,11 @@ editor inside Home Assistant, with no external sequencing software or separate h
 - Draggable effects (solid, fade, chase, rainbow, strobe, twinkle, wipe) with a live,
   segment-level preview
 - Save and load shows; each show is baked into precomputed frames for reliable playback
-- Play from the browser: the song plays there and the add-on streams the lights in sync
+- Play the song on any Home Assistant media player (with a per-speaker delay), or in the browser
+- Schedule or trigger shows from automations: MQTT entities (show select, play/stop buttons,
+  status), or the `hassio.addon_stdin` action
 
 See [the add-on docs](govee_show/DOCS.md) for how to use it.
-
-**Planned**
-
-- Audio playback through Home Assistant media players
-- Shows exposed to Home Assistant automations for scheduled or triggered playback
 
 ## Installation
 
@@ -29,9 +26,7 @@ See [the add-on docs](govee_show/DOCS.md) for how to use it.
    `https://github.com/gavin-vbmedia/govee-ha-show`.
 3. Install **Govee Light Show** and start it.
 
-While this repository is private, Home Assistant can't fetch it; install it as a
-local add-on instead by copying the `govee_show` folder into `/addons` on your
-Home Assistant host.
+Home Assistant builds the add-on on your machine the first time, which takes a minute or two.
 
 ## How it works
 
@@ -39,7 +34,9 @@ One Python service (aiohttp) serves the editor through Home Assistant ingress an
 Effects are written once, in JavaScript: the editor uses them for the live preview and, on save,
 renders every frame of the show into a compact baked file. The player only streams those frames to
 each device over Govee's undocumented per-segment "razer" LAN protocol, with rate limiting,
-keepalive and periodic re-enable, following the browser's audio position.
+keepalive and periodic re-enable. It follows either the browser's audio position or, for a Home
+Assistant speaker, starts the lights when the speaker reports it is playing (plus that speaker's
+delay) and corrects large drift from its reported position.
 
 ## Repository layout
 
@@ -50,7 +47,11 @@ govee_show/                             The add-on (config, Dockerfile, app code
   app/goveeshow/discovery.py            Multicast device scan
   app/goveeshow/output.py               Per-device streaming, keepalive, test pattern
   app/goveeshow/baked.py                Baked show file format
-  app/goveeshow/player.py               Plays baked frames in sync with the browser
+  app/goveeshow/player.py               Plays baked frames against a movable clock
+  app/goveeshow/runner.py               Starts shows on a speaker or for the browser
+  app/goveeshow/ha.py                   Home Assistant API (media players, MQTT details)
+  app/goveeshow/commands.py             Automation commands over add-on stdin
+  app/goveeshow/mqtt.py                 MQTT discovery entities
   app/goveeshow/server.py               HTTP API for the editor
   app/goveeshow/static/                 The editor (no build step)
 tests/                                  pytest and node tests
@@ -67,6 +68,7 @@ node --test tests/js/*.mjs
 cd govee_show/app
 GOVEE_SHOW_CONFIG=/tmp/gs/config GOVEE_SHOW_MEDIA=/tmp/gs/media python -m goveeshow
 # then open http://localhost:8099/
+# Optional: HA_URL=http://homeassistant.local:8123 HA_TOKEN=<long-lived token> to use real speakers
 ```
 
 To try it in Home Assistant, copy the `govee_show` folder into `/addons` (Samba or SSH add-on), then

@@ -17,6 +17,11 @@ ingress_port: 8099
 panel_icon: mdi:string-lights
 panel_title: Light Shows
 homeassistant_api: true
+# Automations can send commands with the hassio.addon_stdin action.
+stdin: true
+# Show entities (select, play/stop buttons, status) via MQTT discovery when a broker exists.
+services:
+  - mqtt:want
 map:
-  - media:ro        # songs from the Home Assistant media folder
-  - addon_config:rw # shows, devices and uploaded songs (included in backups)
+  - media:rw        # songs; uploads go to /media/govee_show so media players can play them
+  - addon_config:rw # shows, devices and settings (included in backups)

@@ -55,12 +55,18 @@ const app = {
   historyIndex: -1,
   clockStart: 0,
   syncTimer: null,
+  speakers: [],
+  remote: false, // playing on a Home Assistant speaker; the add-on keeps time
 
   duration() {
     return Math.max(this.audioDuration || this.show.duration || 0, showDuration({ tracks: this.show.tracks }));
   },
 
   seek(t) {
+    if (this.playing && this.remote) {
+      status("Stop the speaker to move the playhead");
+      return;
+    }
     this.time = Math.min(Math.max(t, 0), this.duration());
     if (hasAudio()) audio.currentTime = this.time;
     else this.clockStart = performance.now() - this.time * 1000;
@@ -404,6 +410,7 @@ async function openShow(id) {
   prefs.set("lastShow", app.showId);
   $("show-name").value = app.show.name;
   $("duration").value = Math.round(app.show.duration || 60);
+  renderOutput();
   renderInspector();
   await loadAudio(app.show.audio);
   app.seek(0);
@@ -433,6 +440,7 @@ async function save() {
     app.bakedKey = key;
   }
   await refreshShows();
+  renderOutput();
 }
 
 async function saveClicked() {
@@ -518,15 +526,66 @@ async function upload(file) {
   } catch (e) { status(`Upload failed: ${e.message}`, true); }
 }
 
+// speakers --------------------------------------------------------------------
+const speaker = () => app.show.media_player || "";
+
+async function loadSpeakers() {
+  try {
+    const body = await api("api/speakers");
+    app.speakers = body.speakers;
+  } catch { app.speakers = []; }
+  renderOutput();
+}
+
+function renderOutput() {
+  const sel = $("output-select");
+  sel.replaceChildren(new Option("Song in this browser", ""));
+  const current = speaker();
+  for (const s of app.speakers) sel.add(new Option(`Speaker: ${s.name}`, s.entity_id, false, s.entity_id === current));
+  if (current && !app.speakers.some((s) => s.entity_id === current)) {
+    sel.add(new Option(`Speaker: ${current} (unavailable)`, current, false, true));
+  }
+  sel.value = current;
+  const sp = app.speakers.find((s) => s.entity_id === current);
+  $("lights-wrap").hidden = !!current;
+  $("offset-label").textContent = current ? "Speaker delay" : "Light offset";
+  $("offset-hint").textContent = current
+    ? "How late this speaker plays after it reports starting. Raise it if the lights lead the music."
+    : "Use this to line the lights up with the audio if they lead or lag.";
+  $("offset").value = current ? (sp?.delay_ms ?? 0) : prefs.get("offset", 0);
+  $("automation-input").textContent = JSON.stringify({ action: "play", show: app.showId || app.show.name });
+}
+
+async function offsetChanged(e) {
+  const v = Number(e.target.value) || 0;
+  if (!speaker()) { prefs.set("offset", v); return; }
+  try {
+    await api("api/speakers/delay", { method: "PUT", json: { entity_id: speaker(), delay_ms: v } });
+    const sp = app.speakers.find((s) => s.entity_id === speaker());
+    if (sp) sp.delay_ms = v;
+  } catch (err) { status(`Couldn't save the delay: ${err.message}`, true); }
+}
+
 // transport -------------------------------------------------------------------
 const lightsOn = () => $("lights").checked && app.show.tracks.some((t) => app.devices[t.device]);
 const offset = () => (Number($("offset").value) || 0) / 1000;
 
 function currentTime() {
-  return hasAudio() ? audio.currentTime : (performance.now() - app.clockStart) / 1000;
+  return hasAudio() && !app.remote ? audio.currentTime : (performance.now() - app.clockStart) / 1000;
+}
+
+// While a speaker plays, follow the add-on's clock.
+async function followRemote() {
+  try {
+    const st = await api("api/player");
+    if (!app.playing || !app.remote) return;
+    if (!st.playing) { stop(); return; }
+    app.clockStart = performance.now() - st.position * 1000;
+  } catch { /* try again next tick */ }
 }
 
 async function syncLights() {
+  if (app.remote) { followRemote(); return; }
   if (!app.playing || !lightsOn()) return;
   try { await api("api/player/sync", { method: "POST", json: { position: currentTime() } }); }
   catch { /* the next sync will retry */ }
@@ -535,6 +594,23 @@ async function syncLights() {
 async function play() {
   if (app.playing) return;
   if (app.time >= app.duration() - 0.01) app.seek(0);
+  if (speaker()) {
+    if (!app.show.audio) { status("Pick a song to play on a speaker", true); return; }
+    try {
+      status("Starting the speaker…");
+      await save();
+      const st = await api("api/player/play", {
+        method: "POST", json: { show: app.showId, position: app.time, media_player: speaker() },
+      });
+      status("");
+      app.clockStart = performance.now() - st.position * 1000;
+    } catch (e) { status(`Couldn't play: ${e.message}`, true); return; }
+    app.remote = true;
+    app.playing = true;
+    $("btn-play").textContent = "⏸ Stop";
+    app.syncTimer = setInterval(syncLights, 500);
+    return;
+  }
   if (lightsOn()) {
     try {
       status("Preparing lights…");
@@ -562,6 +638,7 @@ async function play() {
 async function stop() {
   const wasPlaying = app.playing;
   app.playing = false;
+  app.remote = false;
   clearInterval(app.syncTimer);
   audio.pause();
   $("btn-play").textContent = "▶ Play";
@@ -657,8 +734,13 @@ function wire() {
     prefs.set("lights", e.target.checked);
     if (!e.target.checked && app.playing) api("api/player/stop", { method: "POST" }).catch(() => {});
   });
-  $("offset").value = prefs.get("offset", 0);
-  $("offset").addEventListener("change", (e) => prefs.set("offset", Number(e.target.value) || 0));
+  $("offset").addEventListener("change", offsetChanged);
+  $("output-select").addEventListener("change", async (e) => {
+    await stop();
+    app.show.media_player = e.target.value || null;
+    app.changed();
+    renderOutput();
+  });
   $("btn-zoom-in").addEventListener("click", () => { timeline.zoom(1.5); prefs.set("pps", app.pps); });
   $("btn-zoom-out").addEventListener("click", () => { timeline.zoom(1 / 1.5); prefs.set("pps", app.pps); });
 
@@ -694,6 +776,7 @@ async function init() {
   renderPalette();
   try {
     await loadDevices();
+    loadSpeakers();
     const shows = await api("api/shows");
     const last = prefs.get("lastShow", null);
     const id = shows.some((s) => s.id === last) ? last : shows[0]?.id;

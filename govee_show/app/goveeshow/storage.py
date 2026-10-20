@@ -1,7 +1,8 @@
-"""Devices, shows and uploaded audio, stored under the add-on config folder.
+"""Devices, shows and settings live in the add-on config folder; songs in /media.
 
-/config is the add-on's own folder (addon_config:rw), so everything here is
-included in Home Assistant backups.
+/config is the add-on's own folder (addon_config:rw), so it is included in Home
+Assistant backups. Uploaded songs go to /media/govee_show so Home Assistant media
+players can play them through the media source.
 """
 import json
 import os
@@ -42,10 +43,10 @@ class Storage:
         self.config_dir = config_dir
         self.media_dir = media_dir
         self.shows_dir = config_dir / "shows"
-        self.audio_dir = config_dir / "audio"
+        self.upload_dir = media_dir / "govee_show"
         self.devices_file = config_dir / "devices.json"
-        for d in (self.shows_dir, self.audio_dir):
-            d.mkdir(parents=True, exist_ok=True)
+        self.settings_file = config_dir / "settings.json"
+        self.shows_dir.mkdir(parents=True, exist_ok=True)
 
     # devices -------------------------------------------------------------
     def load_devices(self) -> list[dict]:
@@ -59,6 +60,18 @@ class Storage:
 
     def devices_by_id(self) -> dict[str, dict]:
         return {d["id"]: d for d in self.load_devices()}
+
+    # settings ------------------------------------------------------------
+    def load_settings(self) -> dict:
+        try:
+            settings = json.loads(self.settings_file.read_text())
+        except (FileNotFoundError, ValueError):
+            settings = {}
+        settings.setdefault("speaker_delays", {})  # media_player entity -> ms
+        return settings
+
+    def save_settings(self, settings: dict):
+        _write_atomic(self.settings_file, json.dumps(settings, indent=2).encode())
 
     # shows ---------------------------------------------------------------
     def list_shows(self) -> list[dict]:
@@ -100,7 +113,7 @@ class Storage:
 
     # audio ---------------------------------------------------------------
     def audio_roots(self) -> dict[str, Path]:
-        return {"upload": self.audio_dir, "media": self.media_dir}
+        return {"media": self.media_dir}
 
     def list_audio(self, limit: int = 2000) -> list[dict]:
         out = []
@@ -128,4 +141,5 @@ class Storage:
         name = _UNSAFE_NAME.sub("_", Path(filename).name).strip(" .")
         if not name or Path(name).suffix.lower() not in AUDIO_EXT:
             return None
-        return self.audio_dir / name
+        self.upload_dir.mkdir(parents=True, exist_ok=True)
+        return self.upload_dir / name
