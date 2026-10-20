@@ -244,6 +244,11 @@ async def test_house_photo_and_paths(client):
     styles = {"gutter": {"style": "icicle", "drops": 60, "length": 0.9}, "porch": {"style": "line"}}
     resp = await client.put("/api/house", json={"paths": {}, "styles": styles})
     assert (await resp.json())["styles"] == {"gutter": {"style": "icicle", "drops": 60, "length": 0.5}}
+    spots = {"flood": {"style": "spots", "beam": 0.4, "aims": [[0, -0.2], [2, 0.1]]}}
+    resp = await client.put("/api/house", json={"paths": {}, "styles": spots})
+    assert (await resp.json())["styles"] == {"flood": {"style": "spots", "beam": 0.4, "aims": [[0, -0.2], [1, 0.1]]}}
+    bad = {"flood": {"style": "spots", "aims": [["x"]]}}
+    assert (await client.put("/api/house", json={"paths": {}, "styles": bad})).status == 400
     bad = {"gutter": {"style": "icicle", "drops": "lots"}}
     assert (await client.put("/api/house", json={"paths": {}, "styles": bad})).status == 400
 

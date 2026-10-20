@@ -205,6 +205,12 @@ has, and set **Length** to how far the longest one hangs on the photo. The drops
 segment's colour, with the light's **Bulbs** shared between them. Effects still run along the
 line, as they do on the real lights.
 
+**Spotlights** (such as the H7093) are placed rather than traced. Pick the light, set its
+**Style** to **Spots**, press **Trace** and click where each spotlight sits, starting with the one
+nearest the plug. Each spot shines a soft wash of colour onto the photo: drag its round handle to
+aim it, and use **Beam** to make the beams wider or narrower. Each spot shows its share of the
+light's segments, blended if it has more than one, so set **Segments** with **Test** first.
+
 While you trace, each light is drawn in a rainbow from red at the plug to the far end, so you can
 check it runs the same way as the real light. If it's backwards, retrace it from the other end,
 or tick **Reverse** on the Devices tab if the effects themselves run the wrong way. **Darken**

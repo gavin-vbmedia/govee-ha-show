@@ -84,6 +84,23 @@ export function icicleDrops(points, drops, bulbs) {
   });
 }
 
+// Spotlights: where spot i points, as an offset across and down the photo from where it sits.
+export const DEFAULT_AIM = [0, -0.15];
+export const aimOf = (style, i) => style.aims?.[i] || DEFAULT_AIM;
+
+// The colour of spot `i` of `spots`: its share of the light's segments, counted from the plug
+// (flipped by Reverse), averaged. `rgb` is the frame, 3 bytes per segment.
+export function spotColour(i, spots, rgb, segments, reverse) {
+  const lo = Math.min(Math.floor((i * segments) / spots), segments - 1);
+  const hi = Math.max(lo + 1, Math.min(Math.floor(((i + 1) * segments) / spots), segments));
+  const sum = [0, 0, 0];
+  for (let j = lo; j < hi; j++) {
+    const s = reverse ? segments - 1 - j : j;
+    for (let c = 0; c < 3; c++) sum[c] += rgb[s * 3 + c];
+  }
+  return sum.map((v) => Math.round(v / (hi - lo)));
+}
+
 // Which segment of the frame bulb `j` shows. Paths start at the plug; Reverse flips which end
 // the show's first segment is at, as it does on the real light.
 export function bulbSegment(j, bulbs, segments, reverse) {
@@ -104,7 +121,8 @@ export class House {
   constructor({ api, status, frameFor }) {
     Object.assign(this, { api, status, frameFor });
     this.paths = {};
-    this.styles = {}; // id -> {style: "icicle", drops, length}; lights without one are a line
+    // id -> {style: "icicle", drops, length} or {style: "spots", beam, aims}; others are a line
+    this.styles = {};
     this.dim = 0.5;
     this.photo = null;
     this.devices = [];
@@ -230,6 +248,18 @@ export class House {
       ctx.beginPath(); ctx.arc(x, y, r * size, 0, Math.PI * 2); ctx.fill();
     };
     for (const dev of this.devices) {
+      const style = this.styles[dev.id];
+      if (style?.style === "spots") {
+        const pts = this.paths[dev.id];
+        if (!pts?.length) continue;
+        const rgb = colours(dev), cap = (dev.brightness ?? 100) / 100;
+        pts.forEach(([x, y], i) => {
+          const c = spotColour(i, pts.length, rgb, dev.segments, dev.reverse).map((v) => Math.round(v * cap));
+          if (c[0] + c[1] + c[2] >= 8) this.wash(ctx, x * w, y * h, aimOf(style, i), style.beam, c, w, h);
+          dot(x * w, y * h, c, 1.4);
+        });
+        continue;
+      }
       const bulbs = this.bulbs(dev);
       if (!bulbs) continue;
       const rgb = colours(dev);
@@ -252,6 +282,25 @@ export class House {
     }
     ctx.globalCompositeOperation = "source-over";
     return { ctx, w, h };
+  }
+
+  // A spotlight's beam on the wall: a soft oval of colour from where it sits towards where it
+  // points, `beam` wide for its length.
+  wash(ctx, x, y, [ax, ay], beam, [r, g, b], w, h) {
+    const len = Math.max(Math.hypot(ax * w, ay * h), 4);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.atan2(ay * h, ax * w));
+    ctx.scale(1, beam);
+    const grad = ctx.createRadialGradient(len * 0.55, 0, 0, len * 0.55, 0, len * 0.65);
+    grad.addColorStop(0, `rgba(${r},${g},${b},0.75)`);
+    grad.addColorStop(0.5, `rgba(${r},${g},${b},0.35)`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(len * 0.55, 0, len * 0.65, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   // The editor's House panel: the show at the playhead.
@@ -284,6 +333,35 @@ export class House {
       const pts = this.paths[dev.id];
       if (!pts?.length) continue;
       const active = dev.id === (this.active || this.selected);
+      const style = this.styles[dev.id];
+      if (style?.style === "spots") {
+        // Spots aren't joined up: each has a numbered square where it sits and, when the light
+        // is picked, a round handle at the end of a line showing where it points.
+        ctx.font = "11px system-ui, sans-serif";
+        pts.forEach(([x, y], i) => {
+          if (active) {
+            const [ax, ay] = aimOf(style, i);
+            ctx.strokeStyle = "rgba(80,170,255,0.9)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x * w, y * h);
+            ctx.lineTo((x + ax) * w, (y + ay) * h);
+            ctx.stroke();
+            ctx.fillStyle = "rgb(80,170,255)";
+            ctx.beginPath();
+            ctx.arc((x + ax) * w, (y + ay) * h, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = i === 0 ? "#fff" : active ? "rgb(80,170,255)" : "rgba(255,255,255,0.6)";
+          ctx.fillRect(x * w - 4, y * h - 4, 8, 8);
+          ctx.fillStyle = "#fff";
+          ctx.fillText(String(i + 1), x * w + 7, y * h + 12);
+        });
+        const [x0, y0] = pts[0];
+        ctx.font = "12px system-ui, sans-serif";
+        ctx.fillText(`${dev.name} (plug)`, x0 * w + 8, y0 * h - 8);
+        continue;
+      }
       // Stretches in view are solid; ones out of view are dashed and labelled with their bulbs.
       for (let i = 1; i < pts.length; i++) {
         const [a, b] = [pts[i - 1], pts[i]];
@@ -354,10 +432,17 @@ export class House {
       const { w, h } = this.size || { w: 1, h: 1 };
       let best = null, bestD = HIT_PX;
       const ids = [this.active, ...Object.keys(this.paths)].filter(Boolean);
+      const picked = this.active || this.selected;
       for (const id of ids) {
+        const style = this.styles[id];
         (this.paths[id] || []).forEach(([x, y], i) => {
           const d = Math.hypot((x - p[0]) * w, (y - p[1]) * h);
           if (d < bestD) { bestD = d; best = { id, i }; }
+          if (style?.style === "spots" && id === picked) {
+            const [ax, ay] = aimOf(style, i);
+            const da = Math.hypot((x + ax - p[0]) * w, (y + ay - p[1]) * h);
+            if (da < bestD) { bestD = da; best = { id, i, aim: true }; }
+          }
         });
       }
       return best;
@@ -366,6 +451,7 @@ export class House {
       const { w, h } = this.size || { w: 1, h: 1 };
       let best = null, bestD = HIT_PX;
       for (const [id, pts] of Object.entries(this.paths)) {
+        if (this.styles[id]?.style === "spots") continue; // spots have no stretches
         for (let i = 1; i < pts.length; i++) {
           const [ax, ay, bx, by] = [pts[i - 1][0] * w, pts[i - 1][1] * h, pts[i][0] * w, pts[i][1] * h];
           const [px, py] = [p[0] * w, p[1] * h];
@@ -382,6 +468,7 @@ export class House {
       const found = hit(at(e));
       if (!found) return;
       this.paths[found.id].splice(found.i, 1);
+      this.styles[found.id]?.aims?.splice(found.i, 1);
       if (!this.paths[found.id].length) delete this.paths[found.id];
       else this.paths[found.id][0].length = 2; // the first point has no stretch before it
       this.stretch = null;
@@ -412,8 +499,16 @@ export class House {
     });
     canvas.addEventListener("pointermove", (e) => {
       const p = at(e);
-      this.hover = this.active && !this.drag ? p : null;
-      if (this.drag) this.paths[this.drag.id][this.drag.i].splice(0, 2, ...p);
+      this.hover = this.active && !this.drag && this.styles[this.active]?.style !== "spots" ? p : null;
+      const d = this.drag;
+      if (d?.aim) {
+        const style = this.styles[d.id], [x, y] = this.paths[d.id][d.i];
+        style.aims ||= [];
+        for (let k = style.aims.length; k < d.i; k++) style.aims.push([...DEFAULT_AIM]);
+        style.aims[d.i] = [+(p[0] - x).toFixed(4), +(p[1] - y).toFixed(4)];
+      } else if (d) {
+        this.paths[d.id][d.i].splice(0, 2, ...p);
+      }
     });
     canvas.addEventListener("pointerleave", () => { this.hover = null; });
     const end = () => {
