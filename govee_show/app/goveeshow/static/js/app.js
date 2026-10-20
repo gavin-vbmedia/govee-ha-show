@@ -436,24 +436,102 @@ function drawPreview() {
 
 new ResizeObserver(layoutPreview).observe(preview);
 
-// palette and inspector -------------------------------------------------------
+// clip preview ----------------------------------------------------------------
+// The selected clip loops on its own in the Selection panel, so a change can be seen without playing
+// the show. With "Show on the light" ticked it also loops on the real light while the show is stopped.
+const clipPreview = { canvas: null, clip: null, started: 0, dev: null, sent: 0, pending: null, failedAt: -Infinity };
+const PREVIEW_SEND_MS = 66; // about 15 frames a second to the light
+const previewOnLight = () => prefs.get("previewOnLight", true);
+const toHex = (rgb) => Array.from(rgb, (b) => b.toString(16).padStart(2, "0")).join("");
+
+function clipPreviewRow(clip, dev) {
+  const row = document.createElement("div");
+  row.className = "clip-preview";
+  const canvas = document.createElement("canvas");
+  canvas.title = "This clip on its own, looping";
+  if (clipPreview.clip !== clip) Object.assign(clipPreview, { clip, started: performance.now() });
+  clipPreview.canvas = canvas;
+  row.append(canvas);
+  if (dev?.ip && !EFFECTS[clip.effect]?.experimental) {
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = previewOnLight();
+    box.addEventListener("change", () => {
+      prefs.set("previewOnLight", box.checked);
+      if (!box.checked) stopLightPreview();
+    });
+    const l = document.createElement("label");
+    l.title = "Loop this clip on the light while the show is stopped";
+    l.append(box, " Show on the light");
+    row.append(l);
+  }
+  return row;
+}
+
+function drawClipPreview() {
+  const c = clipPreview.canvas, sel = app.selected;
+  const track = sel?.clip && c?.isConnected && app.show.tracks[sel.track];
+  const dev = track && app.devices[track.device];
+  if (!dev) { if (clipPreview.dev) stopLightPreview(); return; }
+  const clip = sel.clip, len = Math.max(clip.end - clip.start, 0.05);
+  const t = clip.start + ((performance.now() - clipPreview.started) / 1000) % len;
+  const rgb = renderTrack([clip], t, dev.segments);
+  const dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const cap = (dev.brightness ?? 100) / 100, n = dev.segments, bw = w / n;
+  for (let i = 0; i < n; i++) {
+    const [r, g, b] = [rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2]].map((v) => Math.round(v * cap));
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(i * bw + 1, 2, Math.max(bw - 2, 1), h - 4);
+  }
+  const onLight = previewOnLight() && dev.ip && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
+  if (onLight) sendPreview(dev, rgb);
+  else if (clipPreview.dev) stopLightPreview();
+}
+
+// The add-on applies the light's brightness cap, so the clip's own colours are sent.
+function sendPreview(dev, rgb) {
+  const now = performance.now();
+  if (clipPreview.pending || now - clipPreview.sent < PREVIEW_SEND_MS || now - clipPreview.failedAt < 5000) return;
+  if (clipPreview.dev && clipPreview.dev !== dev.id) { stopLightPreview(); return; }
+  clipPreview.sent = now;
+  clipPreview.dev = dev.id;
+  clipPreview.pending = api("api/devices/preview", { method: "POST", json: { ...dev, rgb: toHex(rgb) } })
+    .catch((e) => {
+      clipPreview.failedAt = performance.now();
+      status(`Couldn't show the clip on ${dev.name}: ${e.message}`, true);
+    })
+    .finally(() => { clipPreview.pending = null; });
+}
+
+// Lets the light go back to what it was doing. Resolves once any frame still on its way has landed.
+async function stopLightPreview() {
+  const dev = app.devices[clipPreview.dev];
+  clipPreview.dev = null;
+  await clipPreview.pending;
+  if (dev?.ip) await api("api/devices/preview", { method: "POST", json: { ...dev, stop: true } }).catch(() => {});
+}
+
+// effects and inspector -------------------------------------------------------
 // Experimental effects (Govee scenes) only appear once switched on in Settings. `keep` stays listed
 // regardless, so a clip that already uses one can still be edited.
 const experimentalOn = () => prefs.get("experimental.scenes", false);
 const visibleEffects = (keep) => Object.entries(EFFECTS).filter(([k, fx]) => !fx.experimental || experimentalOn() || k === keep);
 
-function renderPalette() {
-  const box = $("palette");
-  box.replaceChildren();
+// One button per effect; the last one used is outlined so a run of the same effect is quick to add.
+function effectPicker(onPick) {
+  const box = document.createElement("div");
+  box.className = "effect-picker";
   for (const [key, fx] of visibleEffects()) {
-    const b = button(fx.label, () => {
+    box.append(button(fx.label, () => {
       app.paletteEffect = key;
-      renderPalette();
-      if (app.selected?.range) addToRange(key);
-      else renderInspector();
-    }, key === app.paletteEffect ? "active" : "");
-    box.append(b);
+      onPick(key);
+    }, key === app.paletteEffect ? "active" : ""));
   }
+  return box;
 }
 
 function renderInspector() {
@@ -464,8 +542,8 @@ function renderInspector() {
   if (track && !sel.clip) { renderTrackInspector(sel.track); return; }
   if (!sel || !track || !track.clips.includes(sel.clip)) {
     app.selected = null;
-    box.innerHTML = `<p class="hint">Drag across a light (or several) to select a stretch of time, then click an
-      effect above to add it there, or press Delete to clear it (hold Alt to start a selection on top of a clip). Click a clip to edit it: drag it to move, drag its
+    box.innerHTML = `<p class="hint">Drag across a light (or several) to select a stretch of time, then pick an
+      effect to add it there, or press Delete to clear it (hold Alt to start a selection on top of a clip). Click a clip to edit it: drag it to move, drag its
       edges to resize, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's name to copy or
       recolour all its effects. Drag along the time ruler to set a play region, and tick Loop to repeat it. Click the beat lane to add or
       remove a beat; hold Shift to drag without snapping.</p>`;
@@ -476,7 +554,7 @@ function renderInspector() {
   box.replaceChildren();
   const h = document.createElement("h3");
   h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${dev ? dev.name : "missing device"}`;
-  box.append(h);
+  box.append(h, clipPreviewRow(clip, dev));
 
   // Settings are grouped so a clip with many of them stays readable.
   const group = (title) => {
@@ -869,19 +947,15 @@ function renderRangeInspector(r) {
     l.append(key === "start" ? "Start" : "End", el);
     return l;
   };
-  const effect = document.createElement("select");
-  for (const [key, fx] of visibleEffects()) effect.add(new Option(fx.label, key, false, key === app.paletteEffect));
-  const l = document.createElement("label");
-  l.append("Effect", effect);
   const overlaps = tracks.some((t) => app.show.tracks[t].clips.some((c) => c.start < r.end && c.end > r.start));
   const del = button("Delete effects here", deleteRange, "ghost danger");
   del.disabled = !overlaps;
-  box.append(timeInput("start"), timeInput("end"), l, button("Add effect", () => addToRange(effect.value), "primary"), del,
+  box.append(timeInput("start"), timeInput("end"), del,
     button("▶ Play this part", () => { app.setRegion(r); app.seek(r.start); play(); }, "ghost"));
-  const hint = document.createElement("p");
-  hint.className = "hint";
-  hint.textContent = "Tip: with a stretch selected, clicking an effect above adds it straight away.";
-  box.append(hint);
+  const add = document.createElement("p");
+  add.className = "hint";
+  add.textContent = "Pick an effect to add it here:";
+  box.append(add, effectPicker(addToRange));
 }
 
 function addToRange(effect) {
@@ -1213,7 +1287,17 @@ function renderRegion() {
 }
 
 async function play() {
-  if (app.playing) return;
+  if (app.playing || app.starting) return;
+  app.starting = true;
+  try {
+    await stopLightPreview();
+    await startPlaying();
+  } finally {
+    app.starting = false;
+  }
+}
+
+async function startPlaying() {
   const r = app.region;
   if (r && !speaker() && (app.time < r.start || app.time >= r.end - 0.01)) app.seek(r.start);
   else if (app.time >= app.duration() - 0.01) app.seek(0);
@@ -1308,6 +1392,7 @@ function frame() {
   $("clock").textContent = fmtTime(app.time);
   timeline.drawPlayhead();
   drawPreview();
+  drawClipPreview();
   requestAnimationFrame(frame);
 }
 
@@ -1441,10 +1526,8 @@ async function init() {
   $("exp-scenes").addEventListener("change", (e) => {
     prefs.set("experimental.scenes", e.target.checked);
     if (!e.target.checked && EFFECTS[app.paletteEffect]?.experimental) app.paletteEffect = "solid";
-    renderPalette();
     renderInspector();
   });
-  renderPalette();
   try {
     await loadDevices();
     loadSpeakers();

@@ -195,3 +195,21 @@ async def test_static_files_are_revalidated(client):
     resp = await client.get("/static/js/effects.js")
     assert resp.status == 200
     assert resp.headers["Cache-Control"] == "no-cache"
+
+
+async def test_live_preview_shows_frames_then_lets_go(client, monkeypatch):
+    monkeypatch.setattr(server.LivePreview, "IDLE_S", 0.3)
+    dev = {"ip": "192.0.2.11", "segments": 2, "brightness": 50}
+    out = client.app[server.OUTPUT]
+    resp = await client.post("/api/devices/preview", json={**dev, "rgb": "ff0000" + "00ff00"})
+    assert resp.status == 200
+    assert out.devices["192.0.2.11"].brightness == 50
+    assert out.devices["192.0.2.11"].pending is not None or out.devices["192.0.2.11"].last_frame
+    assert (await client.post("/api/devices/preview", json={**dev, "rgb": "ff00"})).status == 400
+    assert (await client.post("/api/devices/preview", json={**dev, "rgb": "zz" * 6})).status == 400
+    await asyncio.sleep(0.6)  # frames stopped: the light goes back to what it was doing
+    assert "192.0.2.11" not in out.devices
+    await client.post("/api/devices/preview", json={**dev, "rgb": "000000" * 2})
+    assert "192.0.2.11" in out.devices
+    assert (await client.post("/api/devices/preview", json={**dev, "stop": True})).status == 200
+    assert "192.0.2.11" not in out.devices

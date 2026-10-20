@@ -17,7 +17,7 @@ from . import __version__, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .mqtt import MqttBridge
-from .output import PROBE_MAX, Output, run_probe, run_test_pattern
+from .output import PROBE_MAX, LivePreview, Output, run_probe, run_test_pattern
 from .player import Player
 from .protocol import PROTOCOLS
 from .runner import Runner, RunnerError
@@ -33,6 +33,7 @@ OUTPUT = web.AppKey("output", Output)
 PLAYER = web.AppKey("player", Player)
 STORAGE = web.AppKey("storage", Storage)
 TESTS = web.AppKey("tests", dict)
+PREVIEWS = web.AppKey("previews", dict)
 HA = web.AppKey("ha", HomeAssistant)
 RUNNER = web.AppKey("runner", Runner)
 MQTT = web.AppKey("mqtt", MqttBridge)
@@ -176,6 +177,39 @@ async def probe_device(request):
     tests[d["ip"]] = asyncio.create_task(run_probe(
         app[OUTPUT], d["ip"], segment, gradient=d["gradient"], protocol=d["protocol"]))
     return web.json_response({"ok": True, "max": PROBE_MAX})
+
+
+async def preview_device(request):
+    """One frame of the clip being edited, shown on the light until frames stop or `stop` is sent."""
+    body = await request.json()
+    d = _clean_device(body)
+    if not d["ip"]:
+        raise web.HTTPBadRequest(text="link this device to a real light first")
+    app = request.app
+    previews, tests = app[PREVIEWS], app[TESTS]
+    live = previews.get(d["ip"])
+    if body.get("stop"):
+        if live and not live.task.done():
+            live.stop()
+        return web.json_response({"ok": True})
+    try:
+        rgb = bytes.fromhex(str(body.get("rgb", "")))
+    except ValueError:
+        raise web.HTTPBadRequest(text="rgb must be hex")
+    if len(rgb) != d["segments"] * 3:
+        raise web.HTTPBadRequest(text="rgb must have 3 bytes per segment")
+    if live is None or live.task.done():
+        # Previewing takes the light over from a running show or a test, like Test does.
+        await app[RUNNER].stop()
+        if (old := tests.pop(d["ip"], None)):
+            old.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await old
+        live = previews[d["ip"]] = LivePreview(app[OUTPUT], d["ip"])
+        tests[d["ip"]] = live.task
+    live.show(rgb, d["segments"], reverse=d["reverse"], gradient=d["gradient"], protocol=d["protocol"],
+              brightness=d["brightness"])
+    return web.json_response({"ok": True})
 
 
 async def get_scenes(request):
@@ -391,6 +425,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     app[ALLOW_ALL] = allow_all
     app[STORAGE] = Storage(config_dir, media_dir)
     app[TESTS] = {}
+    app[PREVIEWS] = {}
 
     async def lifecycle(app):
         app[OUTPUT] = Output()
@@ -424,6 +459,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_post("/api/devices/scan", scan_devices)
     r.add_post("/api/devices/test", test_device)
     r.add_post("/api/devices/probe", probe_device)
+    r.add_post("/api/devices/preview", preview_device)
     r.add_get("/api/shows", list_shows)
     r.add_post("/api/shows", create_show)
     r.add_get("/api/shows/{id}", get_show)
