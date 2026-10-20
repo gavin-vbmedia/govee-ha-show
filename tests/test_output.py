@@ -78,3 +78,27 @@ def test_razer_on_is_repeated_while_the_light_starts_up():
         dev.tick(t0 + i * 0.05)
     times_enabled = len([p for p in razer_packets(sock) if p[3] == 0xB1])
     assert 8 <= times_enabled <= 12  # about twice a second for 5 s, then quiet
+
+
+def test_whole_light_protocol_sends_colorwc_without_realtime_mode():
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.5", 2, sock, protocol="whole")
+    dev.enable()
+    t = dev.last_enable
+    dev.update(bytes([200, 0, 0, 0, 0, 100]))
+    dev.tick(t + 1)
+    dev.tick(t + 2)
+    dev.disable()
+    cmds = [m["cmd"] for m, _ in sock.sent]
+    assert "razer" not in cmds
+    colours = [m["data"]["color"] for m, _ in sock.sent if m["cmd"] == "colorwc"]
+    assert colours == [{"r": 100, "g": 0, "b": 50}]
+    assert dev.min_interval >= 1 / output.WHOLE_FPS
+
+
+def test_claim_rebuilds_the_device_when_the_protocol_changes():
+    out = output.Output.__new__(output.Output)
+    out.sock, out.devices = FakeSock(), {}
+    first = out.claim("10.0.0.5", 3)
+    second = out.claim("10.0.0.5", 3, protocol="v2")
+    assert first is not second and second.protocol == "v2"

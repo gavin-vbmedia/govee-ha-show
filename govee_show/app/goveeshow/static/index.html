@@ -129,14 +129,15 @@
   </section>
   <p class="hint">Devices need <b>LAN Control</b> switched on in the Govee Home app. Govee doesn't report
     segment counts, so press <b>Test</b>: a rainbow runs with a white dot stepping along it. Set
-    <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.</p>
+    <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
+    If Test only turns the light on, change <b>Protocol</b> and test again.</p>
   <p class="hint">Lights not delivered yet? Pick the <b>model</b> and add a <b>planned light</b>, then build shows
     with it. ✓ realtime means Govee lists the model as supporting per-segment control; ⚠ unverified models
     may not. Segment counts aren't published, so 15 is a guess until you Test the real light. When it arrives, scan and choose <b>Link to</b>, or type its IP into the row. Its
     shows carry over.</p>
   <div id="scan-results"></div>
   <table class="devices">
-    <thead><tr><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th title="How colours are sent to the light">Protocol</th><th></th></tr></thead>
     <tbody id="device-rows"></tbody>
   </table>
 </main>

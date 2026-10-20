@@ -16,6 +16,16 @@ Govee doesn't report how many segments a device has, so press **Test**: a rainbo
 dot stepping along it. Set **Segments** so the dot visits every segment once per lap, and tick
 **Reverse** if it runs the wrong way. Most strips and outdoor lights have 10 to 15 segments.
 
+**Test only turns the light on?** Lights accept different forms of the realtime command. Change
+**Protocol** and press **Test** again:
+
+| Protocol | When to use it |
+| --- | --- |
+| Realtime | The default, the same packets OpenRGB sends. Works for most strips and outdoor lights. |
+| Realtime (Razer) | The fixed-size packet Razer Chroma sends. Try it next. |
+| Realtime v2 | The newer DreamView form some recent lights use. |
+| Whole light only | For lights with no realtime mode. The whole light shows the average colour of its segments, at up to 10 changes a second, and each change fades a little. |
+
 **Lights not delivered yet?** Pick the model (e.g. `H7093`) and use **Add planned light**, then
 build shows with it straight away. The model list comes from Govee's product data: **✓ realtime**
 means Govee lists the model as supporting per-segment realtime control, which this add-on needs.

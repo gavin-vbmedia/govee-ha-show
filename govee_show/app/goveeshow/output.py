@@ -9,7 +9,7 @@ import logging
 import socket
 import time
 
-from .protocol import CMD_PORT, razer_colors, razer_enable, razer_msg, wrap
+from .protocol import CMD_PORT, average, colorwc_msg, razer_colors, razer_enable, razer_msg, wrap
 
 log = logging.getLogger(__name__)
 
@@ -20,12 +20,18 @@ REENABLE_S = 60
 STARTUP_S = 5
 STARTUP_REENABLE_S = 0.5
 MAX_FPS = 40
+WHOLE_FPS = 10  # colorwc fades each change, so faster than this just blurs
 
 
 class OutputDevice:
     def __init__(self, ip: str, segments: int, sock: socket.socket, *,
-                 reverse: bool = False, gradient: bool = False, max_fps: int = MAX_FPS):
+                 reverse: bool = False, gradient: bool = False, protocol: str = "standard",
+                 max_fps: int = MAX_FPS):
         self.ip = ip
+        self.protocol = protocol
+        self.realtime = protocol != "whole"
+        if not self.realtime:
+            max_fps = min(max_fps, WHOLE_FPS)
         self.segments = segments
         self.reverse = reverse
         self.gradient = gradient
@@ -47,12 +53,13 @@ class OutputDevice:
     def enable(self):
         self._send(wrap("turn", {"value": 1}))
         self._send(wrap("brightness", {"value": 100}))  # let the show own brightness
-        self._send(razer_msg(razer_enable(True)))
+        if self.realtime:
+            self._send(razer_msg(razer_enable(True)))
         self.last_enable = self.enabled_at = time.monotonic()
         self.enabled = True
 
     def disable(self):
-        if self.enabled:
+        if self.enabled and self.realtime:
             self._send(razer_msg(razer_enable(False)))
         self.enabled = False
         self.pending = self.last_frame = None
@@ -64,18 +71,23 @@ class OutputDevice:
             seg = b"".join(seg[i: i + 3] for i in range(n - 3, -1, -3))
         self.pending = seg
 
+    def packet(self, frame: bytes) -> bytes:
+        if not self.realtime:
+            return colorwc_msg(*average(frame))
+        return razer_msg(razer_colors(frame, self.gradient, self.protocol))
+
     def tick(self, now: float):
         if not self.enabled:
             return
         starting = now - self.enabled_at < STARTUP_S
-        if now - self.last_enable > (STARTUP_REENABLE_S if starting else REENABLE_S):
+        if self.realtime and now - self.last_enable > (STARTUP_REENABLE_S if starting else REENABLE_S):
             self._send(razer_msg(razer_enable(True)))
             self.last_enable = now
         frame = self.pending if self.pending is not None else self.last_frame
         if frame is None or now - self.last_sent < self.min_interval:
             return  # rate limited; latest pending frame wins
         if frame != self.last_frame or now - self.last_sent > KEEPALIVE_S:
-            self._send(razer_msg(razer_colors(frame, self.gradient)))
+            self._send(self.packet(frame))
             self.last_frame, self.last_sent = frame, now
         self.pending = None
 
@@ -98,12 +110,13 @@ class Output:
             self._task.cancel()
         self.sock.close()
 
-    def claim(self, ip: str, segments: int, *, reverse=False, gradient=False) -> OutputDevice:
+    def claim(self, ip: str, segments: int, *, reverse=False, gradient=False,
+              protocol="standard") -> OutputDevice:
         dev = self.devices.get(ip)
-        if dev is None or dev.segments != segments or dev.reverse != reverse or dev.gradient != gradient:
+        if dev is None or (dev.segments, dev.reverse, dev.gradient, dev.protocol) != (segments, reverse, gradient, protocol):
             if dev:
                 dev.disable()
-            dev = OutputDevice(ip, segments, self.sock, reverse=reverse, gradient=gradient)
+            dev = OutputDevice(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol)
             self.devices[ip] = dev
         if not dev.enabled:
             dev.enable()
@@ -140,11 +153,13 @@ def test_frame(segments: int, t: float) -> bytes:
 
 
 async def run_test_pattern(output: Output, ip: str, segments: int, seconds: float = 15,
-                           *, reverse=False, gradient=False, fps: int = 30):
-    dev = output.claim(ip, segments, reverse=reverse, gradient=gradient)
+                           *, reverse=False, gradient=False, protocol="standard", fps: int = 30):
+    dev = output.claim(ip, segments, reverse=reverse, gradient=gradient, protocol=protocol)
     # Logged so a light that ignores the pattern can be compared against other tools.
-    log.info("Test pattern on %s: %d segments, first colour packet %s", ip, segments,
-             razer_colors(test_frame(segments, 0), gradient).hex(" "))
+    first = test_frame(segments, 0)
+    packet = (razer_colors(first, gradient, protocol).hex(" ") if dev.realtime
+              else colorwc_msg(*average(first)).decode())
+    log.info("Test pattern on %s (%s): %d segments, first colour packet %s", ip, protocol, segments, packet)
     t0 = time.monotonic()
     try:
         while (t := time.monotonic() - t0) < seconds:
