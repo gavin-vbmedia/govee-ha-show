@@ -96,10 +96,11 @@ Next to Play, choose where the song plays:
 
 - **Song in this browser**: the song plays in your browser and the add-on streams the lights in
   sync with it. Untick **Lights** to preview in the browser only. If the lights lead or lag,
-  adjust **Light offset** under *Playback and automation*.
+  adjust **Light offset** on the **Settings** tab.
 - **Speaker: …** (any Home Assistant media player): the add-on starts the song on that speaker
   and the lights with it; the editor's playhead follows along. Speakers start playing a little
-  after they report they have, so set **Speaker delay** for each speaker (often 100 to 500 ms
+  after they report they have, so set **Speaker delay** on the **Settings** tab (with that speaker
+  picked in Playback) for each speaker (often 100 to 500 ms
   for Wi-Fi speakers) until the lights land on the beat. The speaker you pick is saved with the
   show and is what automations use.
 
@@ -139,8 +140,15 @@ actions:
         media_player: media_player.garden   # optional; defaults to the show's speaker
 ```
 
-Send `input: {action: stop}` to stop. The exact input for the open show is shown under
-*Playback and automation* in the editor. A show with no speaker plays the lights only.
+Send `input: {action: stop}` to stop. The exact input for the open show is shown on the
+**Settings** tab. A show with no speaker plays the lights only.
+
+## Arrange the editor
+
+Every editor panel (Show, Song, Playback, Beats, Zoom, Preview, Effects and Selection) has a **⋯**
+button in its corner: use it to move the panel to the top, left, right or bottom of the timeline.
+The **Layout** section of the **Settings** tab lists every panel in one place and has **Reset
+layout**. The layout is saved in your browser, so each computer or phone keeps its own.
 
 ## Where things are stored
 
