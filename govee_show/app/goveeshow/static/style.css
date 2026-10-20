@@ -12,6 +12,7 @@
   --wave: #8aa4c0;
   --beat: #f59e0b;
   --playhead: #e11d48;
+  --region: #10b981;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -117,3 +118,6 @@ button.swatch:hover { border-color: var(--text); }
 .palette-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel);
   border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 .palette-name { min-width: 11em; }
+.region-wrap { display: inline-flex; align-items: center; gap: 4px; color: var(--region); font-size: 13px; font-weight: 600; }
+.region-wrap button { padding: 1px 7px; }
+.save-state { color: var(--muted); font-size: 12px; min-width: 9em; }

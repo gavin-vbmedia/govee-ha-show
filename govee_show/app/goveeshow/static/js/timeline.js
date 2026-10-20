@@ -110,6 +110,7 @@ export class Timeline {
 
     this.drawWave(col);
     this.drawRuler(col);
+    this.drawRegion(col);
 
     // header column
     ctx.fillStyle = col("--panel");
@@ -194,6 +195,26 @@ export class Timeline {
     ctx.setLineDash([5, 3]);
     ctx.strokeRect(this.x(r.start) + 1, y0 + 1, this.x(r.end) - this.x(r.start) - 2, y1 - y0 - 2);
     ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+  }
+
+  // The play region: a band on the ruler and edge lines down the timeline.
+  drawRegion(col) {
+    const r = this.app.region;
+    if (!r) return;
+    const { ctx, w, h } = this;
+    const x0 = this.x(r.start), x1 = this.x(r.end);
+    if (x1 < HEADER_W || x0 > w) return;
+    ctx.fillStyle = col("--region");
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(Math.max(x0, HEADER_W), 0, Math.min(x1, w) - Math.max(x0, HEADER_W), RULER_H);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = col("--region");
+    ctx.lineWidth = 2;
+    for (const x of [x0, x1]) {
+      if (x < HEADER_W || x > w) continue;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
     ctx.lineWidth = 1;
   }
 
@@ -289,6 +310,11 @@ export class Timeline {
     }
     this.canvas.setPointerCapture(e.pointerId);
     const app = this.app;
+    if (y < RULER_H) {
+      // Drag along the ruler to set the play region; a click just moves the playhead.
+      this.drag = { mode: "region", anchor: Math.max(0, this.snapTime(this.t(x), e)), x0: x, moved: false };
+      return;
+    }
     if (y < RULER_H + WAVE_H) {
       this.drag = { mode: "seek" };
       app.seek(Math.max(0, this.t(x)));
@@ -329,12 +355,20 @@ export class Timeline {
     const d = this.drag;
     if (!d) {
       const hit = this.hitClip(x, y);
-      this.canvas.style.cursor = !hit ? (y < RULER_H + WAVE_H && x > HEADER_W ? "text" : "crosshair")
+      this.canvas.style.cursor = !hit ? (y < RULER_H && x > HEADER_W ? "col-resize"
+        : y < RULER_H + WAVE_H && x > HEADER_W ? "text" : "crosshair")
         : hit.mode === "move" && !e.altKey ? "grab" : e.altKey ? "crosshair" : "ew-resize";
       return;
     }
     const t = this.t(x);
     if (d.mode === "seek") { this.app.seek(Math.max(0, t)); return; }
+    if (d.mode === "region") {
+      if (!d.moved && Math.abs(x - d.x0) < 4) return;
+      d.moved = true;
+      const s = Math.max(0, this.snapTime(t, e));
+      this.app.setRegion(s >= d.anchor ? { start: d.anchor, end: s } : { start: s, end: d.anchor });
+      return;
+    }
     d.moved = true;
     const c = d.clip;
     if (d.mode === "range") {
@@ -370,6 +404,10 @@ export class Timeline {
     const d = this.drag;
     this.drag = null;
     if (!d || d.mode === "seek") return;
+    if (d.mode === "region") {
+      if (!d.moved) this.app.seek(Math.max(0, this.t(this.pos(e)[0])));
+      return;
+    }
     if (d.mode === "range") {
       const r = this.app.selected.range;
       if (!d.moved || (r.end - r.start) * this.app.pps < 4) {

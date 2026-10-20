@@ -41,6 +41,7 @@ const app = {
   show: blankShow(),
   showId: null,
   dirty: false,
+  edits: 0, // counts changes, so a save only marks the show clean if nothing changed meanwhile
   bakedKey: null,
   deviceList: [],
   devices: {},
@@ -51,6 +52,8 @@ const app = {
   // ({tracks, start, end}) when a stretch of time is selected on one or more lights.
   selected: null,
   clipboard: null, // {clips, track, whole}
+  region: null, // {start, end}: the part of the show Play plays (and loops), while designing
+  loop: prefs.get("loop", false),
   paletteEffect: "solid",
   palettes: [], // the user's own colour palettes; presets are in palettes.js
   colourPalette: prefs.get("colourPalette", PRESET_PALETTES[0].name),
@@ -81,6 +84,12 @@ const app = {
     if (this.playing) syncLights();
   },
 
+  setRegion(r) {
+    this.region = r && r.end - r.start >= 0.05 ? { start: Math.max(0, r.start), end: r.end } : null;
+    renderRegion();
+    timeline.draw();
+  },
+
   select(sel) {
     this.selected = sel;
     renderInspector();
@@ -90,10 +99,12 @@ const app = {
   // live changes redraw only; committed ones also go on the undo history.
   changed({ live = false } = {}) {
     this.dirty = true;
+    this.edits++;
     timeline.layout();
     if (!live) {
       commit();
       renderInspector();
+      scheduleAutoSave();
     }
   },
 };
@@ -116,9 +127,11 @@ function restore(step) {
   app.historyIndex = i;
   app.show = JSON.parse(app.history[i]);
   app.dirty = true;
+  app.edits++;
   app.selected = null;
   renderInspector();
   timeline.layout();
+  scheduleAutoSave();
 }
 
 // devices -------------------------------------------------------------------
@@ -363,7 +376,8 @@ function renderInspector() {
     box.innerHTML = `<p class="hint">Drag across a light (or several) to select a stretch of time, then click an
       effect above to add it there, or press Delete to clear it (hold Alt to start a selection on top of a clip). Click a clip to edit it: drag it to move, drag its
       edges to resize, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's name to copy or
-      recolour all its effects. Click the beat lane to add or remove a beat; hold Shift to drag without snapping.</p>`;
+      recolour all its effects. Drag along the time ruler to set a play region, and tick Loop to repeat it. Click the beat lane to add or
+      remove a beat; hold Shift to drag without snapping.</p>`;
     return;
   }
   const clip = sel.clip;
@@ -707,7 +721,8 @@ function renderRangeInspector(r) {
   const overlaps = tracks.some((t) => app.show.tracks[t].clips.some((c) => c.start < r.end && c.end > r.start));
   const del = button("Delete effects here", deleteRange, "ghost danger");
   del.disabled = !overlaps;
-  box.append(timeInput("start"), timeInput("end"), l, button("Add effect", () => addToRange(effect.value), "primary"), del);
+  box.append(timeInput("start"), timeInput("end"), l, button("Add effect", () => addToRange(effect.value), "primary"), del,
+    button("▶ Play this part", () => { app.setRegion(r); app.seek(r.start); play(); }, "ghost"));
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.textContent = "Tip: with a stretch selected, clicking an effect above adds it straight away.";
@@ -776,12 +791,52 @@ async function refreshShows() {
   sel.add(new Option("＋ New show", "__new__"));
 }
 
-function confirmDiscard() {
-  return !app.dirty || confirm("You have unsaved changes. Discard them?");
+async function confirmDiscard() {
+  if (!app.dirty) return true;
+  if (autoSaveOn() && worthSaving()) {
+    try { await autoSave(); return true; } catch { /* fall through to asking */ }
+  }
+  return confirm("You have unsaved changes. Discard them?");
+}
+
+// auto save -------------------------------------------------------------------
+// Saves (and bakes) a couple of seconds after the last change. A brand-new show is only
+// created once it has an effect in it, so trying things out doesn't litter the show list.
+const AUTOSAVE_MS = 2000;
+let autoSaveTimer = null, saving = null;
+const autoSaveOn = () => $("autosave").checked;
+const worthSaving = () => !!app.showId || app.show.tracks.some((t) => t.clips.length);
+
+function renderSaveState(text) {
+  $("save-state").textContent = text ?? (app.dirty ? (autoSaveOn() && worthSaving() ? "Unsaved changes…" : "Unsaved changes") : app.showId ? "All changes saved" : "");
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  renderSaveState();
+  if (!autoSaveOn() || !app.dirty || !worthSaving()) return;
+  autoSaveTimer = setTimeout(() => {
+    // Saving re-bakes the show, so wait until playback stops.
+    if (app.playing) { scheduleAutoSave(); return; }
+    autoSave().catch((e) => status(`Auto save failed: ${e.message}`, true));
+  }, AUTOSAVE_MS);
+}
+
+async function autoSave() {
+  clearTimeout(autoSaveTimer);
+  if (saving) await saving;
+  if (!app.dirty) return;
+  renderSaveState("Saving…");
+  saving = save().finally(() => { saving = null; });
+  try { await saving; } finally {
+    renderSaveState();
+    if (app.dirty) scheduleAutoSave(); // edited while saving
+  }
 }
 
 async function openShow(id) {
   await stop();
+  clearTimeout(autoSaveTimer);
   if (id) {
     app.show = await api(`api/shows/${encodeURIComponent(id)}`);
     app.show.beats ||= [];
@@ -790,6 +845,8 @@ async function openShow(id) {
     app.show = blankShow();
   }
   app.showId = id || null;
+  app.region = null;
+  renderRegion();
   app.dirty = false;
   app.bakedKey = null;
   app.selected = null;
@@ -797,6 +854,7 @@ async function openShow(id) {
   ensureTracks();
   commit();
   prefs.set("lastShow", app.showId);
+  renderSaveState();
   $("show-name").value = app.show.name;
   $("duration").value = Math.round(app.show.duration || 60);
   renderOutput();
@@ -817,8 +875,9 @@ async function save() {
   const key = JSON.stringify(app.deviceList.map((d) => [d.id, d.segments]));
   if (app.dirty || app.bakedKey === null) {
     app.show.duration = app.duration();
+    const edits = app.edits;
     await api(`api/shows/${app.showId}`, { method: "PUT", json: app.show });
-    app.dirty = false;
+    if (app.edits === edits) app.dirty = false;
     app.bakedKey = null;  // saving the show clears the server's bake
   }
   if (app.bakedKey !== key) {
@@ -833,11 +892,14 @@ async function save() {
 }
 
 async function saveClicked() {
+  clearTimeout(autoSaveTimer);
   try {
     status("Saving…");
+    if (saving) await saving;
     await save();
     status("Saved");
   } catch (e) { status(`Save failed: ${e.message}`, true); }
+  renderSaveState();
 }
 
 // audio -----------------------------------------------------------------------
@@ -980,9 +1042,20 @@ async function syncLights() {
   catch { /* the next sync will retry */ }
 }
 
+// Browser playback plays the region (when set) instead of the whole show.
+const playEnd = () => (app.region && !app.remote ? Math.min(app.region.end, app.duration()) : app.duration());
+
+function renderRegion() {
+  const r = app.region;
+  $("region-wrap").hidden = !r;
+  if (r) $("region-label").textContent = `Region ${fmtTime(r.start)} to ${fmtTime(r.end)}`;
+}
+
 async function play() {
   if (app.playing) return;
-  if (app.time >= app.duration() - 0.01) app.seek(0);
+  const r = app.region;
+  if (r && !speaker() && (app.time < r.start || app.time >= r.end - 0.01)) app.seek(r.start);
+  else if (app.time >= app.duration() - 0.01) app.seek(0);
   if (speaker()) {
     if (!app.show.audio) { status("Pick a song to play on a speaker", true); return; }
     try {
@@ -991,7 +1064,7 @@ async function play() {
       const st = await api("api/player/play", {
         method: "POST", json: { show: app.showId, position: app.time, media_player: speaker() },
       });
-      status("");
+      status(r || app.loop ? "Play region and Loop only work with the song in this browser" : "");
       app.clockStart = performance.now() - st.position * 1000;
     } catch (e) { status(`Couldn't play: ${e.message}`, true); return; }
     app.remote = true;
@@ -1055,9 +1128,19 @@ function fillBeats() {
 function frame() {
   if (app.playing) {
     app.time = currentTime();
-    if (app.time >= app.duration()) {
-      app.time = app.duration();
-      stop();
+    const end = playEnd();
+    if (app.time >= end) {
+      if (app.loop && !app.remote) {
+        app.seek(app.region ? app.region.start : 0);
+        // The add-on's player stops at the end of the show, so start it again for the next lap.
+        if (!app.region && lightsOn()) {
+          api("api/player/play", { method: "POST", json: { show: app.showId, position: 0, offset: offset() } })
+            .catch(() => {});
+        }
+      } else {
+        app.time = end;
+        stop();
+      }
     }
     timeline.follow(app.time);
   }
@@ -1081,7 +1164,7 @@ function wire() {
 
   $("show-select").addEventListener("change", async (e) => {
     const v = e.target.value;
-    if (!confirmDiscard()) { await refreshShows(); return; }
+    if (!(await confirmDiscard())) { await refreshShows(); return; }
     if (v === "__new__") await openShow(null);
     else if (v) await openShow(v);
   });
@@ -1090,8 +1173,11 @@ function wire() {
     app.changed();
   });
   $("btn-save").addEventListener("click", saveClicked);
+  $("autosave").checked = prefs.get("autosave", true);
+  $("autosave").addEventListener("change", (e) => { prefs.set("autosave", e.target.checked); scheduleAutoSave(); });
   $("btn-delete").addEventListener("click", async () => {
     if (!app.showId || !confirm(`Delete "${app.show.name}"? This can't be undone.`)) return;
+    clearTimeout(autoSaveTimer);
     await api(`api/shows/${app.showId}`, { method: "DELETE" });
     app.dirty = false;
     await openShow(null);
@@ -1111,7 +1197,10 @@ function wire() {
   audio.addEventListener("ended", stop);
 
   $("btn-play").addEventListener("click", () => (app.playing ? stop() : play()));
-  $("btn-home").addEventListener("click", () => app.seek(0));
+  $("btn-home").addEventListener("click", () => app.seek(app.region ? app.region.start : 0));
+  $("loop").checked = app.loop;
+  $("loop").addEventListener("change", (e) => { app.loop = e.target.checked; prefs.set("loop", app.loop); });
+  $("btn-clear-region").addEventListener("click", () => app.setRegion(null));
   $("btn-tap").addEventListener("click", tapBeat);
   $("btn-fill-beats").addEventListener("click", fillBeats);
   $("btn-clear-beats").addEventListener("click", () => {
