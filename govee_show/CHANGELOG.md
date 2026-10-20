@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.21
+
+- The Selection panel can be hidden too. Only the timeline always stays.
+
 ## 0.2.20
 
 - Fix: the Brightness slider's handle stopped short of the end at 100%. Sliders no longer pick up

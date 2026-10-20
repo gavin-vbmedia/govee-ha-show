@@ -3,8 +3,8 @@
 
 export const DOCKS = { top: "Top", left: "Left", middle: "Middle", right: "Right", bottom: "Bottom" };
 export const HIDDEN = "hidden";
-// The timeline and Selection are where a show is edited, so they can move but not hide.
-const ALWAYS_SHOWN = new Set(["timeline", "inspector"]);
+// The timeline is where a show is edited, so it can move but not hide.
+const ALWAYS_SHOWN = new Set(["timeline"]);
 const placesFor = (panel) => (ALWAYS_SHOWN.has(panel) ? DOCKS : { ...DOCKS, [HIDDEN]: "Hidden" });
 export const PANELS = {
   show: "Show", song: "Song", playback: "Playback", beats: "Beats", zoom: "Zoom",
