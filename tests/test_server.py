@@ -189,3 +189,9 @@ async def test_probe_lights_one_segment_then_stops(client):
     assert (await client.post("/api/devices/probe", json={**dev, "segment": 0})).status == 200
     assert "192.0.2.10" not in out.devices
     assert (await client.post("/api/devices/probe", json={**dev, "segment": 999})).status == 400
+
+
+async def test_static_files_are_revalidated(client):
+    resp = await client.get("/static/js/effects.js")
+    assert resp.status == 200
+    assert resp.headers["Cache-Control"] == "no-cache"

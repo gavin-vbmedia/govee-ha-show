@@ -87,6 +87,12 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 
 .inspector { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; min-height: 36px; }
 .inspector h3 { margin: 0; font-size: 14px; width: 100%; }
+.insp-group { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 0;
+  padding: 6px 12px 10px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; align-self: stretch; }
+.insp-group label > span { display: inline-flex; align-items: center; gap: 6px; }
+.insp-group legend { padding: 0 4px; }
+.insp-group .palette-row { width: auto; flex-basis: 100%; }
+.insp-actions { display: flex; gap: 8px; width: 100%; }
 
 .settings { max-width: 860px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
@@ -97,6 +103,7 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 table.devices { border-collapse: collapse; background: var(--panel); border-radius: 8px; overflow: hidden; }
 table.devices th, table.devices td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
 table.devices td input[type="number"] { width: 5em; }
+.range-value { display: inline-block; min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
 .finder { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
   display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
 .finder p { margin: 0; }

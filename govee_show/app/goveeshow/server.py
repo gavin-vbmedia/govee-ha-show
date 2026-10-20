@@ -68,6 +68,16 @@ async def index(request):
     return resp
 
 
+async def no_cache_static(request, response):
+    """Make browsers check for a newer app.js and effects.js after each update.
+
+    Without this they may keep running the previous version's scripts for days. Unchanged files
+    still come back as a quick 304.
+    """
+    if request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+
+
 async def info(request):
     return web.json_response({"version": __version__, "ha": request.app[HA].available,
                               "mqtt": request.app[MQTT].client is not None})
@@ -367,6 +377,7 @@ async def run_command(request):
 def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
              read_stdin: bool = False) -> web.Application:
     app = web.Application(middlewares=[ingress_only], client_max_size=MAX_UPLOAD)
+    app.on_response_prepare.append(no_cache_static)
     app[ALLOW_ALL] = allow_all
     app[STORAGE] = Storage(config_dir, media_dir)
     app[TESTS] = {}

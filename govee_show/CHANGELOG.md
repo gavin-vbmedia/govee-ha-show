@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.15
+
+- The clip settings below the timeline are grouped into Clip, Colours, Effect settings and
+  Brightness, and the brightness slider shows its value.
+- Fix: after updating the add-on, browsers could keep running the previous version's editor, so
+  new settings like Brightness didn't appear until a hard refresh. The editor's files are now
+  checked for updates on every load.
+
 ## 0.2.14
 
 - Every effect now has a **Brightness %** slider. Rainbow's own brightness setting moves into it,
