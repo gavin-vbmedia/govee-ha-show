@@ -41,6 +41,7 @@ const app = {
   show: blankShow(),
   showId: null,
   dirty: false,
+  edits: 0, // counts changes, so a save only marks the show clean if nothing changed meanwhile
   bakedKey: null,
   deviceList: [],
   devices: {},
@@ -98,10 +99,12 @@ const app = {
   // live changes redraw only; committed ones also go on the undo history.
   changed({ live = false } = {}) {
     this.dirty = true;
+    this.edits++;
     timeline.layout();
     if (!live) {
       commit();
       renderInspector();
+      scheduleAutoSave();
     }
   },
 };
@@ -124,9 +127,11 @@ function restore(step) {
   app.historyIndex = i;
   app.show = JSON.parse(app.history[i]);
   app.dirty = true;
+  app.edits++;
   app.selected = null;
   renderInspector();
   timeline.layout();
+  scheduleAutoSave();
 }
 
 // devices -------------------------------------------------------------------
@@ -786,12 +791,52 @@ async function refreshShows() {
   sel.add(new Option("＋ New show", "__new__"));
 }
 
-function confirmDiscard() {
-  return !app.dirty || confirm("You have unsaved changes. Discard them?");
+async function confirmDiscard() {
+  if (!app.dirty) return true;
+  if (autoSaveOn() && worthSaving()) {
+    try { await autoSave(); return true; } catch { /* fall through to asking */ }
+  }
+  return confirm("You have unsaved changes. Discard them?");
+}
+
+// auto save -------------------------------------------------------------------
+// Saves (and bakes) a couple of seconds after the last change. A brand-new show is only
+// created once it has an effect in it, so trying things out doesn't litter the show list.
+const AUTOSAVE_MS = 2000;
+let autoSaveTimer = null, saving = null;
+const autoSaveOn = () => $("autosave").checked;
+const worthSaving = () => !!app.showId || app.show.tracks.some((t) => t.clips.length);
+
+function renderSaveState(text) {
+  $("save-state").textContent = text ?? (app.dirty ? (autoSaveOn() && worthSaving() ? "Unsaved changes…" : "Unsaved changes") : app.showId ? "All changes saved" : "");
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  renderSaveState();
+  if (!autoSaveOn() || !app.dirty || !worthSaving()) return;
+  autoSaveTimer = setTimeout(() => {
+    // Saving re-bakes the show, so wait until playback stops.
+    if (app.playing) { scheduleAutoSave(); return; }
+    autoSave().catch((e) => status(`Auto save failed: ${e.message}`, true));
+  }, AUTOSAVE_MS);
+}
+
+async function autoSave() {
+  clearTimeout(autoSaveTimer);
+  if (saving) await saving;
+  if (!app.dirty) return;
+  renderSaveState("Saving…");
+  saving = save().finally(() => { saving = null; });
+  try { await saving; } finally {
+    renderSaveState();
+    if (app.dirty) scheduleAutoSave(); // edited while saving
+  }
 }
 
 async function openShow(id) {
   await stop();
+  clearTimeout(autoSaveTimer);
   if (id) {
     app.show = await api(`api/shows/${encodeURIComponent(id)}`);
     app.show.beats ||= [];
@@ -809,6 +854,7 @@ async function openShow(id) {
   ensureTracks();
   commit();
   prefs.set("lastShow", app.showId);
+  renderSaveState();
   $("show-name").value = app.show.name;
   $("duration").value = Math.round(app.show.duration || 60);
   renderOutput();
@@ -829,8 +875,9 @@ async function save() {
   const key = JSON.stringify(app.deviceList.map((d) => [d.id, d.segments]));
   if (app.dirty || app.bakedKey === null) {
     app.show.duration = app.duration();
+    const edits = app.edits;
     await api(`api/shows/${app.showId}`, { method: "PUT", json: app.show });
-    app.dirty = false;
+    if (app.edits === edits) app.dirty = false;
     app.bakedKey = null;  // saving the show clears the server's bake
   }
   if (app.bakedKey !== key) {
@@ -845,11 +892,14 @@ async function save() {
 }
 
 async function saveClicked() {
+  clearTimeout(autoSaveTimer);
   try {
     status("Saving…");
+    if (saving) await saving;
     await save();
     status("Saved");
   } catch (e) { status(`Save failed: ${e.message}`, true); }
+  renderSaveState();
 }
 
 // audio -----------------------------------------------------------------------
@@ -1114,7 +1164,7 @@ function wire() {
 
   $("show-select").addEventListener("change", async (e) => {
     const v = e.target.value;
-    if (!confirmDiscard()) { await refreshShows(); return; }
+    if (!(await confirmDiscard())) { await refreshShows(); return; }
     if (v === "__new__") await openShow(null);
     else if (v) await openShow(v);
   });
@@ -1123,8 +1173,11 @@ function wire() {
     app.changed();
   });
   $("btn-save").addEventListener("click", saveClicked);
+  $("autosave").checked = prefs.get("autosave", true);
+  $("autosave").addEventListener("change", (e) => { prefs.set("autosave", e.target.checked); scheduleAutoSave(); });
   $("btn-delete").addEventListener("click", async () => {
     if (!app.showId || !confirm(`Delete "${app.show.name}"? This can't be undone.`)) return;
+    clearTimeout(autoSaveTimer);
     await api(`api/shows/${app.showId}`, { method: "DELETE" });
     app.dirty = false;
     await openShow(null);

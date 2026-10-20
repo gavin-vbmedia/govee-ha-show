@@ -4,6 +4,8 @@
 
 - Play region: drag along the time ruler (or press "Play this part" on a selection) to play just
   that part of the show. Tick Loop to repeat the region, or the whole show, while you design.
+- Auto save: shows save themselves a couple of seconds after each change (switch it off next to
+  Save). A note shows whether everything is saved.
 
 ## 0.2.5
 

@@ -21,7 +21,7 @@ editor inside Home Assistant, with no external sequencing software or separate h
   or the whole show in one click
 - Copy and paste effects between lights (Ctrl+C / Ctrl+V), or copy a whole light's effects to
   one or every other light
-- Save and load shows; each show is baked into precomputed frames for reliable playback
+- Save and load shows, with auto save; each show is baked into precomputed frames for reliable playback
 - Play the song on any Home Assistant media player (with a per-speaker delay), or in the browser
 - Schedule or trigger shows from automations: MQTT entities (show select, play/stop buttons,
   status), or the `hassio.addon_stdin` action

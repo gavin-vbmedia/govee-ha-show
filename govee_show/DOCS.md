@@ -86,7 +86,11 @@ and redo, Ctrl+S save, + and − zoom, Ctrl+scroll zoom.
 
 ## 3. Play it
 
-**Save** stores the show and bakes every frame for playback (Play saves first if needed).
+**Save** stores the show and bakes every frame for playback (Play saves first if needed). With
+**Auto save** ticked (the default), the show also saves itself a couple of seconds after each
+change, and when you switch to another show; the note next to it says whether everything is saved.
+A new show is saved automatically once it has its first effect. Auto save waits while a show is
+playing, and Ctrl+Z still undoes changes after they've been saved.
 
 Next to Play, choose where the song plays:
 

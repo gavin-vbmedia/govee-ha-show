@@ -120,3 +120,4 @@ button.swatch:hover { border-color: var(--text); }
 .palette-name { min-width: 11em; }
 .region-wrap { display: inline-flex; align-items: center; gap: 4px; color: var(--region); font-size: 13px; font-weight: 600; }
 .region-wrap button { padding: 1px 7px; }
+.save-state { color: var(--muted); font-size: 12px; min-width: 9em; }
