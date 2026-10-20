@@ -56,6 +56,7 @@ const app = {
   clockStart: 0,
   syncTimer: null,
   speakers: [],
+  models: {}, // Govee SKU -> {name, realtime, segments?}
   remote: false, // playing on a Home Assistant speaker; the add-on keeps time
 
   duration() {
@@ -171,7 +172,9 @@ function renderDevices() {
       saveDevices();
     });
     cell(ip);
-    cell(d.sku || "–");
+    const model = document.createElement("span");
+    model.append(d.sku || "–", realtimeBadge(d.sku));
+    cell(model);
     cell(input("number", "segments", { min: 1, max: 255 }));
     cell(input("checkbox", "reverse"));
     cell(input("checkbox", "gradient"));
@@ -192,6 +195,44 @@ function renderDevices() {
     tr.append(actions);
     rows.append(tr);
   }
+}
+
+// Govee models ------------------------------------------------------------------
+async function loadModels() {
+  try {
+    const { models } = await (await fetch("static/models.json")).json();
+    app.models = Object.fromEntries(models.map((m) => [m.sku, m]));
+    const list = $("model-list");
+    for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.realtime ? "" : " (unverified)"}`, m.sku));
+    renderDevices();
+  } catch { /* the picker is a convenience; manual entry still works */ }
+}
+
+const skuOf = (text) => (text || "").trim().split(/\s+/)[0].toUpperCase();
+
+// A small marker saying whether Govee lists the model as realtime-capable.
+function realtimeBadge(sku) {
+  const m = app.models[skuOf(sku)];
+  const span = document.createElement("span");
+  if (!m) return span;
+  span.className = `badge ${m.realtime ? "ok" : "warn"}`;
+  span.textContent = m.realtime ? "✓ realtime" : "⚠ unverified";
+  span.title = m.realtime
+    ? `${m.name}: Govee lists this model as supporting realtime segment control.`
+    : `${m.name}: not on Govee's realtime list. Some unlisted models still work, but test it before relying on it.`;
+  return span;
+}
+
+function planModelChanged() {
+  const m = app.models[skuOf($("plan-model").value)];
+  const info = $("plan-info");
+  info.replaceChildren();
+  if (!m) return;
+  if (!$("plan-name").value) $("plan-name").value = m.name.replace(/^Govee\s+/, "");
+  if (m.segments) $("plan-segments").value = m.segments;
+  info.append(realtimeBadge(m.sku), m.segments
+    ? ` ${m.segments} segments (known)`
+    : " Segment count unknown: 15 is a guess, check it with Test when it arrives.");
 }
 
 function button(label, onclick, cls = "") {
@@ -223,7 +264,7 @@ async function scan() {
     for (const f of found) {
       const row = document.createElement("div");
       row.className = "scan-row";
-      row.append(`${f.sku || "Govee"} at ${f.ip}`);
+      row.append(`${f.sku || "Govee"} at ${f.ip}`, realtimeBadge(f.sku));
       const known = app.devices[f.id] || app.deviceList.find((d) => d.ip === f.ip);
       if (known) { row.append(` (${known.name})`); box.append(row); continue; }
       row.append(button("Add", () => { addDevice(f); row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (added)`); }));
@@ -766,14 +807,18 @@ function wire() {
   $("btn-zoom-out").addEventListener("click", () => { timeline.zoom(1 / 1.5); prefs.set("pps", app.pps); });
 
   $("btn-scan").addEventListener("click", scan);
+  $("plan-model").addEventListener("change", planModelChanged);
   $("plan-form").addEventListener("submit", (e) => {
     e.preventDefault();
     const name = $("plan-name").value.trim();
     const base = `planned-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "light"}`;
     let id = base;
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
-    app.deviceList.push({ id, name, ip: "", sku: "", segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false });
+    const sku = app.models[skuOf($("plan-model").value)] ? skuOf($("plan-model").value) : "";
+    app.deviceList.push({ id, name, ip: "", sku, segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false });
     $("plan-name").value = "";
+    $("plan-model").value = "";
+    $("plan-info").replaceChildren();
     saveDevices();
   });
   $("add-form").addEventListener("submit", (e) => {
@@ -808,6 +853,7 @@ async function init() {
   try {
     await loadDevices();
     loadSpeakers();
+    loadModels();
     const shows = await api("api/shows");
     const last = prefs.get("lastShow", null);
     const id = shows.some((s) => s.id === last) ? last : shows[0]?.id;

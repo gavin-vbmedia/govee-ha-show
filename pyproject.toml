@@ -2,7 +2,7 @@
 # govee_show/app/goveeshow/__init__.py; CI checks they match this one.
 [project]
 name = "govee-show"
-version = "0.2.2"
+version = "0.2.3"
 requires-python = ">=3.12"
 dependencies = ["aiohttp"]
 

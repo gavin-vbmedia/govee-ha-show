@@ -1,0 +1,1466 @@
+{
+"source": "github.com/fu-raz/signalrgb-govee-direct-connect (MIT)",
+"models": [
+{
+"sku": "H5051",
+"name": "Wi-Fi Thermo-Hygrometer",
+"realtime": false
+},
+{
+"sku": "H5071",
+"name": "Wi-Fi Thermo-Hygrometer Pro",
+"realtime": false
+},
+{
+"sku": "H5080",
+"name": "Smart Plug",
+"realtime": false
+},
+{
+"sku": "H5083",
+"name": "Circular Smart Plug",
+"realtime": false
+},
+{
+"sku": "H5085",
+"name": "Smart Plug Pro",
+"realtime": false
+},
+{
+"sku": "H5086",
+"name": "Smart Plug Pro （Energy Monitoring）",
+"realtime": false
+},
+{
+"sku": "H5103",
+"name": "Wi-Fi Thermo-Hygrometer",
+"realtime": false
+},
+{
+"sku": "H5106",
+"name": "Smart AIr Quality Monitor",
+"realtime": false
+},
+{
+"sku": "H5179",
+"name": "Wi-Fi Thermo-Hygrometer",
+"realtime": false
+},
+{
+"sku": "H6002",
+"name": "Wi-Fi+BLE LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6003",
+"name": "Wi-Fi RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6004",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6006",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6008",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6009",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H600A",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H600B",
+"name": "Govee Smart Bulb",
+"realtime": false
+},
+{
+"sku": "H600C",
+"name": "Govee Smart Bulb",
+"realtime": false
+},
+{
+"sku": "H600D",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6010",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6011",
+"name": "Wi-Fi+BLE RGBWW LED Bulb",
+"realtime": false
+},
+{
+"sku": "H6013",
+"name": "Govee Smart Bulb",
+"realtime": false
+},
+{
+"sku": "H601A",
+"name": "6inch Smart RGBWW LED Downlight",
+"realtime": false
+},
+{
+"sku": "H601B",
+"name": "4inch Smart RGBWW LED Downlight",
+"realtime": false
+},
+{
+"sku": "H601C",
+"name": "6inch Recessed Downlight（Can Light）",
+"realtime": false
+},
+{
+"sku": "H601D",
+"name": "4inch Recessed Downlight（Can Light）",
+"realtime": false
+},
+{
+"sku": "H601E",
+"name": "Govee Recessed Downlight 2",
+"realtime": false
+},
+{
+"sku": "H601F",
+"name": "Govee Recessed Downlight 2",
+"realtime": false
+},
+{
+"sku": "H6020",
+"name": "Govee Table Lamp 2 Pro x Sound by JBL",
+"realtime": true
+},
+{
+"sku": "H6022",
+"name": "Govee Table Lamp 2",
+"realtime": true
+},
+{
+"sku": "H6038",
+"name": "Govee Wall Sconce",
+"realtime": true
+},
+{
+"sku": "H6039",
+"name": "Govee Wall Sconce",
+"realtime": true
+},
+{
+"sku": "H6042",
+"name": "Govee TV Light Bar 2",
+"realtime": true
+},
+{
+"sku": "H6043",
+"name": "Govee TV Light Bars 2",
+"realtime": true
+},
+{
+"sku": "H6046",
+"name": "RGBIC TV Light Bars",
+"realtime": false
+},
+{
+"sku": "H6047",
+"name": "RGBIC Gaming Light Bars",
+"realtime": true
+},
+{
+"sku": "H6048",
+"name": "Govee RGBIC Gaming Light Bars Pro",
+"realtime": true
+},
+{
+"sku": "H6049",
+"name": "Govee DreamView P1S Light Bars",
+"realtime": false
+},
+{
+"sku": "H604A",
+"name": "Govee DreamView G1 Pro Gaming Light",
+"realtime": false
+},
+{
+"sku": "H604B",
+"name": "Govee DreamView G1 Gaming Light",
+"realtime": false
+},
+{
+"sku": "H604C",
+"name": "Govee DreamView G1S Pro Gaming Light",
+"realtime": false
+},
+{
+"sku": "H604D",
+"name": "Govee DreamView G1S Gaming Light",
+"realtime": false
+},
+{
+"sku": "H6050",
+"name": "Govee RGB Table lamp",
+"realtime": false
+},
+{
+"sku": "H6051",
+"name": "Table Lamp Lite",
+"realtime": false
+},
+{
+"sku": "H6052",
+"name": "RGBICWW Table Lamp",
+"realtime": false
+},
+{
+"sku": "H6054",
+"name": "Govee DreamView P1 Light Bars",
+"realtime": false
+},
+{
+"sku": "H6056",
+"name": "Flow Plus Light Bar",
+"realtime": true
+},
+{
+"sku": "H6057",
+"name": "Govee Night Light",
+"realtime": false
+},
+{
+"sku": "H6058",
+"name": "Govee Portable Table Lamp",
+"realtime": false
+},
+{
+"sku": "H6059",
+"name": "RGB Night Light Mini",
+"realtime": false
+},
+{
+"sku": "H605A",
+"name": "Govee TV Backlight 3 Lite Kit",
+"realtime": false
+},
+{
+"sku": "H605B",
+"name": "Govee DreamView T1 Pro TV Backlight",
+"realtime": false
+},
+{
+"sku": "H605C",
+"name": "Govee RGBIC TV Backlight T2",
+"realtime": false
+},
+{
+"sku": "H605D",
+"name": "Govee DreamView T1S Pro TV Backlight",
+"realtime": false
+},
+{
+"sku": "H6061",
+"name": "Glide Hexa Light Panels",
+"realtime": true
+},
+{
+"sku": "H6062",
+"name": "Glide Wall Light",
+"realtime": true
+},
+{
+"sku": "H6063",
+"name": "Govee Gaming Wall Light",
+"realtime": true
+},
+{
+"sku": "H6065",
+"name": "Glide Y Lights",
+"realtime": true
+},
+{
+"sku": "H6066",
+"name": "Glide Hexa Pro Light Panels",
+"realtime": true
+},
+{
+"sku": "H6067",
+"name": "Glide Tri Light Panels",
+"realtime": true
+},
+{
+"sku": "H6069",
+"name": "Govee Mini Panel Lights",
+"realtime": true
+},
+{
+"sku": "H606A",
+"name": "Govee Glide Hexa Light Panel Ultra",
+"realtime": true
+},
+{
+"sku": "H6071",
+"name": "Smart LED floor lamp",
+"realtime": false
+},
+{
+"sku": "H6072",
+"name": "RGBICWW Floor Lamp",
+"realtime": true
+},
+{
+"sku": "H6073",
+"name": "Smart RGB Floor Lamp",
+"realtime": false
+},
+{
+"sku": "H6075",
+"name": "Smart LED floor lamp",
+"realtime": false
+},
+{
+"sku": "H6076",
+"name": "RGBICW Floor Lamp Basic",
+"realtime": false
+},
+{
+"sku": "H6078",
+"name": "Govee RGBICWW Floor Lamp",
+"realtime": false
+},
+{
+"sku": "H6079",
+"name": "Govee RGBICWW Floor Lamp",
+"realtime": true
+},
+{
+"sku": "H607C",
+"name": "Govee RGBICWW Floor Lamp 2",
+"realtime": true
+},
+{
+"sku": "H6087",
+"name": "RGBIC Fixture Lights",
+"realtime": false
+},
+{
+"sku": "H6088",
+"name": "Govee RGBIC Cube Wall Sconces",
+"realtime": true
+},
+{
+"sku": "H608A",
+"name": "5m String Downlights",
+"realtime": true
+},
+{
+"sku": "H608B",
+"name": "3m String Downlights",
+"realtime": true
+},
+{
+"sku": "H608C",
+"name": "2m String Downlights",
+"realtime": true
+},
+{
+"sku": "H608D",
+"name": "10m String Downlights",
+"realtime": true
+},
+{
+"sku": "H6092",
+"name": "Govee Galaxy Light Projector",
+"realtime": false
+},
+{
+"sku": "H6093",
+"name": "Star Light Projector(Aurora)",
+"realtime": false
+},
+{
+"sku": "H6097",
+"name": "Govee TV Backlight 3 Lite",
+"realtime": false
+},
+{
+"sku": "H6098",
+"name": "Govee Smart TV Backlight 3S",
+"realtime": false
+},
+{
+"sku": "H6099",
+"name": "Govee TV Backlight 3 Lite",
+"realtime": false
+},
+{
+"sku": "H60A1",
+"name": "12inch Ceiling Light",
+"realtime": false
+},
+{
+"sku": "H60A4",
+"name": "Govee Square Ceiling Light",
+"realtime": true
+},
+{
+"sku": "H60A6",
+"name": "Govee Ceiling Light Pro",
+"realtime": false
+},
+{
+"sku": "H60B0",
+"name": "Govee Uplighter Floor Lamp",
+"realtime": true
+},
+{
+"sku": "H60B1",
+"name": "Govee Torchiere Floor Lamp",
+"realtime": true
+},
+{
+"sku": "H60B2",
+"name": "Govee Tree Floor Lamp",
+"realtime": true
+},
+{
+"sku": "H610A",
+"name": "Glide Lively Wall Light",
+"realtime": false
+},
+{
+"sku": "H610B",
+"name": "Glide Music Wall Light",
+"realtime": false
+},
+{
+"sku": "H6110",
+"name": "2*5m MultiColor Strip Lights",
+"realtime": false
+},
+{
+"sku": "H6117",
+"name": "2*5m RGBIC Strip Lights",
+"realtime": false
+},
+{
+"sku": "H611A",
+"name": "2*10m RGBIC Strip Light with Alexa",
+"realtime": false
+},
+{
+"sku": "H6121",
+"name": "10m RGB Strip Light with Alexa",
+"realtime": false
+},
+{
+"sku": "H612A",
+"name": "5m RGBIC+W Strip Light",
+"realtime": false
+},
+{
+"sku": "H612B",
+"name": "7.5m RGBIC+W Strip Light",
+"realtime": false
+},
+{
+"sku": "H612C",
+"name": "10m RGBIC+W Strip Light",
+"realtime": false
+},
+{
+"sku": "H612D",
+"name": "2*7.5m RGBIC+W Strip Light",
+"realtime": false
+},
+{
+"sku": "H612E",
+"name": "2*10m RGBIC+W Strip Light",
+"realtime": false
+},
+{
+"sku": "H612F",
+"name": "3m RGBIC+W Strip Light",
+"realtime": false
+},
+{
+"sku": "H6141",
+"name": "5m Smart MultiColor  Strip Light",
+"realtime": false
+},
+{
+"sku": "H6142",
+"name": "2*5m Smart MultiColor  Strip Light",
+"realtime": false
+},
+{
+"sku": "H6143",
+"name": "5m RGBIC Strip Light",
+"realtime": false
+},
+{
+"sku": "H6144",
+"name": "2*5m RGBIC Strip Lights",
+"realtime": false
+},
+{
+"sku": "H614E",
+"name": "2*15m RGB Strip Light with Alexa",
+"realtime": false
+},
+{
+"sku": "H6154",
+"name": "2*7.5m RGB Strip Light",
+"realtime": false
+},
+{
+"sku": "H6159",
+"name": "5m MultiColor Strip Light",
+"realtime": false
+},
+{
+"sku": "H615A",
+"name": "5m RGB Strip Light",
+"realtime": false
+},
+{
+"sku": "H615B",
+"name": "10m RGB Strip Light",
+"realtime": false
+},
+{
+"sku": "H615C",
+"name": "15m RGB Strip Light",
+"realtime": false
+},
+{
+"sku": "H615D",
+"name": "20m RGB Strip Light with Alexa",
+"realtime": false
+},
+{
+"sku": "H615E",
+"name": "30m RGB Strip Light with Alexa",
+"realtime": false
+},
+{
+"sku": "H6163",
+"name": "5m RGBIC Strip Light",
+"realtime": false
+},
+{
+"sku": "H6167",
+"name": "2.4m RGBIC TV Backlight",
+"realtime": false
+},
+{
+"sku": "H6168",
+"name": "2*0.7m+2*1.2m RGBIC TV Backlight",
+"realtime": false
+},
+{
+"sku": "H6169",
+"name": "4.6m RGBIC TV Backlight",
+"realtime": false
+},
+{
+"sku": "H616C",
+"name": "10m RGBIC Outdoor Strip Lights 2",
+"realtime": false
+},
+{
+"sku": "H616D",
+"name": "2*7.5m RGBIC Outdoor Strip Lights 2",
+"realtime": false
+},
+{
+"sku": "H616E",
+"name": "2*10m RGBIC Outdoor Strip Lights 2",
+"realtime": false
+},
+{
+"sku": "H6172",
+"name": "10m Outdoor RGBIC Strip Light",
+"realtime": false
+},
+{
+"sku": "H6173",
+"name": "2*10m Outdoor RGBIC LED Strip Lights",
+"realtime": false
+},
+{
+"sku": "H6175",
+"name": "10m RGBIC Outdoor Strip Lights",
+"realtime": false
+},
+{
+"sku": "H6176",
+"name": "30m RGBIC Outdoor Strip Lights",
+"realtime": false
+},
+{
+"sku": "H6182",
+"name": "Wi-Fi MultiColor  TV  Strip Light",
+"realtime": false
+},
+{
+"sku": "H618A",
+"name": "5m RGBIC Basic Strip Light",
+"realtime": false,
+"segments": 15
+},
+{
+"sku": "H618C",
+"name": "10m RGBIC Basic Strip Light",
+"realtime": false
+},
+{
+"sku": "H618E",
+"name": "2*10m RGBIC Bassic Strip Lights",
+"realtime": false
+},
+{
+"sku": "H618F",
+"name": "2*15m RGBIC LED Strip Light",
+"realtime": false
+},
+{
+"sku": "H6195",
+"name": "2*10m Smart MultiColor  Strip Light",
+"realtime": false
+},
+{
+"sku": "H6198",
+"name": "Govee DreamView T1S TV Backlight",
+"realtime": false
+},
+{
+"sku": "H6199",
+"name": "Govee DreamView T1 TV Backlight",
+"realtime": false
+},
+{
+"sku": "H619A",
+"name": "5m RGBIC Pro Strip Lights",
+"realtime": true
+},
+{
+"sku": "H619B",
+"name": "7.5m RGBIC Pro Strip Lights",
+"realtime": true
+},
+{
+"sku": "H619C",
+"name": "10m RGBIC Pro Strip Lights",
+"realtime": true
+},
+{
+"sku": "H619D",
+"name": "2*7.5m RGBIC Pro Strip Lights",
+"realtime": true
+},
+{
+"sku": "H619E",
+"name": "2*10m RGBIC Pro Strip Lights",
+"realtime": true
+},
+{
+"sku": "H619Z",
+"name": "3m RGBIC Pro Strip Lights",
+"realtime": true
+},
+{
+"sku": "H61A0",
+"name": "3m RGBIC Neon Rope Lights",
+"realtime": true
+},
+{
+"sku": "H61A1",
+"name": "2m RGBIC Neon Rope Lights",
+"realtime": true
+},
+{
+"sku": "H61A2",
+"name": "5m RGBIC Neon Rope Lights",
+"realtime": true
+},
+{
+"sku": "H61A3",
+"name": "4m RGBIC Neon Rope Lights",
+"realtime": true
+},
+{
+"sku": "H61A5",
+"name": "10m RGBIC Neon Rope Lights",
+"realtime": true
+},
+{
+"sku": "H61A8",
+"name": "10m RGBIC Outdoor Neon Rope Light",
+"realtime": false
+},
+{
+"sku": "H61A9",
+"name": "20m RGBIC Outdoor Neon Rope Light",
+"realtime": false
+},
+{
+"sku": "H61B2",
+"name": "3m RGBIC Neon TV Backlight",
+"realtime": false
+},
+{
+"sku": "H61B3",
+"name": "5m RGBIC LED Strip Light with Cover",
+"realtime": true
+},
+{
+"sku": "H61B5",
+"name": "5m RGBIC LED Strip Light with Cover",
+"realtime": true
+},
+{
+"sku": "H61B6",
+"name": "10m RGBIC LED Strip Light with Cover",
+"realtime": true
+},
+{
+"sku": "H61B8",
+"name": "Govee Strip Light with Skyline Kit",
+"realtime": true
+},
+{
+"sku": "H61B9",
+"name": "Govee Strip Light with Skyline Kit",
+"realtime": true
+},
+{
+"sku": "H61BA",
+"name": "5m RGBICW LED Strip Light",
+"realtime": true
+},
+{
+"sku": "H61BC",
+"name": "10m RGBICW LED Strip Light",
+"realtime": true
+},
+{
+"sku": "H61BE",
+"name": "2*10m RGBICW LED Strip Light",
+"realtime": true
+},
+{
+"sku": "H61C2",
+"name": "2m RGBIC Neon Rope Light for desks",
+"realtime": true
+},
+{
+"sku": "H61C3",
+"name": "3m RGBIC Neon Rope Light for desks",
+"realtime": true
+},
+{
+"sku": "H61C5",
+"name": "5m RGBIC Neon Rope Light for desks",
+"realtime": true
+},
+{
+"sku": "H61D2",
+"name": "2m Govee Neon Rope Light 2",
+"realtime": true
+},
+{
+"sku": "H61D3",
+"name": "3m Govee Neon Rope Light 2",
+"realtime": true
+},
+{
+"sku": "H61D4",
+"name": "4m Govee Neon Rope Light 2",
+"realtime": true
+},
+{
+"sku": "H61D5",
+"name": "5m Govee Neon Rope Light 2",
+"realtime": true
+},
+{
+"sku": "H61D6",
+"name": "10m Govee Neon Rope Light 2",
+"realtime": true
+},
+{
+"sku": "H61E0",
+"name": "Govee LED Strip Light M1",
+"realtime": true
+},
+{
+"sku": "H61E1",
+"name": "LED Strip Light M1",
+"realtime": true
+},
+{
+"sku": "H61E5",
+"name": "3m Govee COB Strip Light Pro",
+"realtime": true
+},
+{
+"sku": "H61E6",
+"name": "5m Govee COB Strip Light Pro",
+"realtime": true
+},
+{
+"sku": "H61F2",
+"name": "Govee Strip Light 2 Pro",
+"realtime": true
+},
+{
+"sku": "H61F5",
+"name": "Govee Strip Light 2 Pro",
+"realtime": true
+},
+{
+"sku": "H61F6",
+"name": "Govee Strip Light 2 Pro",
+"realtime": true
+},
+{
+"sku": "H6601",
+"name": "Govee AI Gaming Sync Box Kit",
+"realtime": false
+},
+{
+"sku": "H6602",
+"name": "Govee AI Gaming Sync Box with Backlight",
+"realtime": false
+},
+{
+"sku": "H6603",
+"name": "Govee AI Sync Box Kit 2",
+"realtime": false
+},
+{
+"sku": "H6604",
+"name": "Govee AI Sync Box 2 with backlight",
+"realtime": false
+},
+{
+"sku": "H6608",
+"name": "Govee Gaming Light Kit G1",
+"realtime": true
+},
+{
+"sku": "H6609",
+"name": "Govee Gaming Light Strip G1",
+"realtime": true
+},
+{
+"sku": "H6640",
+"name": "3m Govee Neon Rope Light for Wall Lining",
+"realtime": true
+},
+{
+"sku": "H6641",
+"name": "5m Govee Neon Rope Light for Wall Lining",
+"realtime": true
+},
+{
+"sku": "H6800",
+"name": "Christmas Tree LIghts",
+"realtime": false
+},
+{
+"sku": "H6810",
+"name": "240LED Net Lights",
+"realtime": false
+},
+{
+"sku": "H6811",
+"name": "480LED Net Lights",
+"realtime": false
+},
+{
+"sku": "H6840",
+"name": "Govee Cone Tree Lights",
+"realtime": false
+},
+{
+"sku": "H7012",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7013",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7020",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7021",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7025",
+"name": "LED Bulb String Lights",
+"realtime": true
+},
+{
+"sku": "H7026",
+"name": "Govee Outdoor Clear Bulb String Lights",
+"realtime": true
+},
+{
+"sku": "H7028",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7030",
+"name": "LED Bulb String Lights",
+"realtime": true
+},
+{
+"sku": "H7033",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7037",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7038",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7039",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H703A",
+"name": "15m Dots String Lights",
+"realtime": false
+},
+{
+"sku": "H703B",
+"name": "30m Dots String Lights",
+"realtime": false
+},
+{
+"sku": "H7041",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7042",
+"name": "LED Bulb String Lights",
+"realtime": false
+},
+{
+"sku": "H7050",
+"name": "Smart Ground Lights",
+"realtime": false
+},
+{
+"sku": "H7051",
+"name": "Smart Ground Lights",
+"realtime": false
+},
+{
+"sku": "H7052",
+"name": "15m Outdoor Ground Lights",
+"realtime": false
+},
+{
+"sku": "H7053",
+"name": "30m Outdoor Ground Lights",
+"realtime": false
+},
+{
+"sku": "H7055",
+"name": "Govee RGBIC Path Lights",
+"realtime": false
+},
+{
+"sku": "H7057",
+"name": "Outdoor Flood Lights 2",
+"realtime": true
+},
+{
+"sku": "H7058",
+"name": "Outdoor Flood Lights 2",
+"realtime": true
+},
+{
+"sku": "H705A",
+"name": "30m Permanent Outdoor Lights",
+"realtime": false
+},
+{
+"sku": "H705B",
+"name": "15m Permanent Outdoor Lights",
+"realtime": false
+},
+{
+"sku": "H705C",
+"name": "45m Permanent Outdoor Lights",
+"realtime": false
+},
+{
+"sku": "H705D",
+"name": "15m Permanent Outdoor Lights 2",
+"realtime": false
+},
+{
+"sku": "H705E",
+"name": "30m Permanent Outdoor Lights 2",
+"realtime": false
+},
+{
+"sku": "H705F",
+"name": "45m Permanent Outdoor Lights 2",
+"realtime": false
+},
+{
+"sku": "H7060",
+"name": "4 Pack RGBIC Flood Lights",
+"realtime": false
+},
+{
+"sku": "H7061",
+"name": "2 Pack RGBIC Flood Lights",
+"realtime": false
+},
+{
+"sku": "H7062",
+"name": "6 Pack RGBIC Flood Lights",
+"realtime": false
+},
+{
+"sku": "H7063",
+"name": "Govee Outdoor Flood Light",
+"realtime": false
+},
+{
+"sku": "H7066",
+"name": "Govee RGBIC Spotlights",
+"realtime": false
+},
+{
+"sku": "H7067",
+"name": "Govee Outdoor Deck Lights",
+"realtime": false
+},
+{
+"sku": "H7068",
+"name": "Govee Outdoor Deck Lights",
+"realtime": false
+},
+{
+"sku": "H7069",
+"name": "Govee Outdoor Deck Lights",
+"realtime": false
+},
+{
+"sku": "H706A",
+"name": "30m Permanent Outdoor Lights Pro",
+"realtime": false
+},
+{
+"sku": "H706B",
+"name": "45m Permanent Outdoor Lights Pro",
+"realtime": false
+},
+{
+"sku": "H706C",
+"name": "60m Permanent Outdoor Lights Pro",
+"realtime": false
+},
+{
+"sku": "H7070",
+"name": "Govee Outdoor Projector Light",
+"realtime": false
+},
+{
+"sku": "H7072",
+"name": "Govee Outdoor Lamp Post Lights",
+"realtime": true
+},
+{
+"sku": "H7075",
+"name": "Govee Outdoor Wall light",
+"realtime": false
+},
+{
+"sku": "H7076",
+"name": "Govee Outdoor UpDown Wall Light",
+"realtime": true
+},
+{
+"sku": "H7078",
+"name": "Govee Outdoor Wall light",
+"realtime": false
+},
+{
+"sku": "H7086",
+"name": "Govee Outdoor Garden Lights",
+"realtime": false
+},
+{
+"sku": "H7093",
+"name": "Govee Outdoor Spotlights 2",
+"realtime": true
+},
+{
+"sku": "H7094",
+"name": "Govee Outdoor Spotlights 2",
+"realtime": true
+},
+{
+"sku": "H70A1",
+"name": "10m RGBICWW Outdoor Strip Light",
+"realtime": false
+},
+{
+"sku": "H70A2",
+"name": "20m RGBICWW Outdoor Strip Light",
+"realtime": false
+},
+{
+"sku": "H70A3",
+"name": "30m RGBICWW Outdoor Strip Light",
+"realtime": false
+},
+{
+"sku": "H70B1",
+"name": "1.5*2m 520LED Curtain Lights",
+"realtime": true
+},
+{
+"sku": "H70B3",
+"name": "520LED Curtain Lights",
+"realtime": false
+},
+{
+"sku": "H70B4",
+"name": "1040LED Curtain Lights",
+"realtime": false
+},
+{
+"sku": "H70B5",
+"name": "1560LED Curtain Lights",
+"realtime": false
+},
+{
+"sku": "H70BC",
+"name": "400LED Curtain Lights",
+"realtime": true
+},
+{
+"sku": "H70C1",
+"name": "10m RGBIC String Light",
+"realtime": false
+},
+{
+"sku": "H70C2",
+"name": "20m RGBIC String Light",
+"realtime": false
+},
+{
+"sku": "H70C4",
+"name": "20m Christmas String Lights 2",
+"realtime": false
+},
+{
+"sku": "H70C5",
+"name": "30m Christmas String Lights 2",
+"realtime": false
+},
+{
+"sku": "H70C7",
+"name": "50m Christmas String Lights 2",
+"realtime": false
+},
+{
+"sku": "H70C9",
+"name": "100m Christmas String Lights 2",
+"realtime": false
+},
+{
+"sku": "H70CB",
+"name": "20m RGBIC String Light",
+"realtime": false
+},
+{
+"sku": "H70D1",
+"name": "10m RGBIC Outdoor Icicle Lights",
+"realtime": false
+},
+{
+"sku": "H70D2",
+"name": "20m RGBIC Outdoor Icicle Lights",
+"realtime": false
+},
+{
+"sku": "H70D3",
+"name": "30m RGBIC Outdoor Icicle Lights",
+"realtime": false
+},
+{
+"sku": "H7101",
+"name": "Smart Tower Fan",
+"realtime": false
+},
+{
+"sku": "H7102",
+"name": "Smart Tower Fan",
+"realtime": false
+},
+{
+"sku": "H7105",
+"name": "Smart Tower Fan 2 Max (42 Inch)",
+"realtime": false
+},
+{
+"sku": "H7106",
+"name": "Smart Tower Fan 2 (36inch)",
+"realtime": false
+},
+{
+"sku": "H7122",
+"name": "Smart Air Purifier",
+"realtime": false
+},
+{
+"sku": "H7123",
+"name": "Smart Pet Air Purifier",
+"realtime": false
+},
+{
+"sku": "H7124",
+"name": "Smart Air Purifier 2 (Sensor)",
+"realtime": false
+},
+{
+"sku": "H7126",
+"name": "Smart Mini Air Purifier",
+"realtime": false
+},
+{
+"sku": "H7128",
+"name": "Smart Air Purifier 2 Pro",
+"realtime": false
+},
+{
+"sku": "H7129",
+"name": "Smart Air Purifier 2 Pro (Sensor)",
+"realtime": false
+},
+{
+"sku": "H712C",
+"name": "Smart Air Purifier 2",
+"realtime": false
+},
+{
+"sku": "H7131",
+"name": "Smart Portable Space Heater",
+"realtime": false
+},
+{
+"sku": "H7135",
+"name": "Smart Space Heater Lite",
+"realtime": false
+},
+{
+"sku": "H7140",
+"name": "Smart Humidifier Lite",
+"realtime": false
+},
+{
+"sku": "H7142",
+"name": "Smart Humidifier",
+"realtime": false
+},
+{
+"sku": "H7143",
+"name": "Cool and Warm Mist Humidifier",
+"realtime": false
+},
+{
+"sku": "H7145",
+"name": "Smart Humidifier 2 (6L)",
+"realtime": false
+},
+{
+"sku": "H7151",
+"name": "Smart Dehumidifier Max",
+"realtime": false
+},
+{
+"sku": "H7152",
+"name": "Smart Dehumidifier Max (Pump)",
+"realtime": false
+},
+{
+"sku": "H7172",
+"name": "Smart Countertop Ice Maker",
+"realtime": false
+},
+{
+"sku": "H717D",
+"name": "Smart Countertop Ice Maker",
+"realtime": false
+},
+{
+"sku": "H800B",
+"name": "Govee Smart Bulb",
+"realtime": false
+},
+{
+"sku": "H801B",
+"name": "15m Permanent Outdoor Lights",
+"realtime": false
+},
+{
+"sku": "H801C",
+"name": "Govee Rescessed Downlight",
+"realtime": false
+},
+{
+"sku": "H8022",
+"name": "Govee Table Lamp 2S",
+"realtime": true
+},
+{
+"sku": "H8025",
+"name": "Govee Outdoor Clear Bulb String Lights",
+"realtime": true
+},
+{
+"sku": "H8026",
+"name": "Govee Outdoor Clear Bulb String Lights",
+"realtime": true
+},
+{
+"sku": "H802A",
+"name": "5m RGBIC Basic Strip Lights with Alexa",
+"realtime": false
+},
+{
+"sku": "H8057",
+"name": "Outdoor Flood Lights 2",
+"realtime": true
+},
+{
+"sku": "H805A",
+"name": "30m Permanent Outdoor Lights Elite",
+"realtime": false
+},
+{
+"sku": "H805B",
+"name": "15m Permanent Outdoor Lights Elite",
+"realtime": false
+},
+{
+"sku": "H805C",
+"name": "45m Permanent Outdoor Lights Elite",
+"realtime": false
+},
+{
+"sku": "H8066",
+"name": "Govee Smart Outdoor Spotlight",
+"realtime": true
+},
+{
+"sku": "H8069",
+"name": "Govee Mini Panel Lights",
+"realtime": true
+},
+{
+"sku": "H8072",
+"name": "Govee RGBICWW Floor Lamp",
+"realtime": true
+},
+{
+"sku": "H8076",
+"name": "Govee RGBICW Floor Lamp Lite",
+"realtime": false
+},
+{
+"sku": "H807C",
+"name": "Govee Corner Floor Lamp 2",
+"realtime": true
+},
+{
+"sku": "H808A",
+"name": "5m String Downlights",
+"realtime": true
+},
+{
+"sku": "H8098",
+"name": "Govee Smart TV Backlight 3S",
+"realtime": false
+},
+{
+"sku": "H80A1",
+"name": "12inch Ceiling Light",
+"realtime": false
+},
+{
+"sku": "H80A4",
+"name": "Govee Square Ceiling Light",
+"realtime": true
+},
+{
+"sku": "H80B5",
+"name": "5m RGBIC LED Strip Light with Cover",
+"realtime": true
+},
+{
+"sku": "H80C4",
+"name": "20m Christmas String Lights 2",
+"realtime": false
+},
+{
+"sku": "H80D1",
+"name": "10m RGBIC Outdoor Icicle Lights",
+"realtime": false
+},
+{
+"sku": "H8604",
+"name": "Govee Smart AI Sync Box",
+"realtime": false
+},
+{
+"sku": "H8811",
+"name": "480LED Net Lights",
+"realtime": false
+},
+{
+"sku": "H8840",
+"name": "Cone Tree Lights",
+"realtime": false
+}
+]
+}

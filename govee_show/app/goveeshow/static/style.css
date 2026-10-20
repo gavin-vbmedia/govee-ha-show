@@ -97,3 +97,6 @@ table.devices th, table.devices td { padding: 6px 10px; border-bottom: 1px solid
 table.devices td input[type="number"] { width: 5em; }
 #scan-results { display: flex; flex-direction: column; gap: 6px; }
 .scan-row { display: flex; gap: 10px; align-items: center; }
+.badge { font-size: 12px; margin-left: 6px; }
+.badge.ok { color: #16a34a; }
+.badge.warn { color: #d97706; }
