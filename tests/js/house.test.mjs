@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { bulbLayout, bulbPositions, bulbSegment } from "../../govee_show/app/goveeshow/static/js/house.js";
+import { bulbLayout, bulbPositions, bulbSegment, icicleDrops } from "../../govee_show/app/goveeshow/static/js/house.js";
 
 const close = (a, b) => a.every((p, i) => Math.abs(p[0] - b[i][0]) < 1e-9 && Math.abs(p[1] - b[i][1]) < 1e-9);
 
@@ -33,4 +33,13 @@ test("bulbs out of view take their place in the order but aren't drawn", () => {
   assert.ok(close(bulbLayout([[0, 0], [1, 0], [1, 1]], 5), bulbPositions([[0, 0], [1, 0], [1, 1]], 5)));
   // More bulbs marked hidden than the light has: the rest are simply hidden.
   assert.deepEqual(bulbLayout([[0, 0], [1, 0, 50]], 4), [null, null, null, null]);
+});
+
+test("icicle drops spread along the line with staggered lengths", () => {
+  const drops = icicleDrops([[0, 0], [1, 0], [2, 0, 4]], 6, 60);
+  assert.equal(drops.length, 6);
+  assert.deepEqual(drops.slice(2).every((d) => d === null), true); // 4 out of view
+  assert.ok(close(drops.slice(0, 2).map((d) => d.top), [[0, 0], [1, 0]]));
+  assert.equal(drops[0].f, 1);
+  assert.ok(drops[1].f < 1 && drops[1].n < drops[0].n);
 });

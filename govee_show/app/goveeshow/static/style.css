@@ -83,7 +83,8 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .house-light { display: flex; gap: 6px; align-items: center; }
 .house-light.active > span { color: var(--accent); font-weight: 600; }
 .house-stretch { padding: 6px 10px; border: 1px solid #ffb020; border-radius: 6px; }
-.house-stretch input { width: 5em; }
+.house-stretch input, .house-drops { width: 5em; }
+.house-light input[type="range"] { width: 90px; }
 #preview { display: block; width: 100%; height: 40px; }
 
 .effect-picker { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }

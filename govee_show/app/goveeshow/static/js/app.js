@@ -506,6 +506,45 @@ function renderHouseStretch() {
   box.replaceChildren(...parts);
 }
 
+// Line or Icicle, and for icicles how many drops and how far the longest hangs.
+function houseStyleControls(d) {
+  const style = house.styles[d.id];
+  const sel = document.createElement("select");
+  sel.title = "How the light looks on the photo";
+  sel.innerHTML = `<option value="line">Line</option><option value="icicle">Icicle</option>`;
+  sel.value = style?.style || "line";
+  sel.addEventListener("change", () => {
+    house.setStyle(d.id, sel.value === "icicle"
+      ? { style: "icicle", drops: Math.max(d.segments * 3, 10), length: 0.06 } : null);
+    renderHouseLights();
+  });
+  if (!style) return [sel];
+  const drops = document.createElement("input");
+  drops.type = "number";
+  drops.min = "1";
+  drops.max = "2000";
+  drops.value = style.drops;
+  drops.className = "house-drops";
+  drops.title = "How many drops hang from the light";
+  drops.addEventListener("change", () => {
+    house.setStyle(d.id, { ...style, drops: Math.min(Math.max(Math.round(Number(drops.value)) || 1, 1), 2000) });
+    renderHouseLights();
+  });
+  const length = document.createElement("input");
+  length.type = "range";
+  length.min = "0.01";
+  length.max = "0.3";
+  length.step = "0.005";
+  length.value = style.length;
+  length.title = "How far the longest drop hangs on the photo";
+  length.addEventListener("input", () => { style.length = Number(length.value); house.setStyle(d.id, style); });
+  const l1 = document.createElement("label");
+  l1.append("Drops ", drops);
+  const l2 = document.createElement("label");
+  l2.append("Length ", length);
+  return [sel, l1, l2];
+}
+
 function renderHouseLights() {
   renderHouseStretch();
   $("house-remove").hidden = !house.photo;
@@ -538,6 +577,7 @@ function renderHouseLights() {
         renderHouseLights();
       }));
     }
+    row.append(...houseStyleControls(d));
     if (pts) {
       row.append(button("Clear", () => {
         delete house.paths[d.id];

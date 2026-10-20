@@ -457,7 +457,20 @@ async def get_house(request):
 
 def _house(settings: dict) -> dict:
     house = settings.get("house", {})
-    return {"paths": house.get("paths", {}), "dim": house.get("dim", 0.5)}
+    return {"paths": house.get("paths", {}), "styles": house.get("styles", {}), "dim": house.get("dim", 0.5)}
+
+
+def _clean_style(style) -> dict | None:
+    """How a light looks on the house photo: {"style": "icicle", "drops": n, "length": l} draws
+    n drops hanging from its line, the longest l of the photo's height. Plain lines need nothing."""
+    if not isinstance(style, dict) or style.get("style") != "icicle":
+        return None
+    try:
+        drops = min(max(int(style.get("drops", 40)), 1), MAX_BULBS)
+        length = round(min(max(float(style.get("length", 0.06)), 0.01), 0.5), 4)
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="icicle drops and length must be numbers")
+    return {"style": "icicle", "drops": drops, "length": length}
 
 
 async def put_house(request):
@@ -489,13 +502,17 @@ async def put_house(request):
             pts.append([x, y] if hidden is None else [x, y, hidden])
         if pts:
             clean[str(dev_id)[:64]] = pts
+    styles = body.get("styles") or {}
+    if not isinstance(styles, dict) or len(styles) > 100:
+        raise web.HTTPBadRequest(text="expected styles for up to 100 lights")
+    styles = {str(k)[:64]: v for k, v in ((k, _clean_style(v)) for k, v in styles.items()) if v}
     try:
         dim = min(max(float(body.get("dim", 0.5)), 0), 0.9)
     except (TypeError, ValueError):
         raise web.HTTPBadRequest(text="dim must be a number")
     storage = request.app[STORAGE]
     settings = storage.load_settings()
-    settings["house"] = {"paths": clean, "dim": dim}
+    settings["house"] = {"paths": clean, "styles": styles, "dim": dim}
     storage.save_settings(settings)
     return web.json_response(_house(settings))
 
