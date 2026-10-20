@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.30
+
+- Every effect button in the Selection panel now has a small strip playing that effect, so you can
+  see what each one looks like before adding it. It uses the effect's default settings and runs
+  on the selected light's segments, for as long as the selection (up to 6 seconds before it loops).
+
 ## 0.2.29
 
 - House view: spotlights, such as the H7093. Set a light's **Style** to **Spots**, press Trace and

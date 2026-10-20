@@ -53,7 +53,7 @@ real segment count differs, just change it: effects scale to any number of segme
   (hold Shift to place freely).
 - To add an effect, drag across a light's track to select a stretch of time (drag up or down to
   cover several lights; a plain click selects up to the next beat). The Selection panel then shows a
-  button for every effect: click one to add it there. To clear a stretch, select
+  button for every effect, each with a strip playing it on that light: click one to add it there. To clear a stretch, select
   it and press **Delete effects here** or the Delete key: effects inside it are removed and ones
   crossing its edges are trimmed. Hold **Alt** to start a selection on top of an existing clip.
 - Click a clip to edit it. Drag it to move it (including onto another device), drag its edges to
