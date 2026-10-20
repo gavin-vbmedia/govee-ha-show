@@ -1,14 +1,18 @@
-// Editor layout: which dock around the timeline (top, left, right or bottom) each panel sits in.
+// Editor layout: which dock (top, left, middle, right or bottom) each panel sits in, or hidden.
 // Saved per browser, so a laptop and a phone can each have their own arrangement.
 
-export const DOCKS = { top: "Top", left: "Left", right: "Right", bottom: "Bottom" };
+export const DOCKS = { top: "Top", left: "Left", middle: "Middle", right: "Right", bottom: "Bottom" };
+export const HIDDEN = "hidden";
+// The timeline and Selection are where a show is edited, so they can move but not hide.
+const ALWAYS_SHOWN = new Set(["timeline", "inspector"]);
+const placesFor = (panel) => (ALWAYS_SHOWN.has(panel) ? DOCKS : { ...DOCKS, [HIDDEN]: "Hidden" });
 export const PANELS = {
   show: "Show", song: "Song", playback: "Playback", beats: "Beats", zoom: "Zoom",
-  preview: "Preview", inspector: "Selection",
+  preview: "Preview", timeline: "Timeline", inspector: "Selection",
 };
 export const DEFAULT_LAYOUT = {
   show: "top", song: "top", playback: "top", beats: "top", zoom: "top",
-  preview: "top", inspector: "bottom",
+  preview: "top", timeline: "middle", inspector: "bottom",
 };
 const KEY = "goveeshow.layout";
 
@@ -16,7 +20,7 @@ export function loadLayout() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { /* private mode or bad data */ }
   const layout = { ...DEFAULT_LAYOUT };
-  for (const [k, v] of Object.entries(saved)) if (k in PANELS && v in DOCKS) layout[k] = v;
+  for (const [k, v] of Object.entries(saved)) if (k in PANELS && v in placesFor(k)) layout[k] = v;
   return layout;
 }
 
@@ -59,9 +63,11 @@ export class Layout {
     const docks = Object.fromEntries([...document.querySelectorAll(".dock[data-dock]")].map((d) => [d.dataset.dock, d]));
     for (const key of Object.keys(PANELS)) {
       const el = document.querySelector(`.panel[data-panel="${key}"]`);
-      if (el) docks[this.layout[key]].append(el);
+      if (!el) continue;
+      el.hidden = this.layout[key] === HIDDEN;
+      if (!el.hidden) docks[this.layout[key]].append(el);
     }
-    for (const d of Object.values(docks)) d.hidden = !d.querySelector(".panel");
+    for (const d of Object.values(docks)) d.hidden = !d.querySelector(".panel:not([hidden])");
     this.renderSettings();
     this.onChange?.();
   }
@@ -75,7 +81,7 @@ export class Layout {
     title.className = "section-label";
     title.textContent = `Move ${PANELS[panel]} to`;
     menu.append(title);
-    for (const [dock, label] of Object.entries(DOCKS)) {
+    for (const [dock, label] of Object.entries(placesFor(panel))) {
       const b = document.createElement("button");
       b.className = dock === this.layout[panel] ? "active" : "ghost";
       b.textContent = label;
@@ -101,7 +107,7 @@ export class Layout {
     box.replaceChildren(...Object.entries(PANELS).map(([key, label]) => {
       const l = document.createElement("label");
       const sel = document.createElement("select");
-      for (const [dock, dl] of Object.entries(DOCKS)) sel.add(new Option(dl, dock, false, dock === this.layout[key]));
+      for (const [dock, dl] of Object.entries(placesFor(key))) sel.add(new Option(dl, dock, false, dock === this.layout[key]));
       sel.addEventListener("change", () => this.move(key, sel.value));
       const name = document.createElement("span");
       name.textContent = label;

@@ -55,6 +55,7 @@ button, .button, select, input {
   padding: 5px 10px;
 }
 input[type="checkbox"] { padding: 0; }
+input[type="range"] { padding: 0; border: 0; background: none; accent-color: var(--accent); }
 input[type="color"] { padding: 0 2px; width: 44px; height: 30px; }
 input[type="number"] { width: 6em; }
 button, .button { cursor: pointer; }
@@ -80,7 +81,7 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .clip-preview { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; width: 100%; }
 .clip-preview canvas { display: block; flex: 1 1 240px; min-width: 0; height: 22px; background: #000; border-radius: 6px; }
 
-.timeline-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.timeline-wrap { border-radius: 6px; overflow: hidden; }
 .timeline-scroll { overflow-x: auto; overflow-y: hidden; }
 .timeline-inner { position: relative; }
 .timeline-stage { position: sticky; left: 0; width: 100%; }
@@ -129,22 +130,26 @@ button.swatch:hover { border-color: var(--text); }
 .region-wrap button { padding: 1px 7px; }
 .save-state { color: var(--muted); font-size: 12px; min-width: 9em; }
 
-/* editor layout: panels in docks around the timeline */
+/* editor layout: panels in five docks, top and bottom full width, left, middle and right between */
 .panel {
   display: flex; flex-direction: column; gap: 6px; min-width: 0;
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px;
 }
+.panel[hidden] { display: none; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
 .panel-move { padding: 0 6px; line-height: 1.2; border-color: transparent; color: var(--muted); }
 .panel-move:hover { color: var(--text); }
 .dock { display: flex; gap: 8px; }
+.dock[hidden] { display: none; }
 .dock[data-dock="top"], .dock[data-dock="bottom"] { flex-wrap: wrap; align-items: stretch; }
 .dock[data-dock="top"] > .panel, .dock[data-dock="bottom"] > .panel { flex: 0 1 auto; }
-.dock[data-dock="top"] > [data-panel="preview"], .dock[data-dock="top"] > [data-panel="inspector"],
-.dock[data-dock="bottom"] > [data-panel="preview"], .dock[data-dock="bottom"] > [data-panel="inspector"] { flex-basis: 100%; }
-.dock[data-dock="left"], .dock[data-dock="right"] { flex-direction: column; width: 320px; flex: none; }
+.dock[data-dock="top"] > :is([data-panel="preview"], [data-panel="inspector"], [data-panel="timeline"]),
+.dock[data-dock="bottom"] > :is([data-panel="preview"], [data-panel="inspector"], [data-panel="timeline"]) { flex-basis: 100%; }
+.dock[data-dock="left"], .dock[data-dock="right"], .dock[data-dock="middle"] { flex-direction: column; }
+.dock[data-dock="left"], .dock[data-dock="right"] { width: 320px; flex: none; }
+.dock[data-dock="middle"] { flex: 1; min-width: 0; }
 .editor-middle { display: flex; gap: 10px; align-items: flex-start; }
-.editor-middle > .timeline-wrap { flex: 1; min-width: 0; }
+.editor-middle > .dock[hidden] + .dock[data-dock="right"] { margin-left: auto; }
 .panel-menu {
   position: absolute; z-index: 10; display: flex; flex-direction: column; gap: 4px; min-width: 150px;
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px;

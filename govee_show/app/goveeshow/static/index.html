@@ -22,7 +22,7 @@
 </header>
 
 <main id="view-editor" class="view editor">
-  <!-- Panels live in four docks around the timeline; layout.js moves them where each viewer wants. -->
+  <!-- Panels live in five docks (top, left, middle, right, bottom); layout.js moves or hides them per viewer. -->
   <div class="dock" data-dock="top">
     <section class="panel" data-panel="show">
       <div class="panel-head"><span class="section-label">Show</span></div>
@@ -82,16 +82,21 @@
   </div>
   <div class="editor-middle">
     <div class="dock" data-dock="left"></div>
-    <section class="timeline-wrap">
-      <div id="timeline-scroll" class="timeline-scroll">
-        <div id="timeline-inner" class="timeline-inner">
-          <div class="timeline-stage">
-            <canvas id="timeline"></canvas>
-            <canvas id="timeline-overlay"></canvas>
+    <div class="dock" data-dock="middle">
+      <section class="panel" data-panel="timeline">
+        <div class="panel-head"><span class="section-label">Timeline</span></div>
+        <div class="timeline-wrap">
+          <div id="timeline-scroll" class="timeline-scroll">
+            <div id="timeline-inner" class="timeline-inner">
+              <div class="timeline-stage">
+                <canvas id="timeline"></canvas>
+                <canvas id="timeline-overlay"></canvas>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
     <div class="dock" data-dock="right"></div>
   </div>
   <div class="dock" data-dock="bottom">
@@ -176,8 +181,9 @@
   </section>
   <section class="card">
     <h2>Layout</h2>
-    <p class="hint">Choose where each editor panel sits around the timeline. You can also use the ⋯ button on a
-      panel. The layout is saved in this browser.</p>
+    <p class="hint">Choose where each editor panel sits: along the top or bottom, down the left or right, or in
+      the middle. Choose <b>Hidden</b> to tuck a panel away and bring it back here. You can also use the ⋯ button on
+      a panel. The layout is saved in this browser.</p>
     <div id="layout-rows" class="layout-rows"></div>
     <p><button id="btn-reset-layout" class="ghost">Reset layout</button></p>
   </section>

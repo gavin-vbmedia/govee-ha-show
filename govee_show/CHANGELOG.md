@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.20
+
+- Fix: the Brightness slider's handle stopped short of the end at 100%. Sliders no longer pick up
+  the padding and border meant for text boxes.
+- Editor layout has five zones: top and bottom across the full width, and left, middle and right
+  between them. The timeline is a panel too and can go in any of them. Panels other than the
+  timeline and Selection can be hidden, and brought back from Settings → Layout.
+
 ## 0.2.19
 
 - The Effects bar is gone. Select a stretch of a light and the Selection panel shows a button for
