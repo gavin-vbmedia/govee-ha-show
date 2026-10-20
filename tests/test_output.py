@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 
@@ -92,7 +93,7 @@ def test_whole_light_protocol_sends_colorwc_without_realtime_mode():
     cmds = [m["cmd"] for m, _ in sock.sent]
     assert "razer" not in cmds
     colours = [m["data"]["color"] for m, _ in sock.sent if m["cmd"] == "colorwc"]
-    assert colours == [{"r": 100, "g": 0, "b": 50}]
+    assert colours and all(c == {"r": 100, "g": 0, "b": 50} for c in colours)
     assert dev.min_interval >= 1 / output.WHOLE_FPS
 
 
@@ -117,3 +118,28 @@ def test_claim_resizes_in_place_without_leaving_realtime_mode():
     second = out.claim("10.0.0.5", 32)
     assert first is second and second.segments == 32
     assert len(sock.sent) == sent  # no razer off/on between steps
+
+
+async def test_probe_keeps_the_light_between_questions():
+    sock = FakeSock()
+    out = output.Output.__new__(output.Output)
+    out.sock, out.devices = sock, {}
+    task = asyncio.create_task(output.run_probe(out, "10.0.0.5", 64))
+    await asyncio.sleep(0)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    assert "10.0.0.5" in out.devices  # still in realtime mode for the next question
+    assert razer_packets(sock)[-1] == output.razer_enable(True)
+
+
+def test_unchanged_frame_is_resent_often_enough_to_stay_in_realtime_mode():
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.5", 1, sock)
+    dev.enable()
+    t = dev.enabled_at + output.STARTUP_S + 1
+    dev.last_enable = t  # past start-up, no re-enables in this window
+    dev.update(b"\xff\x00\x00")
+    for i in range(30):
+        dev.tick(t + i * 0.1)
+    colours = [p for p in razer_packets(sock) if p[3] == 0xB0]
+    assert len(colours) >= 5  # about every half second over 3 s
