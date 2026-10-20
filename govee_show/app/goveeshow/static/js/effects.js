@@ -38,6 +38,21 @@ const num = (key, label, def, min, max, step) => ({ key, label, type: "number", 
 const choice = (key, label, def, options) => ({ key, label, type: "select", default: def, options });
 const direction = choice("direction", "Direction", "forward", ["forward", "reverse"]);
 
+// Two or three solid colours side by side: split the light into equal bands, or alternate
+// them every few segments along it.
+function multiColour(label, colours) {
+  return {
+    label,
+    params: [...colours, choice("layout", "Layout", "split", ["split", "alternate"]),
+      num("size", "Segments per colour (alternate)", 1, 1, 50, 1)],
+    render: (p, t, dur, n, i) => {
+      const k = colours.length;
+      const idx = p.layout === "alternate" ? Math.floor(i / Math.max(1, p.size)) % k : Math.min(k - 1, Math.floor((i * k) / n));
+      return hexToRgb(p[colours[idx].key]);
+    },
+  };
+}
+
 // render(p, t, dur, n, i) returns the colour of segment i (0..n-1) at t seconds into the clip.
 export const EFFECTS = {
   solid: {
@@ -45,6 +60,9 @@ export const EFFECTS = {
     params: [color("color", "Colour", "#ff0000")],
     render: (p) => hexToRgb(p.color),
   },
+  duo: multiColour("Two colours", [color("color", "Colour 1", "#ff0000"), color("color2", "Colour 2", "#00ff00")]),
+  trio: multiColour("Three colours", [color("color", "Colour 1", "#ff0000"), color("color2", "Colour 2", "#ffffff"),
+    color("color3", "Colour 3", "#00ff00")]),
   fade: {
     label: "Fade",
     params: [color("from", "From", "#000000"), color("to", "To", "#ff0000")],

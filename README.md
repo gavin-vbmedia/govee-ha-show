@@ -12,7 +12,7 @@ editor inside Home Assistant, with no external sequencing software or separate h
 - Plan shows before your lights arrive: add planned lights by name and segment count, then link
   them to the real devices later
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping
-- Draggable effects (solid, fade, chase, rainbow, strobe, twinkle, wipe) with a live,
+- Draggable effects (solid, two and three colours, fade, chase, rainbow, strobe, twinkle, wipe) with a live,
   segment-level preview
 - Copy and paste effects between lights (Ctrl+C / Ctrl+V), or copy a whole light's effects to
   one or every other light
