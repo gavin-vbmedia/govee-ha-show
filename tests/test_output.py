@@ -143,3 +143,14 @@ def test_unchanged_frame_is_resent_often_enough_to_stay_in_realtime_mode():
         dev.tick(t + i * 0.025)
     colours = [p for p in razer_packets(sock) if p[3] == 0xB0]
     assert len(colours) >= 20  # roughly 10 a second over 3 s (tick spacing rounds it down a little)
+
+
+def test_brightness_caps_every_frame_and_can_change_live():
+    out = output.Output.__new__(output.Output)
+    out.sock, out.devices = FakeSock(), {}
+    dev = out.claim("10.0.0.5", 1, brightness=50)
+    dev.update(b"\xff\x80\x00")
+    assert dev.pending == bytes([127, 64, 0])
+    assert out.claim("10.0.0.5", 1, brightness=100) is dev
+    dev.update(b"\xff\x80\x00")
+    assert dev.pending == b"\xff\x80\x00"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.14
+
+- Every effect now has a **Brightness %** slider. Rainbow's own brightness setting moves into it,
+  and existing rainbow clips keep their level.
+- New **Brightness %** per light on the Devices tab, which caps that light in every show and in
+  the preview. It applies straight away, without re-saving shows.
+
 ## 0.2.13
 
 - Fix: lights that hold one colour, including Find segments, could still flicker back to their own

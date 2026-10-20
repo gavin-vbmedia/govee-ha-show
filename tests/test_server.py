@@ -53,7 +53,8 @@ async def test_devices_round_trip_and_validation(client):
     devices = await (await client.get("/api/devices")).json()
     assert devices == [{"id": "192.168.1.50", "name": "Porch", "ip": "192.168.1.50", "sku": "",
                         "segments": 12, "reverse": False, "gradient": False,
-                        "protocol": "standard"}]
+                        "protocol": "standard", "brightness": 100}]
+    assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "brightness": 0}])).status == 400
     assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "protocol": "dmx"}])).status == 400
     assert (await client.put("/api/devices", json=[{"ip": "nope"}])).status == 400
     assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "segments": 0}])).status == 400

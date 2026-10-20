@@ -166,10 +166,11 @@ function renderDevices() {
   const rows = $("device-rows");
   rows.replaceChildren();
   if (!app.deviceList.length) {
-    rows.innerHTML = `<tr><td colspan="7" class="hint">No devices yet. Scan the network or add one by IP.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="9" class="hint">No devices yet. Scan the network or add one by IP.</td></tr>`;
     return;
   }
   for (const d of app.deviceList) {
+    d.brightness ??= 100; // saved before per-light brightness existed
     const tr = document.createElement("tr");
     const input = (type, key, attrs = {}) => {
       const el = document.createElement("input");
@@ -202,6 +203,7 @@ function renderDevices() {
     find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
     segs.append(input("number", "segments", { min: 1, max: 255 }), " ", find);
     cell(segs);
+    cell(input("number", "brightness", { min: 1, max: 100, title: "Caps this light in every show. 100 is full brightness." }));
     cell(input("checkbox", "reverse"));
     cell(input("checkbox", "gradient"));
     const proto = document.createElement("select");
@@ -348,7 +350,7 @@ function button(label, onclick, cls = "") {
 function addDevice(found) {
   if (app.devices[found.id] || app.deviceList.some((d) => d.ip && d.ip === found.ip)) return;
   const name = `${found.sku || "Govee"} ${found.ip.split(".").pop()}`;
-  app.deviceList.push({ id: found.id, name, ip: found.ip, sku: found.sku || "", segments: 15, reverse: false, gradient: false, protocol: "standard" });
+  app.deviceList.push({ id: found.id, name, ip: found.ip, sku: found.sku || "", segments: 15, reverse: false, gradient: false, protocol: "standard", brightness: 100 });
   saveDevices();
 }
 
@@ -419,6 +421,8 @@ function drawPreview() {
     const dev = app.devices[tr.device];
     const n = dev.segments;
     const rgb = renderTrack(tr.clips, app.time, n);
+    const cap = (dev.brightness ?? 100) / 100;
+    if (cap < 1) for (let i = 0; i < rgb.length; i++) rgb[i] = Math.round(rgb[i] * cap);
     const y = row * ROW_H;
     pctx.fillStyle = "#aaa";
     pctx.fillText(dev.name, 4, y + 17, LABEL_W - 10);
@@ -513,12 +517,13 @@ function renderInspector() {
     } else {
       el = document.createElement("input");
       el.type = p.type;
-      if (p.type === "number") Object.assign(el, { min: p.min, max: p.max, step: p.step });
+      if (p.type === "number" || p.type === "range") Object.assign(el, { min: p.min, max: p.max, step: p.step });
       el.value = clip[p.key] ?? p.default;
     }
-    const read = () => (p.type === "number" ? Number(el.value) : el.value);
+    const numeric = p.type === "number" || p.type === "range";
+    const read = () => (numeric ? Number(el.value) : el.value);
     el.addEventListener("input", () => {
-      if (p.type === "number" && !Number.isFinite(read())) return;
+      if (numeric && !Number.isFinite(read())) return;
       clip[p.key] = read();
       app.changed({ live: true });
     });
@@ -1321,7 +1326,7 @@ function wire() {
     let id = base;
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
     const sku = app.models[skuOf($("plan-model").value)] ? skuOf($("plan-model").value) : "";
-    app.deviceList.push({ id, name, ip: "", sku, segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false, protocol: "standard" });
+    app.deviceList.push({ id, name, ip: "", sku, segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false, protocol: "standard", brightness: 100 });
     $("plan-name").value = "";
     $("plan-model").value = "";
     $("plan-info").replaceChildren();

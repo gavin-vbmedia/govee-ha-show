@@ -119,11 +119,11 @@ export const EFFECTS = {
   rainbow: {
     label: "Rainbow",
     params: [num("speed", "Cycles per second", 0.5, 0, 10, 0.05), num("spread", "Rainbows across", 1, 0, 10, 0.1),
-      num("brightness", "Brightness %", 100, 0, 100, 1), direction],
+      direction],
     render: (p, t, dur, n, i) => {
       const pos = p.direction === "reverse" ? n - 1 - i : i;
       const h = (((pos / n) * p.spread - t * p.speed) % 1 + 1) % 1;
-      return hsv(h, 1, p.brightness / 100);
+      return hsv(h, 1, 1);
     },
   },
   comet: {
@@ -201,6 +201,11 @@ export const EFFECTS = {
   },
 };
 
+// Every effect gets a Brightness slider, applied after it renders. Rainbow had its own with the
+// same key, so its older clips keep their level.
+const BRIGHTNESS = { key: "brightness", label: "Brightness %", type: "range", default: 100, min: 0, max: 100, step: 1 };
+for (const fx of Object.values(EFFECTS)) fx.params.push(BRIGHTNESS);
+
 export function defaultParams(effect) {
   return Object.fromEntries(EFFECTS[effect].params.map((p) => [p.key, p.default]));
 }
@@ -218,11 +223,12 @@ export function renderTrack(clips, time, n, out = new Uint8Array(n * 3)) {
     if (!fx) continue;
     const p = { ...defaultParams(clip.effect), ...clip };
     const t = time - clip.start, dur = clip.end - clip.start;
+    const level = Math.min(Math.max(Number(p.brightness ?? 100), 0), 100) / 100;
     for (let i = 0; i < n; i++) {
       const c = fx.render(p, t, dur, n, i);
-      out[i * 3] = clamp(c[0]);
-      out[i * 3 + 1] = clamp(c[1]);
-      out[i * 3 + 2] = clamp(c[2]);
+      out[i * 3] = clamp(c[0] * level);
+      out[i * 3 + 1] = clamp(c[1] * level);
+      out[i * 3 + 2] = clamp(c[2] * level);
     }
   }
   return out;
