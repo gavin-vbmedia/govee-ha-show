@@ -108,7 +108,7 @@
     <section class="panel" data-panel="inspector">
       <div class="panel-head"><span class="section-label">Selection</span></div>
       <div class="inspector" id="inspector">
-        <p class="hint">Drag across a light to select a stretch of time, then pick an effect to add it there.</p>
+        <p class="hint">Drag across a light, or the House lane, to select a stretch of time, then pick an effect to add it there.</p>
       </div>
     </section>
   </div>
@@ -230,7 +230,8 @@
     <p class="hint">To play <b id="automation-show">this show</b> from an automation, use the <b>Govee Light Show</b> MQTT
       entities (pick the show, then press Play), or the <code>hassio.addon_stdin</code> action with input
       <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the show's
-      <b>Show speaker</b> (in the editor's Song panel), or on the default below when a show doesn't pick one. The
+      <b>Show speaker</b> (in the editor's Song panel), or on the <b>Default show speaker</b> on the Speakers tab when a show
+      doesn't pick one. The
       speaker in the Playback panel is only for editing, so you can design on a speaker indoors without changing
       where the real show plays. Speakers are added on the <b>Speakers</b> tab.</p>
   </section>
