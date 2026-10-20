@@ -37,6 +37,10 @@ const color = (key, label, def) => ({ key, label, type: "color", default: def })
 const num = (key, label, def, min, max, step) => ({ key, label, type: "number", default: def, min, max, step });
 const choice = (key, label, def, options) => ({ key, label, type: "select", default: def, options });
 const direction = choice("direction", "Direction", "forward", ["forward", "reverse"]);
+const mod = (a, n) => ((a % n) + n) % n;
+// 0 -> 1 -> 0 over each 2 units, so movement can bounce instead of jumping back.
+const bounce = (x) => { const m = mod(x, 2); return m <= 1 ? m : 2 - m; };
+const smooth = (u) => u * u * (3 - 2 * u);
 
 // Two or three solid colours side by side: split the light into equal bands, or alternate
 // them every few segments along it.
@@ -44,10 +48,13 @@ function multiColour(label, colours) {
   return {
     label,
     params: [...colours, choice("layout", "Layout", "split", ["split", "alternate"]),
-      num("size", "Segments per colour (alternate)", 1, 1, 50, 1)],
+      num("size", "Segments per colour (alternate)", 1, 1, 50, 1),
+      num("speed", "Move (segments per second)", 0, -50, 50, 0.5)],
     render: (p, t, dur, n, i) => {
       const k = colours.length;
-      const idx = p.layout === "alternate" ? Math.floor(i / Math.max(1, p.size)) % k : Math.min(k - 1, Math.floor((i * k) / n));
+      const pos = i - Math.floor(t * (p.speed || 0)); // moving bands make a marquee
+      const idx = p.layout === "alternate" ? mod(Math.floor(pos / Math.max(1, p.size)), k)
+        : Math.min(k - 1, Math.floor((mod(pos, n) * k) / n));
       return hexToRgb(p[colours[idx].key]);
     },
   };
@@ -63,6 +70,36 @@ export const EFFECTS = {
   duo: multiColour("Two colours", [color("color", "Colour 1", "#ff0000"), color("color2", "Colour 2", "#00ff00")]),
   trio: multiColour("Three colours", [color("color", "Colour 1", "#ff0000"), color("color2", "Colour 2", "#ffffff"),
     color("color3", "Colour 3", "#00ff00")]),
+  pulse: {
+    label: "Pulse",
+    params: [color("color", "Colour", "#ff0000"), color("background", "Background", "#000000"),
+      num("rate", "Pulses per second", 1, 0.05, 10, 0.05)],
+    render: (p, t) => mix(hexToRgb(p.background), hexToRgb(p.color), (1 - Math.cos(2 * Math.PI * t * p.rate)) / 2),
+  },
+  gradient: {
+    label: "Gradient",
+    params: [color("color", "Colour 1", "#ff0000"), color("color2", "Colour 2", "#0000ff"),
+      color("color3", "Colour 3", "#00ff00"), choice("count", "Colours", "3", ["2", "3"]),
+      num("speed", "Move (per second)", 0, -5, 5, 0.05)],
+    render: (p, t, dur, n, i) => {
+      const stops = [p.color, p.color2, p.color3].slice(0, Number(p.count)).map(hexToRgb);
+      const u = bounce((n > 1 ? i / (n - 1) : 0) + t * p.speed) * (stops.length - 1);
+      const k = Math.min(Math.floor(u), stops.length - 2);
+      return mix(stops[k], stops[k + 1], u - k);
+    },
+  },
+  cycle: {
+    label: "Colour cycle",
+    params: [color("color", "Colour 1", "#ff0000"), color("color2", "Colour 2", "#00ff00"),
+      color("color3", "Colour 3", "#0000ff"), color("color4", "Colour 4", "#ffffff"),
+      choice("count", "Colours", "4", ["2", "3", "4"]), num("rate", "Changes per second", 1, 0.05, 20, 0.05),
+      choice("blend", "Change", "fade", ["fade", "step"])],
+    render: (p, t) => {
+      const cs = [p.color, p.color2, p.color3, p.color4].slice(0, Number(p.count)).map(hexToRgb);
+      const s = t * p.rate, k = Math.floor(s) % cs.length;
+      return p.blend === "step" ? cs[k] : mix(cs[k], cs[(k + 1) % cs.length], smooth(s - Math.floor(s)));
+    },
+  },
   fade: {
     label: "Fade",
     params: [color("from", "From", "#000000"), color("to", "To", "#ff0000")],
@@ -87,6 +124,51 @@ export const EFFECTS = {
       const pos = p.direction === "reverse" ? n - 1 - i : i;
       const h = (((pos / n) * p.spread - t * p.speed) % 1 + 1) % 1;
       return hsv(h, 1, p.brightness / 100);
+    },
+  },
+  comet: {
+    label: "Comet",
+    params: [color("color", "Colour", "#ffffff"), color("background", "Background", "#000000"),
+      num("length", "Tail (segments)", 5, 1, 100, 1), num("speed", "Laps per second", 1, 0.05, 10, 0.05), direction],
+    render: (p, t, dur, n, i) => {
+      const head = mod(t * p.speed * n, n);
+      const pos = p.direction === "reverse" ? n - 1 - i : i;
+      const behind = mod(head - pos, n);
+      return behind < p.length ? mix(hexToRgb(p.background), hexToRgb(p.color), 1 - behind / p.length)
+        : hexToRgb(p.background);
+    },
+  },
+  scanner: {
+    label: "Scanner",
+    params: [color("color", "Colour", "#ff0000"), color("background", "Background", "#000000"),
+      num("width", "Width (segments)", 2, 1, 50, 0.5), num("speed", "Sweeps per second", 0.5, 0.05, 10, 0.05)],
+    render: (p, t, dur, n, i) => {
+      const head = bounce(t * p.speed) * (n - 1);
+      return mix(hexToRgb(p.background), hexToRgb(p.color), Math.max(0, 1 - Math.abs(i - head) / p.width));
+    },
+  },
+  flicker: {
+    label: "Flicker",
+    params: [color("color", "Colour", "#ff5000"), color("color2", "Hot colour", "#ffb000"),
+      num("rate", "Flickers per second", 8, 0.5, 30, 0.5)],
+    render: (p, t, dur, n, i) => {
+      const s = t * p.rate, k = Math.floor(s);
+      const v = hash01(i + 1, k) + (hash01(i + 1, k + 1) - hash01(i + 1, k)) * smooth(s - k);
+      const c = mix(hexToRgb(p.color), hexToRgb(p.color2), v);
+      const level = 0.35 + 0.65 * v;
+      return [c[0] * level, c[1] * level, c[2] * level];
+    },
+  },
+  lightning: {
+    label: "Lightning",
+    params: [color("color", "Flash", "#ffffff"), color("background", "Background", "#000010"),
+      num("rate", "Strikes per second", 0.7, 0.05, 5, 0.05)],
+    render: (p, t) => {
+      // Ten chances a second to strike; each strike fades over its tenth of a second.
+      const slot = Math.floor(t * 10);
+      const strike = hash01(slot + 1, 7919) < p.rate / 10;
+      const env = strike ? (1 - (t * 10 - slot)) ** 2 : 0;
+      return mix(hexToRgb(p.background), hexToRgb(p.color), env);
     },
   },
   strobe: {

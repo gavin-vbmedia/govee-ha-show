@@ -38,7 +38,26 @@ real segment count differs, just change it: effects scale to any number of segme
   timeline. The preview strip shows every segment of every device as the playhead moves.
 - **Two colours** and **Three colours** are solid effects with more than one colour. **Split**
   divides the light into halves or thirds; **Alternate** repeats the colours along it, with
-  **Segments per colour** setting how wide each block is.
+  **Segments per colour** setting how wide each block is. Set **Move** to slide the colours along
+  the light like marquee lights (negative numbers go the other way).
+- The other effects:
+
+  | Effect | What it does |
+  | --- | --- |
+  | Solid | One colour |
+  | Pulse | Breathes between a colour and the background |
+  | Gradient | Blends two or three colours along the light; **Move** makes it slide back and forth |
+  | Colour cycle | The whole light changes through two to four colours, fading or stepping |
+  | Fade | Fades from one colour to another over the clip |
+  | Chase | A block of colour running along the light |
+  | Rainbow | A moving rainbow |
+  | Comet | A bright head with a fading tail running along the light |
+  | Scanner | A dot bouncing from end to end |
+  | Flicker | Candle or fire flicker between two colours |
+  | Lightning | Random bright flashes over a dark background |
+  | Strobe | Flashes on and off |
+  | Twinkle | Segments sparkle at random |
+  | Wipe | Fills the light with colour over the clip |
 - Colour palettes: an effect's settings include a **Palette** picker. Click one of its colours to
   put it in the colour field you last clicked (or the first one), or press **Apply palette** to
   fill all of them in order. Click a light's name to **Recolour this light** or **Recolour all

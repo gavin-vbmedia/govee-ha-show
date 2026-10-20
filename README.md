@@ -12,7 +12,8 @@ editor inside Home Assistant, with no external sequencing software or separate h
 - Plan shows before your lights arrive: add planned lights by name and segment count, then link
   them to the real devices later
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping
-- Draggable effects (solid, two and three colours, fade, chase, rainbow, strobe, twinkle, wipe) with a live,
+- Draggable effects (solid, two and three colours, pulse, gradient, colour cycle, fade, chase, rainbow, comet,
+  scanner, flicker, lightning, strobe, twinkle, wipe) with a live,
   segment-level preview
 - Colour palettes: presets for holidays and moods, plus your own, to recolour an effect, a light
   or the whole show in one click

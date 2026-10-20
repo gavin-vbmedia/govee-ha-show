@@ -5,6 +5,8 @@
 - Colour palettes: 18 presets (Christmas, Halloween, Bonfire Night, Pride, Ocean, Fire and more)
   plus your own on the new Palettes tab. Click a palette colour to use it in an effect, apply a
   palette to an effect, or recolour every effect on a light or the whole show.
+- New effects: Pulse, Gradient, Colour cycle, Comet, Scanner, Flicker and Lightning.
+- Two colours and Three colours can move along the light like theatre marquee lights.
 
 ## 0.2.4
 
