@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / frontend build
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+
+# Local add-on development
+.devcontainer/data/
+/data/
+/share/
+/media/
+*.log
+
+# Local test assets (show files and audio stay out of the repo)
+*.mp3
+*.wav
+*.ogg
+*.flac
+
+# Secrets
+.env
+secrets.yaml
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
