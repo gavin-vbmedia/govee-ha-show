@@ -139,3 +139,23 @@ async def test_command_endpoint(client):
     body = await (await client.post("/api/command", data="stop")).json()
     assert body["playing"] is False
     assert (await client.post("/api/command", data='{"action": "play", "show": "nope"}')).status == 400
+
+
+async def test_planned_devices_save_but_dont_play(client):
+    planned = {"id": "planned-porch", "name": "Porch", "ip": "", "segments": 12}
+    devices = await (await client.put("/api/devices", json=[planned])).json()
+    assert devices[0]["ip"] == "" and devices[0]["id"] == "planned-porch"
+    assert (await client.put("/api/devices", json=[{"ip": "", "segments": 5}])).status == 400  # needs an id
+    resp = await client.post("/api/devices/test", json=planned)
+    assert resp.status == 400 and "link" in await resp.text()
+
+    await client.put("/api/shows/s", json={"name": "s", "tracks": []})
+    blob = baked.encode(40, [{"device": "planned-porch", "segments": 12}], [bytes(36)] * 40)
+    await client.put("/api/shows/s/baked", data=blob)
+    status = await (await client.post("/api/player/play", json={"show": "s"})).json()
+    assert status["playing"]  # the timeline still runs; there is just nothing to send to
+    await client.post("/api/player/stop")
+
+    # Linking keeps the id, so shows built for the planned light carry over.
+    linked = await (await client.put("/api/devices", json=[{**planned, "ip": "192.168.1.60"}])).json()
+    assert linked[0]["id"] == "planned-porch" and linked[0]["ip"] == "192.168.1.60"

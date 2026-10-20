@@ -39,7 +39,11 @@ class Player:
 
     async def play(self, show_id: str, baked: Baked, devices: dict, position: float = 0.0,
                    offset: float = 0.0):
-        """devices maps a track's device id to its stored config (ip, reverse, gradient)."""
+        """devices maps a track's device id to its stored config (ip, reverse, gradient).
+
+        Planned devices (no IP yet) are skipped.
+        """
+        devices = {k: d for k, d in devices.items() if d.get("ip")}
         await self.stop(release=False)
         self.baked, self.show_id, self.devices, self.offset = baked, show_id, devices, offset
         claimed = set()

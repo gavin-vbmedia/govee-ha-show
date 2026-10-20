@@ -126,7 +126,7 @@ export class Timeline {
       ctx.fillText(clipText(ctx, dev ? dev.name : "Missing device", HEADER_W - 16), 10, y + 20);
       ctx.fillStyle = col("--muted");
       ctx.font = "12px system-ui, sans-serif";
-      ctx.fillText(dev ? `${dev.segments} segments` : tr.device, 10, y + 36);
+      ctx.fillText(dev ? `${dev.segments} segments${dev.ip ? "" : " · planned"}` : tr.device, 10, y + 36);
     });
     ctx.strokeStyle = col("--line");
     ctx.beginPath(); ctx.moveTo(HEADER_W + 0.5, 0); ctx.lineTo(HEADER_W + 0.5, h); ctx.stroke();

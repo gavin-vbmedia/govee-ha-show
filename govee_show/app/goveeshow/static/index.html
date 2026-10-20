@@ -96,10 +96,18 @@
       <input id="add-ip" placeholder="IP address" pattern="\d+\.\d+\.\d+\.\d+" required size="14">
       <button>Add by IP</button>
     </form>
+    <form id="plan-form" class="group" title="Build shows for lights you don't have yet, then link them when they arrive">
+      <input id="plan-name" placeholder="Planned light, e.g. Porch" required size="18">
+      <label>Segments <input id="plan-segments" type="number" min="1" max="255" value="15" required></label>
+      <button>Add planned light</button>
+    </form>
   </section>
   <p class="hint">Devices need <b>LAN Control</b> switched on in the Govee Home app. Govee doesn't report
     segment counts, so press <b>Test</b>: a rainbow runs with a white dot stepping along it. Set
     <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.</p>
+  <p class="hint">Lights not delivered yet? Add a <b>planned light</b> with the segment count from the product page
+    and build shows with it. When it arrives, scan and choose <b>Link to</b>, or type its IP into the row. Its
+    shows carry over.</p>
   <div id="scan-results"></div>
   <table class="devices">
     <thead><tr><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th></th></tr></thead>
