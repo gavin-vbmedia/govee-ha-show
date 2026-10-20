@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.23
+
+- Separate speakers for editing and for the real show. The speaker in the Playback panel is now
+  only where the editor plays, kept per browser. Automations and the MQTT Play button use the
+  **Show speaker** in the Song panel, or the new **Default show speaker** on the Settings tab.
+  Shows that already had a speaker keep it as their show speaker. Pick your editing speaker
+  again in Playback after updating.
+
 ## 0.2.22
 
 - New **House** view. Upload a photo of your house on the House tab and trace where each light

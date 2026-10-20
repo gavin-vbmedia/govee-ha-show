@@ -116,7 +116,8 @@ change, and when you switch to another show; the note next to it says whether ev
 A new show is saved automatically once it has its first effect. Auto save waits while a show is
 playing, and Ctrl+Z still undoes changes after they've been saved.
 
-Next to Play, choose where the song plays:
+Next to Play, choose where the song plays while you edit. This choice is kept in your browser
+and never changes where the real show plays (see **Show speaker** below):
 
 - **Song in this browser**: the song plays in your browser and the add-on streams the lights in
   sync with it. Untick **Lights** to preview in the browser only. If the lights lead or lag,
@@ -125,8 +126,12 @@ Next to Play, choose where the song plays:
   and the lights with it; the editor's playhead follows along. Speakers start playing a little
   after they report they have, so set **Speaker delay** on the **Settings** tab (with that speaker
   picked in Playback) for each speaker (often 100 to 500 ms
-  for Wi-Fi speakers) until the lights land on the beat. The speaker you pick is saved with the
-  show and is what automations use.
+  for Wi-Fi speakers) until the lights land on the beat.
+
+**Show speaker** in the Song panel is where the song plays when the show is started from an
+automation or the MQTT Play button. Leave it on **Default** to use the **Default show speaker** set
+on the **Settings** tab, which suits most setups with one outdoor speaker, or pick a speaker for this
+show only. That way you can design on a speaker indoors and the real show still plays outside.
 
 ## 4. Schedule it with automations
 
@@ -161,11 +166,11 @@ actions:
       input:
         action: play
         show: Halloween
-        media_player: media_player.garden   # optional; defaults to the show's speaker
+        media_player: media_player.garden   # optional; defaults to the show speaker
 ```
 
 Send `input: {action: stop}` to stop. The exact input for the open show is shown on the
-**Settings** tab. A show with no speaker plays the lights only.
+**Settings** tab. A show with no show speaker and no default plays the lights only.
 
 ## See it on your house
 

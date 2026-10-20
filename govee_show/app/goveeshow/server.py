@@ -315,18 +315,32 @@ async def upload_audio(request):
 # speakers ----------------------------------------------------------------
 async def list_speakers(request):
     ha = request.app[HA]
-    delays = request.app[STORAGE].load_settings()["speaker_delays"]
+    settings = request.app[STORAGE].load_settings()
+    delays, show_speaker = settings["speaker_delays"], settings.get("show_speaker")
     if not ha.available:
-        return web.json_response({"available": False, "speakers": []})
+        return web.json_response({"available": False, "speakers": [], "show_speaker": show_speaker})
     try:
         states = await ha.states("media_player")
     except HAError as e:
-        return web.json_response({"available": False, "error": str(e), "speakers": []})
+        return web.json_response({"available": False, "error": str(e), "speakers": [], "show_speaker": show_speaker})
     speakers = [{"entity_id": s["entity_id"], "state": s["state"],
                  "name": s.get("attributes", {}).get("friendly_name") or s["entity_id"],
                  "delay_ms": delays.get(s["entity_id"], 0)} for s in states]
-    return web.json_response({"available": True,
+    return web.json_response({"available": True, "show_speaker": show_speaker,
                               "speakers": sorted(speakers, key=lambda s: s["name"].lower())})
+
+
+async def put_show_speaker(request):
+    """The speaker shows play on when started from an automation and the show doesn't pick one."""
+    body = await request.json()
+    entity = body.get("entity_id") or None
+    if entity is not None and not str(entity).startswith("media_player."):
+        raise web.HTTPBadRequest(text="expected a media_player entity")
+    storage = request.app[STORAGE]
+    settings = storage.load_settings()
+    settings["show_speaker"] = entity
+    storage.save_settings(settings)
+    return web.json_response({"show_speaker": entity})
 
 
 async def put_speaker_delay(request):
@@ -546,6 +560,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/audio/file", get_audio)
     r.add_get("/api/speakers", list_speakers)
     r.add_put("/api/speakers/delay", put_speaker_delay)
+    r.add_put("/api/speakers/show", put_show_speaker)
     r.add_get("/api/palettes", get_palettes)
     r.add_get("/api/scenes", get_scenes)
     r.add_put("/api/palettes", put_palettes)
