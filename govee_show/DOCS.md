@@ -169,7 +169,7 @@ Send `input: {action: stop}` to stop. The exact input for the open show is shown
 
 ## Arrange the editor
 
-Drag any editor panel (Show, Song, Playback, Beats, Zoom, Preview, Timeline and Selection) by its
+Drag any editor panel (Show, Song, Playback, Beats, Preview, Timeline and Selection) by its
 title to move it to the top, left, middle, right or bottom, or to change its order there; a blue
 bar shows where it will land. The **⋯** button in its corner does the same from a menu, with
 **Earlier** and **Later** to change the order, which also works on a touch screen. Top and
