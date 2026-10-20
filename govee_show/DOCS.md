@@ -16,8 +16,12 @@ Govee doesn't report how many segments a device has, so press **Test**: a rainbo
 dot stepping along it. Set **Segments** so the dot visits every segment once per lap, and tick
 **Reverse** if it runs the wrong way. Most strips and outdoor lights have 10 to 15 segments.
 
-**Lights not delivered yet?** Use **Add planned light** with a name and the segment count from
-the product listing, and build shows with it straight away. Planned lights show in the preview
+**Lights not delivered yet?** Pick the model (e.g. `H7093`) and use **Add planned light**, then
+build shows with it straight away. The model list comes from Govee's product data: **✓ realtime**
+means Govee lists the model as supporting per-segment realtime control, which this add-on needs.
+**⚠ unverified** means it isn't on that list; some unlisted models still work, but test one
+before buying more. Govee doesn't publish realtime segment counts, so the count is a guess (15)
+until you Test the real light. Planned lights show in the preview
 but nothing is sent to them. When the light arrives, press **Scan network** and choose **Link to**
 next to it (or type its IP into the planned light's row). The shows you built carry over. If the
 real segment count differs, just change it: effects scale to any number of segments.

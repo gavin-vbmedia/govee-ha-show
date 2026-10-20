@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+- Model picker for planned lights (about 290 Govee models): fills in the name and shows whether
+  Govee lists the model as supporting realtime segment control. Devices and scan results show
+  the same marker.
+
 ## 0.2.2
 
 - Fix install: use a Home Assistant base image tag that exists (Python 3.13, Alpine 3.22) and
