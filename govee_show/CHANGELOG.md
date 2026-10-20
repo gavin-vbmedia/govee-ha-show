@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.27
+
+- House view: icicle lights. Set a light to **Icicle** on the House tab and say how many drops it
+  has and how far the longest hangs. It's drawn as staggered drops hanging from the traced line,
+  each drop in its segment's colour, sharing out the light's **Bulbs**.
+
 ## 0.2.26
 
 - House view: parts of a light that can't be seen from the photo, such as eaves running round the

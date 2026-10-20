@@ -199,6 +199,12 @@ plays the show on it, so you can design without standing outside.
    panel, while its bulbs still use up their share of the segments, so the bulbs you can see show
    the right part of each effect.
 
+**Icicle lights** are traced along the line they hang from, like any other light. Then change
+**Line** to **Icicle** next to the light and set **Drops** to how many drops it has, and **Length**
+to how far the longest one hangs on the photo. The drops are drawn staggered, each in its
+segment's colour, with the light's **Bulbs** shared between them. Effects still run along the
+line, as they do on the real lights.
+
 While you trace, each light is drawn in a rainbow from red at the plug to the far end, so you can
 check it runs the same way as the real light. If it's backwards, retrace it from the other end,
 or tick **Reverse** on the Devices tab if the effects themselves run the wrong way. **Darken**

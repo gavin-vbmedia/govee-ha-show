@@ -5,6 +5,9 @@
 const BULBS_PER_SEGMENT = 4; // the guess when a light's bulb count isn't set on the Devices tab
 const MAX_BULBS = 2000;
 const HIT_PX = 10;
+// Icicle drops aren't all the same length; this repeating pattern staggers them like the real thing.
+const STAGGER = [1, 0.55, 0.8, 0.4, 0.95, 0.65, 0.5, 0.85];
+const STAGGER_MEAN = STAGGER.reduce((a, b) => a + b, 0) / STAGGER.length;
 
 // `count` points spread evenly along the path (points are [x, y] in any units), the first at its
 // start and the last at its end.
@@ -70,6 +73,17 @@ export function bulbLayout(points, count) {
   return out;
 }
 
+// An icicle light's drops: `drops` spread along its path like bulbs (null when out of view), each
+// with how long it hangs as a share of `length` and how many of the light's `bulbs` are on it.
+export function icicleDrops(points, drops, bulbs) {
+  const per = Math.max(bulbs / drops, 1);
+  return bulbLayout(points, drops).map((at, i) => {
+    if (!at) return null;
+    const f = STAGGER[i % STAGGER.length];
+    return { top: at, f, n: Math.max(1, Math.round((per * f) / STAGGER_MEAN)) };
+  });
+}
+
 // Which segment of the frame bulb `j` shows. Paths start at the plug; Reverse flips which end
 // the show's first segment is at, as it does on the real light.
 export function bulbSegment(j, bulbs, segments, reverse) {
@@ -90,6 +104,7 @@ export class House {
   constructor({ api, status, frameFor }) {
     Object.assign(this, { api, status, frameFor });
     this.paths = {};
+    this.styles = {}; // id -> {style: "icicle", drops, length}; lights without one are a line
     this.dim = 0.5;
     this.photo = null;
     this.devices = [];
@@ -105,6 +120,7 @@ export class House {
     try {
       const h = await this.api("api/house");
       this.paths = h.paths || {};
+      this.styles = h.styles || {};
       this.dim = h.dim ?? 0.5;
       if (h.photo) await this.loadPhoto();
     } catch (e) {
@@ -145,7 +161,7 @@ export class House {
     clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(async () => {
       try {
-        await this.api("api/house", { method: "PUT", json: { paths: this.paths, dim: this.dim } });
+        await this.api("api/house", { method: "PUT", json: { paths: this.paths, styles: this.styles, dim: this.dim } });
       } catch (e) {
         this.status(`Couldn't save the house view: ${e.message}`, true);
       }
@@ -170,14 +186,25 @@ export class House {
     return { ctx, w, h };
   }
 
+  // Where a light's bulbs are: [x, y] or null each for a line, or its drops for icicles.
   bulbs(dev) {
     const points = this.paths[dev.id];
     if (!points?.length) return null;
     const count = Math.min(dev.bulbs || dev.segments * BULBS_PER_SEGMENT, MAX_BULBS);
-    const key = `${count}:${JSON.stringify(points)}`;
+    const style = this.styles[dev.id];
+    const key = `${count}:${JSON.stringify(style)}:${JSON.stringify(points)}`;
     let c = this.cache.get(dev.id);
-    if (c?.key !== key) this.cache.set(dev.id, c = { key, bulbs: bulbLayout(points, count) });
+    if (c?.key !== key) {
+      const bulbs = style?.style === "icicle" ? icicleDrops(points, style.drops, count) : bulbLayout(points, count);
+      this.cache.set(dev.id, c = { key, bulbs });
+    }
     return c.bulbs;
+  }
+
+  setStyle(id, style) {
+    if (style) this.styles[id] = style;
+    else delete this.styles[id];
+    this.save();
   }
 
   // The photo, darkened like dusk, with every placed light on it. `colours(dev)` gives each
@@ -190,25 +217,36 @@ export class House {
     ctx.fillRect(0, 0, w, h);
     const r = Math.max(1.5, w / 450);
     ctx.globalCompositeOperation = "lighter";
+    const dot = (x, y, [cr, cg, cb], size = 1) => {
+      if (cr + cg + cb < 8) {
+        ctx.fillStyle = "rgba(255,255,255,0.07)";
+        ctx.beginPath(); ctx.arc(x, y, r * 0.7 * size, 0, Math.PI * 2); ctx.fill();
+        return;
+      }
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},0.22)`; // glow
+      ctx.beginPath(); ctx.arc(x, y, r * 3.2 * size, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgb(${cr},${cg},${cb})`;
+      ctx.beginPath(); ctx.arc(x, y, r * size, 0, Math.PI * 2); ctx.fill();
+    };
     for (const dev of this.devices) {
       const bulbs = this.bulbs(dev);
       if (!bulbs) continue;
       const rgb = colours(dev);
       const n = dev.segments, cap = (dev.brightness ?? 100) / 100;
-      bulbs.forEach((at, j) => {
-        if (!at) return;
-        const [x, y] = at;
+      const colour = (j) => {
         const s = bulbSegment(j, bulbs.length, n, dev.reverse);
-        const [cr, cg, cb] = [rgb[s * 3], rgb[s * 3 + 1], rgb[s * 3 + 2]].map((v) => Math.round(v * cap));
-        if (cr + cg + cb < 8) {
-          ctx.fillStyle = "rgba(255,255,255,0.07)";
-          ctx.beginPath(); ctx.arc(x * w, y * h, r * 0.7, 0, Math.PI * 2); ctx.fill();
-          return;
+        return [rgb[s * 3], rgb[s * 3 + 1], rgb[s * 3 + 2]].map((v) => Math.round(v * cap));
+      };
+      const icicle = this.styles[dev.id];
+      bulbs.forEach((b, j) => {
+        if (!b) return;
+        if (b.top) {
+          // A drop: its bulbs hang evenly from the line to the drop's tip, a little smaller.
+          const c = colour(j), drop = icicle.length * h * b.f;
+          for (let k = 0; k < b.n; k++) dot(b.top[0] * w, b.top[1] * h + (b.n > 1 ? (drop * k) / (b.n - 1) : 0), c, 0.7);
+        } else {
+          dot(b[0] * w, b[1] * h, colour(j));
         }
-        ctx.fillStyle = `rgba(${cr},${cg},${cb},0.22)`; // glow
-        ctx.beginPath(); ctx.arc(x * w, y * h, r * 3.2, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgb(${cr},${cg},${cb})`;
-        ctx.beginPath(); ctx.arc(x * w, y * h, r, 0, Math.PI * 2); ctx.fill();
       });
     }
     ctx.globalCompositeOperation = "source-over";
