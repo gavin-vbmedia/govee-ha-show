@@ -15,6 +15,7 @@
   <nav>
     <button class="tab active" data-view="editor">Editor</button>
     <button class="tab" data-view="devices">Devices</button>
+    <button class="tab" data-view="speakers">Speakers</button>
     <button class="tab" data-view="house">House</button>
     <button class="tab" data-view="palettes">Palettes</button>
     <button class="tab" data-view="settings">Settings</button>
@@ -158,6 +159,30 @@
   </table>
 </main>
 
+<main id="view-speakers" class="view" hidden>
+  <p class="hint">Only speakers added here are offered in the editor. Adding one plays a short chime on it the same way
+    a show starts, so a speaker that can't play the add-on's songs is caught here rather than when the show should
+    start. Some media players, like Echo devices through Alexa Media Player or Emby clients, can't play files from
+    Home Assistant's media folder.</p>
+  <p id="speakers-ha" class="hint"></p>
+  <section class="toolbar">
+    <h2>Your speakers</h2>
+    <label title="Where shows play when started from an automation, unless a show picks its own in the Song panel">Default
+      show speaker <select id="default-speaker"></select></label>
+  </section>
+  <table class="devices">
+    <thead><tr><th>Speaker</th><th>Entity</th><th>State</th>
+      <th title="How late this speaker plays after it reports starting. Raise it if the lights lead the music.">Delay ms</th>
+      <th></th></tr></thead>
+    <tbody id="speaker-rows"></tbody>
+  </table>
+  <h2>Add a speaker</h2>
+  <table class="devices">
+    <thead><tr><th>Media player</th><th>Entity</th><th>State</th><th></th></tr></thead>
+    <tbody id="candidate-rows"></tbody>
+  </table>
+</main>
+
 <main id="view-house" class="view" hidden>
   <section class="toolbar">
     <label class="button primary">Upload photo<input id="house-upload" type="file" accept="image/*" hidden></label>
@@ -199,8 +224,7 @@
       <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the show's
       <b>Show speaker</b> (in the editor's Song panel), or on the default below when a show doesn't pick one. The
       speaker in the Playback panel is only for editing, so you can design on a speaker indoors without changing
-      where the real show plays.</p>
-    <p><label>Default show speaker <select id="default-speaker"></select></label></p>
+      where the real show plays. Speakers are added on the <b>Speakers</b> tab.</p>
   </section>
   <section class="card">
     <h2>Layout</h2>

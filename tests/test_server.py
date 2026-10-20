@@ -245,3 +245,57 @@ async def test_default_show_speaker(client):
     assert (await (await client.get("/api/speakers")).json())["show_speaker"] == "media_player.porch"
     assert (await client.put("/api/speakers/show", json={"entity_id": "light.porch"})).status == 400
     assert (await (await client.put("/api/speakers/show", json={"entity_id": None})).json()) == {"show_speaker": None}
+
+
+class FakeSpeakers:
+    """Home Assistant with a speaker that plays songs and a TV remote that can't."""
+    available = True
+
+    def __init__(self):
+        self.calls = []
+        self.playing = False
+
+    def _state(self, entity):
+        from datetime import datetime, timezone
+        features = 512 if entity == "media_player.garden" else 4
+        return {"entity_id": entity, "state": "playing" if self.playing else "idle",
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "attributes": {"friendly_name": entity.split(".")[1].title(), "supported_features": features}}
+
+    async def states(self, domain=None):
+        return [self._state("media_player.garden"), self._state("media_player.tv")]
+
+    async def state(self, entity):
+        return self._state(entity)
+
+    async def call(self, domain, service, data):
+        self.calls.append((service, data))
+        self.playing = service == "play_media"
+
+
+async def test_speakers_are_tested_before_the_editor_offers_them(client, monkeypatch):
+    ha = FakeSpeakers()
+    real = client.app[server.HA]
+    monkeypatch.setattr(type(real), "available", True)
+    for name in ("states", "state", "call"):
+        monkeypatch.setattr(real, name, getattr(ha, name))
+    body = await (await client.get("/api/speakers")).json()
+    assert body["speakers"] == []
+    assert [(c["entity_id"], c["can_play"]) for c in body["candidates"]] == [
+        ("media_player.garden", True), ("media_player.tv", False)]
+
+    resp = await (await client.post("/api/speakers/test", json={"entity_id": "media_player.tv"})).json()
+    assert not resp["ok"] and "can't be sent a song" in resp["error"]
+    resp = await (await client.post("/api/speakers/test", json={"entity_id": "media_player.garden"})).json()
+    assert resp["ok"]
+    play = ha.calls[0]
+    assert play[0] == "play_media" and play[1]["media_content_id"].endswith("govee_show/govee-show-speaker-test.wav")
+    assert ha.calls[-1][0] == "media_stop"
+    body = await (await client.get("/api/speakers")).json()
+    assert [s["entity_id"] for s in body["speakers"]] == ["media_player.garden"]
+    # The test chime isn't offered as a song.
+    assert not any("speaker-test" in a["path"] for a in await (await client.get("/api/audio")).json())
+
+    assert (await client.post("/api/speakers/remove", json={"entity_id": "media_player.garden"})).status == 200
+    assert (await (await client.get("/api/speakers")).json())["speakers"] == []
+    assert (await client.post("/api/speakers/test", json={"entity_id": "light.x"})).status == 400

@@ -67,7 +67,9 @@ const app = {
   historyIndex: -1,
   clockStart: 0,
   syncTimer: null,
-  speakers: [],
+  speakers: [], // added on the Speakers tab; the only ones the editor offers
+  speakerCandidates: [], // all of Home Assistant's media players
+  haAvailable: null,
   defaultSpeaker: null, // where automations play a show that has no speaker of its own
   models: {}, // Govee SKU -> {name, realtime, segments?}
   remote: false, // playing on a Home Assistant speaker; the add-on keeps time
@@ -1303,9 +1305,96 @@ async function loadSpeakers() {
   try {
     const body = await api("api/speakers");
     app.speakers = body.speakers;
+    app.speakerCandidates = body.candidates || [];
+    app.haAvailable = body.available;
     app.defaultSpeaker = body.show_speaker || null;
-  } catch { app.speakers = []; }
+  } catch { app.speakers = []; app.speakerCandidates = []; }
   renderOutput();
+  renderSpeakers();
+}
+
+// The Speakers tab: the speakers the editor offers, and HA's other media players to test and add.
+const speakerTests = {}; // entity -> {busy, ok, text}
+
+function renderSpeakers() {
+  $("speakers-ha").textContent = app.haAvailable === false
+    ? "Home Assistant isn't reachable from the add-on, so speakers can't be listed or tested right now." : "";
+  const cells = (tr, ...items) => {
+    for (const it of items) {
+      const td = document.createElement("td");
+      td.append(it);
+      tr.append(td);
+    }
+    return tr;
+  };
+  const result = (entity) => {
+    const t = speakerTests[entity];
+    const span = document.createElement("span");
+    span.className = `hint${t && !t.busy && !t.ok ? " error" : ""}`;
+    span.textContent = t ? ` ${t.text}` : "";
+    return span;
+  };
+  const testButton = (entity, label, cls = "") => {
+    const b = button(speakerTests[entity]?.busy ? "Testing…" : label, () => testSpeaker(entity), cls);
+    b.disabled = !!speakerTests[entity]?.busy;
+    b.title = "Plays a short chime on it";
+    return b;
+  };
+  const rows = $("speaker-rows");
+  rows.replaceChildren(...app.speakers.map((s) => {
+    const delay = document.createElement("input");
+    Object.assign(delay, { type: "number", step: 10, value: s.delay_ms ?? 0 });
+    delay.addEventListener("change", async () => {
+      try {
+        await api("api/speakers/delay", { method: "PUT", json: { entity_id: s.entity_id, delay_ms: Number(delay.value) || 0 } });
+        s.delay_ms = Number(delay.value) || 0;
+        renderOutput();
+      } catch (err) { status(`Couldn't save the delay: ${err.message}`, true); }
+    });
+    const actions = document.createElement("span");
+    actions.className = "group";
+    actions.append(testButton(s.entity_id, "Test again", "ghost"), button("Remove", () => removeSpeaker(s.entity_id), "ghost danger"),
+      result(s.entity_id));
+    return cells(document.createElement("tr"), s.name, s.entity_id, s.state, delay, actions);
+  }));
+  if (!app.speakers.length) {
+    rows.innerHTML = `<tr><td colspan="5" class="hint">None yet. Test a media player below to add it.</td></tr>`;
+  }
+  const others = (app.speakerCandidates || []).filter((c) => !c.added);
+  const cand = $("candidate-rows");
+  cand.replaceChildren(...others.map((c) => {
+    const actions = document.createElement("span");
+    actions.className = "group";
+    if (c.can_play) actions.append(testButton(c.entity_id, "Test and add", "primary"), result(c.entity_id));
+    else actions.append(Object.assign(document.createElement("span"), { className: "hint", textContent: "Can't be sent a song to play" }));
+    return cells(document.createElement("tr"), c.name, c.entity_id, c.state, actions);
+  }));
+  if (!others.length) {
+    cand.innerHTML = `<tr><td colspan="4" class="hint">${app.haAvailable === false ? "Home Assistant isn't reachable."
+      : "No other media players in Home Assistant."}</td></tr>`;
+  }
+}
+
+async function testSpeaker(entity) {
+  speakerTests[entity] = { busy: true, text: "Playing a chime…" };
+  renderSpeakers();
+  try {
+    const r = await api("api/speakers/test", { method: "POST", json: { entity_id: entity } });
+    speakerTests[entity] = r.ok
+      ? { ok: true, text: `✓ Works. It took ${r.start_s} s to start.` }
+      : { ok: false, text: `✗ ${r.error}` };
+  } catch (e) {
+    speakerTests[entity] = { ok: false, text: `✗ ${e.message}` };
+  }
+  await loadSpeakers();
+}
+
+async function removeSpeaker(entity) {
+  try { await api("api/speakers/remove", { method: "POST", json: { entity_id: entity } }); } catch (e) {
+    status(`Couldn't remove it: ${e.message}`, true);
+  }
+  delete speakerTests[entity];
+  await loadSpeakers();
 }
 
 // Fills a speaker <select>; a saved choice that HA no longer lists stays, marked unavailable.
@@ -1313,7 +1402,7 @@ function speakerOptions(sel, first, current, label = (s) => s.name) {
   sel.replaceChildren(new Option(first, ""));
   for (const s of app.speakers) sel.add(new Option(label(s), s.entity_id));
   if (current && !app.speakers.some((s) => s.entity_id === current)) {
-    sel.add(new Option(`${current} (unavailable)`, current));
+    sel.add(new Option(`${current} (not added on the Speakers tab)`, current));
   }
   sel.value = current || "";
 }
@@ -1504,6 +1593,8 @@ function wire() {
       $("view-devices").hidden = tab.dataset.view !== "devices";
       $("view-palettes").hidden = tab.dataset.view !== "palettes";
       $("view-house").hidden = tab.dataset.view !== "house";
+      $("view-speakers").hidden = tab.dataset.view !== "speakers";
+      if (tab.dataset.view === "speakers") loadSpeakers();
       if (tab.dataset.view === "house") renderHouseLights();
       $("view-settings").hidden = tab.dataset.view !== "settings";
       if (tab.dataset.view === "editor") { layoutPreview(); timeline.layout(); }
