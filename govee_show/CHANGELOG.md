@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.32
+
+- Documentation refresh. The add-on guide is rewritten to cover everything up to now, in the order
+  you'd use it: devices, speakers, tracing your house (out-of-view stretches, icicles and spots),
+  building a show, the full effect list including the House lane, playing, automations and
+  troubleshooting. The README's feature list and repository layout are brought up to date, and
+  the in-app hints now point to the Speakers tab for the default show speaker.
+
 ## 0.2.31
 
 - New **House** lane at the top of the timeline, for effects that run across all your lights by
