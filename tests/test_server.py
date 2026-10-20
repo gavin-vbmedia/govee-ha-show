@@ -236,6 +236,10 @@ async def test_house_photo_and_paths(client):
     assert (await (await client.get("/api/house")).json())["photo"] is True
     assert (await client.put("/api/house", json={"paths": {"a": [[2, 0]]}})).status == 400
     assert (await client.put("/api/house", json={"paths": {"a": [["x"]]}})).status == 400
+    # A stretch out of view carries its hidden bulb count; one on the first point means nothing.
+    resp = await client.put("/api/house", json={"paths": {"eaves": [[0, 0, 5], [0.5, 0], [0.9, 0.1, 12]]}})
+    assert (await resp.json())["paths"] == {"eaves": [[0, 0], [0.5, 0], [0.9, 0.1, 12]]}
+    assert (await client.put("/api/house", json={"paths": {"a": [[0, 0], [1, 1, -1]]}})).status == 400
 
     assert (await client.delete("/api/house/photo")).status == 200
     assert (await client.get("/api/house/photo")).status == 404

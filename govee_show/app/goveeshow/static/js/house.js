@@ -30,6 +30,46 @@ export function bulbPositions(points, count) {
   return out;
 }
 
+// Where each of a light's `count` bulbs is, in order from the plug: [x, y], or null for a bulb
+// out of view. A point [x, y, n] marks the stretch leading to it as out of view (round the back
+// of the house, or an extension lead with n = 0) holding n bulbs. The other bulbs are shared out
+// over the stretches in view by length, so each run in view ends with a bulb at both ends.
+export function bulbLayout(points, count) {
+  const runs = []; // {points} in view, or {hidden: n}
+  let run = null;
+  points.forEach((p, i) => {
+    if (i && p[2] != null) {
+      run = null;
+      runs.push({ hidden: p[2] });
+    } else if (i) {
+      if (!run) runs.push(run = { points: [points[i - 1]] });
+      run.points.push(p);
+    }
+  });
+  if (points.length === 1) runs.push({ points });
+  let left = count;
+  for (const r of runs) if (r.hidden != null) left -= (r.hidden = Math.min(r.hidden, Math.max(left, 0)));
+  const shown = runs.filter((r) => r.points);
+  const length = (pts) => pts.slice(1).reduce((t, p, i) => t + Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]), 0);
+  const lengths = shown.map((r) => length(r.points));
+  const total = lengths.reduce((a, b) => a + b, 0);
+  // Largest remainder, so the bulbs in view add up exactly.
+  const share = shown.map((r, k) => (total ? (left * lengths[k]) / total : left / shown.length));
+  shown.forEach((r, k) => { r.n = Math.floor(share[k]); });
+  let spare = left - shown.reduce((t, r) => t + r.n, 0);
+  for (const k of shown.map((_, k) => k).sort((a, b) => (share[b] % 1) - (share[a] % 1))) {
+    if (spare-- <= 0) break;
+    shown[k].n++;
+  }
+  const out = [];
+  for (const r of runs) {
+    if (r.points) out.push(...bulbPositions(r.points, r.n));
+    else for (let j = 0; j < r.hidden; j++) out.push(null);
+  }
+  while (out.length < count) out.push(null); // nothing in view to put them on
+  return out;
+}
+
 // Which segment of the frame bulb `j` shows. Paths start at the plug; Reverse flips which end
 // the show's first segment is at, as it does on the real light.
 export function bulbSegment(j, bulbs, segments, reverse) {
@@ -55,6 +95,7 @@ export class House {
     this.devices = [];
     this.active = null; // id of the light being drawn on the House tab
     this.drag = null; // {id, i} while a point is dragged
+    this.stretch = null; // {id, i}: the stretch from point i - 1 to point i, picked on the House tab
     this.hover = null; // pointer position on the House tab, for the line to the next point
     this.saveTimer = null;
     this.cache = new Map(); // id -> {key, bulbs}
@@ -133,9 +174,9 @@ export class House {
     const points = this.paths[dev.id];
     if (!points?.length) return null;
     const count = Math.min(dev.bulbs || dev.segments * BULBS_PER_SEGMENT, MAX_BULBS);
-    const key = `${count}:${points.flat().join(",")}`;
+    const key = `${count}:${JSON.stringify(points)}`;
     let c = this.cache.get(dev.id);
-    if (c?.key !== key) this.cache.set(dev.id, c = { key, bulbs: bulbPositions(points, count) });
+    if (c?.key !== key) this.cache.set(dev.id, c = { key, bulbs: bulbLayout(points, count) });
     return c.bulbs;
   }
 
@@ -154,7 +195,9 @@ export class House {
       if (!bulbs) continue;
       const rgb = colours(dev);
       const n = dev.segments, cap = (dev.brightness ?? 100) / 100;
-      bulbs.forEach(([x, y], j) => {
+      bulbs.forEach((at, j) => {
+        if (!at) return;
+        const [x, y] = at;
         const s = bulbSegment(j, bulbs.length, n, dev.reverse);
         const [cr, cg, cb] = [rgb[s * 3], rgb[s * 3 + 1], rgb[s * 3 + 2]].map((v) => Math.round(v * cap));
         if (cr + cg + cb < 8) {
@@ -202,12 +245,35 @@ export class House {
       const pts = this.paths[dev.id];
       if (!pts?.length) continue;
       const active = dev.id === this.active;
-      ctx.strokeStyle = active ? "rgba(80,170,255,0.9)" : "rgba(255,255,255,0.35)";
-      ctx.lineWidth = active ? 2 : 1;
-      ctx.beginPath();
-      pts.forEach(([x, y], i) => (i ? ctx.lineTo(x * w, y * h) : ctx.moveTo(x * w, y * h)));
-      if (active && this.hover) ctx.lineTo(this.hover[0] * w, this.hover[1] * h);
-      ctx.stroke();
+      // Stretches in view are solid; ones out of view are dashed and labelled with their bulbs.
+      for (let i = 1; i < pts.length; i++) {
+        const [a, b] = [pts[i - 1], pts[i]];
+        const hidden = b[2] != null;
+        const picked = this.stretch?.id === dev.id && this.stretch.i === i;
+        ctx.strokeStyle = picked ? "#ffb020" : active ? "rgba(80,170,255,0.9)" : "rgba(255,255,255,0.35)";
+        ctx.lineWidth = picked ? 3 : active ? 2 : 1;
+        ctx.setLineDash(hidden ? [6, 5] : []);
+        ctx.beginPath();
+        ctx.moveTo(a[0] * w, a[1] * h);
+        ctx.lineTo(b[0] * w, b[1] * h);
+        ctx.stroke();
+        if (hidden) {
+          ctx.font = "11px system-ui, sans-serif";
+          ctx.fillStyle = picked ? "#ffb020" : "rgba(255,255,255,0.8)";
+          const label = b[2] ? `${b[2]} out of view` : "lead";
+          ctx.fillText(label, ((a[0] + b[0]) / 2) * w + 6, ((a[1] + b[1]) / 2) * h - 6);
+        }
+      }
+      ctx.setLineDash([]);
+      if (active && this.hover) {
+        const [x, y] = pts[pts.length - 1];
+        ctx.strokeStyle = "rgba(80,170,255,0.9)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x * w, y * h);
+        ctx.lineTo(this.hover[0] * w, this.hover[1] * h);
+        ctx.stroke();
+      }
       pts.forEach(([x, y], i) => {
         ctx.fillStyle = i === 0 ? "#fff" : active ? "rgb(80,170,255)" : "rgba(255,255,255,0.6)";
         const s = i === 0 ? 5 : 3.5;
@@ -220,8 +286,25 @@ export class House {
     }
   }
 
+  // Out of view: the picked stretch holds `bulbs` bulbs that can't be seen (0 for an extension
+  // lead). In view: null.
+  setHidden(bulbs) {
+    const p = this.stretch && this.paths[this.stretch.id]?.[this.stretch.i];
+    if (!p) return;
+    if (bulbs == null) p.length = 2;
+    else p[2] = Math.min(Math.max(Math.round(bulbs) || 0, 0), MAX_BULBS);
+    this.save();
+  }
+
+  pickedStretch() {
+    const s = this.stretch;
+    const p = s && this.paths[s.id]?.[s.i];
+    return p && s.i > 0 ? { ...s, hidden: p[2] ?? null } : null;
+  }
+
   // Pointer handling on the House tab's canvas: click adds a point to the light being drawn,
-  // drag moves any point, right-click removes one.
+  // drag moves any point, right-click removes one. When no light is being drawn, clicking a
+  // line between two points picks that stretch, to mark it out of view.
   wireSetup(canvas, onChange) {
     const at = (e) => {
       const r = canvas.getBoundingClientRect();
@@ -240,12 +323,29 @@ export class House {
       }
       return best;
     };
+    const hitStretch = (p) => {
+      const { w, h } = this.size || { w: 1, h: 1 };
+      let best = null, bestD = HIT_PX;
+      for (const [id, pts] of Object.entries(this.paths)) {
+        for (let i = 1; i < pts.length; i++) {
+          const [ax, ay, bx, by] = [pts[i - 1][0] * w, pts[i - 1][1] * h, pts[i][0] * w, pts[i][1] * h];
+          const [px, py] = [p[0] * w, p[1] * h];
+          const len2 = (bx - ax) ** 2 + (by - ay) ** 2;
+          const u = len2 ? Math.min(Math.max(((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / len2, 0), 1) : 0;
+          const d = Math.hypot(px - (ax + (bx - ax) * u), py - (ay + (by - ay) * u));
+          if (d < bestD) { bestD = d; best = { id, i }; }
+        }
+      }
+      return best;
+    };
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       const found = hit(at(e));
       if (!found) return;
       this.paths[found.id].splice(found.i, 1);
       if (!this.paths[found.id].length) delete this.paths[found.id];
+      else this.paths[found.id][0].length = 2; // the first point has no stretch before it
+      this.stretch = null;
       this.save();
       onChange();
     });
@@ -259,12 +359,15 @@ export class House {
         (this.paths[this.active] ||= []).push(p);
         this.save();
         onChange();
+      } else {
+        this.stretch = hitStretch(p);
+        onChange();
       }
     });
     canvas.addEventListener("pointermove", (e) => {
       const p = at(e);
       this.hover = this.active && !this.drag ? p : null;
-      if (this.drag) this.paths[this.drag.id][this.drag.i] = p;
+      if (this.drag) this.paths[this.drag.id][this.drag.i].splice(0, 2, ...p);
     });
     canvas.addEventListener("pointerleave", () => { this.hover = null; });
     const end = () => {

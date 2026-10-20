@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.26
+
+- House view: parts of a light that can't be seen from the photo, such as eaves running round the
+  back of the house or an extension lead, can be marked **Out of view**. Click the stretch on the
+  House tab, choose Out of view and say how many bulbs are on it (0 for a lead). Those bulbs keep
+  their place in the light's segments but aren't drawn, so the bulbs in view show the right part
+  of each effect.
+- Fixed the timeline's zoom and scrolling. Once zoomed in, the timeline could scroll its own
+  drawing out of sight, leaving a blank strip. The mouse wheel also only worked over part of it
+  and Ctrl+wheel jumped in big steps. Now the wheel scrolls anywhere on the timeline, Ctrl+wheel or
+  a trackpad pinch zooms smoothly round the pointer, the + and − buttons and keys zoom round the
+  playhead when it's in view, and the zoom level is remembered however you change it.
+
 ## 0.2.25
 
 - New **Bulbs** column on the Devices tab. The House view draws exactly that many bulbs along the
