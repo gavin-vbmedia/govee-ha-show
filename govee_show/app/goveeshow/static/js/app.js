@@ -170,7 +170,7 @@ function renderDevices() {
   const rows = $("device-rows");
   rows.replaceChildren();
   if (!app.deviceList.length) {
-    rows.innerHTML = `<tr><td colspan="9" class="hint">No devices yet. Scan the network or add one by IP.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="10" class="hint">No devices yet. Scan the network or add one by IP.</td></tr>`;
     return;
   }
   for (const d of app.deviceList) {
@@ -207,6 +207,15 @@ function renderDevices() {
     find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
     segs.append(input("number", "segments", { min: 1, max: 255 }), " ", find);
     cell(segs);
+    const bulbs = document.createElement("input");
+    Object.assign(bulbs, { type: "number", min: 1, max: 2000, value: d.bulbs ?? "", placeholder: `${d.segments * 4}?`,
+      title: "How many bulbs the light has, so the House view draws each one. Blank guesses 4 per segment." });
+    bulbs.addEventListener("change", () => {
+      const v = Math.round(Number(bulbs.value));
+      d.bulbs = v >= 1 ? Math.min(v, 2000) : null;
+      saveDevices();
+    });
+    cell(bulbs);
     cell(input("number", "brightness", { min: 1, max: 100, title: "Caps this light in every show. 100 is full brightness." }));
     cell(input("checkbox", "reverse"));
     cell(input("checkbox", "gradient"));

@@ -2,8 +2,8 @@
 // path, from the end with the plug to the far end, and drawn as a row of bulbs in its segments'
 // colours. The House tab sets it up; the House panel in the editor plays the show on it.
 
-const BULBS_PER_SEGMENT = 4; // a Govee segment covers several bulbs, so each is drawn as a few
-const MAX_BULBS = 600;
+const BULBS_PER_SEGMENT = 4; // the guess when a light's bulb count isn't set on the Devices tab
+const MAX_BULBS = 2000;
 const HIT_PX = 10;
 
 // `count` points spread evenly along the path (points are [x, y] in any units), the first at its
@@ -132,7 +132,7 @@ export class House {
   bulbs(dev) {
     const points = this.paths[dev.id];
     if (!points?.length) return null;
-    const count = Math.min(dev.segments * BULBS_PER_SEGMENT, MAX_BULBS);
+    const count = Math.min(dev.bulbs || dev.segments * BULBS_PER_SEGMENT, MAX_BULBS);
     const key = `${count}:${points.flat().join(",")}`;
     let c = this.cache.get(dev.id);
     if (c?.key !== key) this.cache.set(dev.id, c = { key, bulbs: bulbPositions(points, count) });
