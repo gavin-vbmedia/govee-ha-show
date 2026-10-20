@@ -113,6 +113,9 @@ class Output:
     def claim(self, ip: str, segments: int, *, reverse=False, gradient=False,
               protocol="standard") -> OutputDevice:
         dev = self.devices.get(ip)
+        if dev and dev.segments != segments and (dev.reverse, dev.gradient, dev.protocol) == (reverse, gradient, protocol):
+            # Only the length changed: keep realtime mode on rather than switching off and on again.
+            dev.segments, dev.pending, dev.last_frame = segments, None, None
         if dev is None or (dev.segments, dev.reverse, dev.gradient, dev.protocol) != (segments, reverse, gradient, protocol):
             if dev:
                 dev.disable()
@@ -165,5 +168,27 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
         while (t := time.monotonic() - t0) < seconds:
             dev.update(test_frame(segments, t))
             await asyncio.sleep(1 / fps)
+    finally:
+        output.release(ip)
+
+
+PROBE_MAX = 128  # the most segments Find segments will look for
+
+
+def probe_frame(segment: int) -> bytes:
+    """Every segment up to and including `segment` (1-based) off except that one, lit white."""
+    return b"\0\0\0" * (segment - 1) + b"\xff\xff\xff"
+
+
+async def run_probe(output: Output, ip: str, segment: int, seconds: float = 300,
+                    *, gradient=False, protocol="standard"):
+    """Light only segment `segment` and hold it, so someone can say whether the light has that many.
+
+    The frame is exactly `segment` long: a light with fewer segments has nowhere to show the white one.
+    """
+    dev = output.claim(ip, segment, gradient=gradient, protocol=protocol)
+    dev.update(probe_frame(segment))
+    try:
+        await asyncio.sleep(seconds)
     finally:
         output.release(ip)

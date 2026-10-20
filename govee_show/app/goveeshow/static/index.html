@@ -128,9 +128,20 @@
     </form>
   </section>
   <p class="hint">Devices need <b>LAN Control</b> switched on in the Govee Home app. Govee doesn't report
-    segment counts, so press <b>Test</b>: a rainbow runs with a white dot stepping along it. Set
-    <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
+    segment counts, so press <b>Find</b> next to <b>Segments</b> and answer a few yes or no questions, which works
+    even with the light still on its reel. Or press <b>Test</b>: a rainbow runs with a white dot stepping along it.
+    Set <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
     If Test only turns the light on, change <b>Protocol</b> and test again.</p>
+  <section id="finder" class="finder" hidden>
+    <b id="finder-title"></b>
+    <p id="finder-question"></p>
+    <div class="group">
+      <button id="finder-yes">Yes, something is lit</button>
+      <button id="finder-no">No, it's all off</button>
+      <button id="finder-cancel" class="ghost">Cancel</button>
+    </div>
+    <p id="finder-progress" class="hint"></p>
+  </section>
   <p class="hint">Lights not delivered yet? Pick the <b>model</b> and add a <b>planned light</b>, then build shows
     with it. ✓ realtime means Govee lists the model as supporting per-segment control; ⚠ unverified models
     may not. Segment counts aren't published, so 15 is a guess until you Test the real light. When it arrives, scan and choose <b>Link to</b>, or type its IP into the row. Its

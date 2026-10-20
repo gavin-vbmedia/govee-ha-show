@@ -102,3 +102,18 @@ def test_claim_rebuilds_the_device_when_the_protocol_changes():
     first = out.claim("10.0.0.5", 3)
     second = out.claim("10.0.0.5", 3, protocol="v2")
     assert first is not second and second.protocol == "v2"
+
+
+def test_probe_frame_lights_only_the_last_segment():
+    assert output.probe_frame(3) == bytes([0, 0, 0, 0, 0, 0, 255, 255, 255])
+
+
+def test_claim_resizes_in_place_without_leaving_realtime_mode():
+    sock = FakeSock()
+    out = output.Output.__new__(output.Output)
+    out.sock, out.devices = sock, {}
+    first = out.claim("10.0.0.5", 64)
+    sent = len(sock.sent)
+    second = out.claim("10.0.0.5", 32)
+    assert first is second and second.segments == 32
+    assert len(sock.sent) == sent  # no razer off/on between steps
