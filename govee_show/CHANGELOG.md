@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.8
+
+- Fix: realtime colour packets set the "gradient off" flag the way OpenRGB and SignalRGB do (it
+  was inverted), which some lights need before they show colours. Blend still turns blending on.
+- The add-on log shows the first colour packet when you press Test, to help diagnose lights that
+  don't respond.
+
 ## 0.2.7
 
 - Arrange the editor: move any panel to the top, left, right or bottom of the timeline with its ⋯

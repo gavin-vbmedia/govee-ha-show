@@ -6,7 +6,9 @@ gives per-segment realtime control and is what the player streams.
 
 Razer packet: BB <len hi> <len lo> <cmd> <data...> <xor checksum of all preceding bytes>
   0xB1 enable  data = 01 (on) / 00 (off)
-  0xB0 colours data = <gradient flag> <segment count> <r g b ...>
+  0xB0 colours data = <gradient off flag> <segment count> <r g b ...>
+       The flag is 1 for crisp segments (what OpenRGB and SignalRGB send) and 0 to let
+       the device blend between segments.
 """
 import base64
 import json
@@ -32,9 +34,8 @@ def razer_enable(on: bool = True) -> bytes:
 
 
 def razer_colors(rgb: bytes, gradient: bool = False) -> bytes:
-    # VERIFY against OpenRGB's Govee controller if colours look wrong.
     n = len(rgb) // 3
-    return frame(CMD_COLORS, bytes([1 if gradient else 0, n]) + bytes(rgb[: n * 3]))
+    return frame(CMD_COLORS, bytes([0 if gradient else 1, n]) + bytes(rgb[: n * 3]))
 
 
 def wrap(cmd: str, data: dict) -> bytes:
