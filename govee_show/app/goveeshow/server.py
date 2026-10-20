@@ -76,15 +76,21 @@ async def get_devices(request):
 
 
 def _clean_device(d: dict) -> dict:
+    """A device with no IP is planned: it has tracks in shows but nothing to send to yet."""
+    ip = str(d.get("ip") or "").strip()
     try:
-        ipaddress.IPv4Address(str(d["ip"]))
+        if ip:
+            ipaddress.IPv4Address(ip)
         segments = int(d.get("segments", 15))
-    except (KeyError, ValueError) as e:
+    except (TypeError, ValueError) as e:
         raise web.HTTPBadRequest(text=f"bad device: {e}")
     if not 1 <= segments <= 255:
         raise web.HTTPBadRequest(text="segments must be 1-255")
-    return {"id": str(d.get("id") or d["ip"]), "name": str(d.get("name") or d["ip"])[:64],
-            "ip": str(d["ip"]), "sku": str(d.get("sku", "")), "segments": segments,
+    dev_id = str(d.get("id") or ip)
+    if not dev_id:
+        raise web.HTTPBadRequest(text="a planned device needs an id")
+    return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64],
+            "ip": ip, "sku": str(d.get("sku", "")), "segments": segments,
             "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient"))}
 
 
@@ -108,6 +114,8 @@ async def scan_devices(request):
 async def test_device(request):
     body = await request.json()
     d = _clean_device(body)
+    if not d["ip"]:
+        raise web.HTTPBadRequest(text="link this device to a real light before testing it")
     seconds = min(max(float(body.get("seconds", 15)), 1), 60)
     app = request.app
     await app[RUNNER].stop()

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Planned lights: add a light you don't have yet (name and segment count) and build shows with it.
+  When it arrives, link it from a scan or by typing its IP; its shows carry over.
+
 ## 0.2.0
 
 - Timeline editor with song waveform, one track per device, draggable and resizable effect clips,

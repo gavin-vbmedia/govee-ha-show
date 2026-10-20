@@ -162,13 +162,21 @@ function renderDevices() {
     };
     const cell = (child) => { const td = document.createElement("td"); td.append(child); tr.append(td); };
     cell(input("text", "name", { size: 14 }));
-    cell(d.ip);
+    const ip = document.createElement("input");
+    Object.assign(ip, { value: d.ip, placeholder: "Not linked yet", size: 13, title: "The light's IP address. Leave blank for a planned light." });
+    ip.addEventListener("change", () => {
+      const v = ip.value.trim();
+      if (v && !/^\d{1,3}(\.\d{1,3}){3}$/.test(v)) { status("That isn't an IP address", true); ip.value = d.ip; return; }
+      d.ip = v;
+      saveDevices();
+    });
+    cell(ip);
     cell(d.sku || "–");
     cell(input("number", "segments", { min: 1, max: 255 }));
     cell(input("checkbox", "reverse"));
     cell(input("checkbox", "gradient"));
     const actions = document.createElement("td");
-    const test = button("Test", async () => {
+    const test = button(d.ip ? "Test" : "Planned", async () => {
       try {
         await api("api/devices/test", { method: "POST", json: { ...d, seconds: 20 } });
         status(`Testing ${d.name} for 20 seconds`);
@@ -179,6 +187,7 @@ function renderDevices() {
       app.deviceList = app.deviceList.filter((x) => x !== d);
       saveDevices();
     }, "ghost danger");
+    test.disabled = !d.ip;
     actions.append(test, " ", remove);
     tr.append(actions);
     rows.append(tr);
@@ -194,7 +203,7 @@ function button(label, onclick, cls = "") {
 }
 
 function addDevice(found) {
-  if (app.devices[found.id]) return;
+  if (app.devices[found.id] || app.deviceList.some((d) => d.ip && d.ip === found.ip)) return;
   const name = `${found.sku || "Govee"} ${found.ip.split(".").pop()}`;
   app.deviceList.push({ id: found.id, name, ip: found.ip, sku: found.sku || "", segments: 15, reverse: false, gradient: false });
   saveDevices();
@@ -215,8 +224,20 @@ async function scan() {
       const row = document.createElement("div");
       row.className = "scan-row";
       row.append(`${f.sku || "Govee"} at ${f.ip}`);
-      if (app.devices[f.id]) row.append(" (added)");
-      else row.append(button("Add", () => { addDevice(f); row.lastChild.replaceWith(" (added)"); }));
+      const known = app.devices[f.id] || app.deviceList.find((d) => d.ip === f.ip);
+      if (known) { row.append(` (${known.name})`); box.append(row); continue; }
+      row.append(button("Add", () => { addDevice(f); row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (added)`); }));
+      const planned = app.deviceList.filter((d) => !d.ip);
+      if (planned.length) {
+        const sel = document.createElement("select");
+        for (const p of planned) sel.add(new Option(p.name, p.id));
+        row.append(" or ", button("Link to", () => {
+          const p = app.devices[sel.value];
+          Object.assign(p, { ip: f.ip, sku: f.sku || p.sku });
+          saveDevices();
+          row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (${p.name})`);
+        }), sel);
+      }
       box.append(row);
     }
   } catch (e) { box.textContent = ""; status(`Scan failed: ${e.message}`, true); }
@@ -567,7 +588,7 @@ async function offsetChanged(e) {
 }
 
 // transport -------------------------------------------------------------------
-const lightsOn = () => $("lights").checked && app.show.tracks.some((t) => app.devices[t.device]);
+const lightsOn = () => $("lights").checked && app.show.tracks.some((t) => app.devices[t.device]?.ip);
 const offset = () => (Number($("offset").value) || 0) / 1000;
 
 function currentTime() {
@@ -745,6 +766,16 @@ function wire() {
   $("btn-zoom-out").addEventListener("click", () => { timeline.zoom(1 / 1.5); prefs.set("pps", app.pps); });
 
   $("btn-scan").addEventListener("click", scan);
+  $("plan-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("plan-name").value.trim();
+    const base = `planned-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "light"}`;
+    let id = base;
+    for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
+    app.deviceList.push({ id, name, ip: "", sku: "", segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false });
+    $("plan-name").value = "";
+    saveDevices();
+  });
   $("add-form").addEventListener("submit", (e) => {
     e.preventDefault();
     const ip = $("add-ip").value.trim();

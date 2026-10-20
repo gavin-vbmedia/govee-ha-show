@@ -16,6 +16,12 @@ Govee doesn't report how many segments a device has, so press **Test**: a rainbo
 dot stepping along it. Set **Segments** so the dot visits every segment once per lap, and tick
 **Reverse** if it runs the wrong way. Most strips and outdoor lights have 10 to 15 segments.
 
+**Lights not delivered yet?** Use **Add planned light** with a name and the segment count from
+the product listing, and build shows with it straight away. Planned lights show in the preview
+but nothing is sent to them. When the light arrives, press **Scan network** and choose **Link to**
+next to it (or type its IP into the planned light's row). The shows you built carry over. If the
+real segment count differs, just change it: effects scale to any number of segments.
+
 ## 2. Build a show
 
 - Pick a song from your Home Assistant **media** folder, or **Upload** one. You can also make a
