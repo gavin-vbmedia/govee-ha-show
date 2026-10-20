@@ -465,7 +465,49 @@ function drawHouse() {
   if (!$("view-house").hidden) house.drawSetup($("house-setup"));
 }
 
+// The stretch picked on the photo: in view, or out of view with how many bulbs it holds.
+function renderHouseStretch() {
+  const box = $("house-stretch");
+  const st = house.active ? null : house.pickedStretch();
+  box.hidden = !st;
+  if (!st) return;
+  const dev = app.deviceList.find((d) => d.id === st.id);
+  const hidden = st.hidden != null;
+  const label = document.createElement("span");
+  label.innerHTML = `<b></b>, from point ${st.i} to ${st.i + 1}:`;
+  label.firstChild.textContent = dev?.name || "Light";
+  const pick = (text, on, title, fn) => {
+    const b = button(text, fn, on ? "primary" : "");
+    b.title = title;
+    return b;
+  };
+  const parts = [label,
+    pick("In view", !hidden, "Bulbs on this stretch can be seen from the photo", () => {
+      house.setHidden(null); renderHouseStretch();
+    }),
+    pick("Out of view", hidden, "This stretch runs where the photo can't see, such as round the back of the house, or is an extension lead", () => {
+      house.setHidden(hidden ? st.hidden : 0); renderHouseStretch();
+    })];
+  if (hidden) {
+    const n = document.createElement("input");
+    n.type = "number";
+    n.min = "0";
+    n.max = "2000";
+    n.value = st.hidden;
+    n.addEventListener("change", () => { house.setHidden(Number(n.value)); renderHouseStretch(); });
+    const l = document.createElement("label");
+    l.append("Bulbs on it ", n);
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = "0 for an extension lead";
+    parts.push(l, hint);
+  }
+  parts.push(button("✕", () => { house.stretch = null; renderHouseStretch(); }, "ghost"));
+  box.replaceChildren(...parts);
+}
+
 function renderHouseLights() {
+  renderHouseStretch();
   $("house-remove").hidden = !house.photo;
   $("house-dim").value = house.dim;
   const box = $("house-lights");
@@ -491,6 +533,7 @@ function renderHouseLights() {
         if (pts && !confirm(`Trace ${d.name} again from the start?`)) return;
         delete house.paths[d.id];
         house.active = d.id;
+        house.stretch = null;
         house.save();
         renderHouseLights();
       }));
@@ -522,7 +565,11 @@ function wireHouse() {
   });
   $("house-dim").addEventListener("input", (e) => { house.dim = Number(e.target.value); house.save(); });
   document.addEventListener("keydown", (e) => {
-    if ($("view-house").hidden || !house.active || e.target.closest("input, select, textarea")) return;
+    if ($("view-house").hidden || e.target.closest("input, select, textarea")) return;
+    if (!house.active) {
+      if (e.key === "Escape" && house.stretch) { house.stretch = null; renderHouseStretch(); }
+      return;
+    }
     if (e.key === "Enter" || e.key === "Escape") { house.active = null; renderHouseLights(); }
     if (e.key === "Backspace") {
       e.preventDefault();

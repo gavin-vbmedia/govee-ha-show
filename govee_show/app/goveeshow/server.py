@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 STATIC = Path(__file__).parent / "static"
 INGRESS_PEER = "172.30.32.2"  # the Supervisor's ingress proxy
 MAX_UPLOAD = 200 * 1024 * 1024
+MAX_BULBS = 2000  # bulbs on one light
 
 OUTPUT = web.AppKey("output", Output)
 PLAYER = web.AppKey("player", Player)
@@ -110,8 +111,8 @@ def _clean_device(d: dict) -> dict:
         bulbs = int(d["bulbs"]) if d.get("bulbs") else None
     except (TypeError, ValueError):
         raise web.HTTPBadRequest(text="bulbs must be a number")
-    if bulbs is not None and not 1 <= bulbs <= 2000:
-        raise web.HTTPBadRequest(text="bulbs must be 1-2000")
+    if bulbs is not None and not 1 <= bulbs <= MAX_BULBS:
+        raise web.HTTPBadRequest(text=f"bulbs must be 1-{MAX_BULBS}")
     protocol = str(d.get("protocol") or "standard")
     if protocol not in PROTOCOLS:
         raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
@@ -470,12 +471,22 @@ async def put_house(request):
     for dev_id, points in paths.items():
         if not isinstance(points, list) or len(points) > MAX_POINTS:
             raise web.HTTPBadRequest(text=f"a path has up to {MAX_POINTS} points")
-        try:
-            pts = [[round(float(x), 5), round(float(y), 5)] for x, y in points]
-        except (TypeError, ValueError):
-            raise web.HTTPBadRequest(text="points are [x, y] pairs")
-        if not all(0 <= v <= 1 for p in pts for v in p):
-            raise web.HTTPBadRequest(text="points must be between 0 and 1")
+        pts = []
+        for i, point in enumerate(points):
+            # [x, y], or [x, y, n] when the stretch from the previous point is out of view
+            # (round the back of the house, or an extension lead) and holds n bulbs.
+            try:
+                if not isinstance(point, list) or len(point) not in (2, 3):
+                    raise ValueError
+                x, y = round(float(point[0]), 5), round(float(point[1]), 5)
+                hidden = int(point[2]) if len(point) == 3 and i else None
+            except (TypeError, ValueError):
+                raise web.HTTPBadRequest(text="points are [x, y] or [x, y, hidden bulbs]")
+            if not (0 <= x <= 1 and 0 <= y <= 1):
+                raise web.HTTPBadRequest(text="points must be between 0 and 1")
+            if hidden is not None and not 0 <= hidden <= MAX_BULBS:
+                raise web.HTTPBadRequest(text=f"a hidden stretch has 0 to {MAX_BULBS} bulbs")
+            pts.append([x, y] if hidden is None else [x, y, hidden])
         if pts:
             clean[str(dev_id)[:64]] = pts
     try:

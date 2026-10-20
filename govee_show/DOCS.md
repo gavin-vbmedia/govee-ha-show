@@ -192,6 +192,12 @@ plays the show on it, so you can design without standing outside.
    draws exactly that many, shared evenly across its segments; left blank, it draws 4 per segment.
 3. Press **Done** (or Enter). Drag a point to move it, right-click a point to remove it, and press
    Backspace while tracing to undo the last point.
+4. If part of the light can't be seen from the photo, such as eaves that carry on round the back
+   of the house, or an extension lead between the plug and the first bulb, trace past it anyway (a
+   short line is fine). Then click that stretch, choose **Out of view** and enter how many bulbs are
+   on it (0 for an extension lead). It's drawn dashed on the House tab and left out of the House
+   panel, while its bulbs still use up their share of the segments, so the bulbs you can see show
+   the right part of each effect.
 
 While you trace, each light is drawn in a rainbow from red at the plug to the far end, so you can
 check it runs the same way as the real light. If it's backwards, retrace it from the other end,
