@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.31
+
+- New **House** lane at the top of the timeline, for effects that run across all your lights by
+  where they are on the house photo: **Sweep** (a band of colour crossing the house left to right,
+  right to left, up, down, or out from or in to the centre), **House wipe** (fills the house with a
+  colour in that direction) and **Rainbow wave**. They sit on top of each light's own effects; set
+  **Elsewhere** to let those show through outside the sweep or wipe. Lights need tracing on the
+  House tab first, and bulbs out of view or off the photo are left alone.
+
 ## 0.2.30
 
 - Every effect button in the Selection panel now has a small strip playing that effect, so you can

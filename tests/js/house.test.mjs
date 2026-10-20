@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { bulbLayout, bulbPositions, bulbSegment, icicleDrops, spotColour } from "../../govee_show/app/goveeshow/static/js/house.js";
+import { bulbLayout, bulbPositions, bulbSegment, icicleDrops, segmentPositions, spotColour } from "../../govee_show/app/goveeshow/static/js/house.js";
 
 const close = (a, b) => a.every((p, i) => Math.abs(p[0] - b[i][0]) < 1e-9 && Math.abs(p[1] - b[i][1]) < 1e-9);
 
@@ -53,4 +53,22 @@ test("each spot shows its share of the segments, blended", () => {
   // One spot blends them all; more spots than segments share a segment.
   assert.deepEqual(spotColour(0, 1, rgb, 4, false), [100, 0, 50]);
   assert.deepEqual(spotColour(7, 8, rgb, 4, false), [0, 0, 100]);
+});
+
+test("segment positions span the traced lights from 0 to 1", () => {
+  const roof = { id: "roof", segments: 2, reverse: false };
+  const spots = { id: "spots", segments: 2, reverse: true };
+  // Roof bulbs from x 0.2 to 0.6 at y 0.3; two spots at y 0.9, reversed.
+  const pos = segmentPositions([
+    { dev: roof, bulbs: [[0.2, 0.3], [0.3, 0.3], [0.5, 0.3], [0.6, 0.3]] },
+    { dev: spots, spots: [[0.4, 0.9], [0.8, 0.9]] },
+  ]);
+  const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 1e-9);
+  // Roof segments sit at the middle of their bulbs: x 0.25 and 0.55, scaled over 0.25..0.8.
+  assert.ok(near(pos.roof[0], [0, 0]));
+  assert.ok(near(pos.roof[1], [0.3 / 0.55, 0]));
+  // Reversed spots: segment 1 is the first spot (by the plug).
+  assert.ok(near(pos.spots[1], [0.15 / 0.55, 1]));
+  assert.ok(near(pos.spots[0], [1, 1]));
+  assert.deepEqual(segmentPositions([]), {});
 });

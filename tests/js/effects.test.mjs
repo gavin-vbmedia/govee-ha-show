@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EFFECTS, bake, newClip, renderTrack } from "../../govee_show/app/goveeshow/static/js/effects.js";
+import { EFFECTS, HOUSE, applyHouse, bake, newClip, renderTrack } from "../../govee_show/app/goveeshow/static/js/effects.js";
 
 const px = (buf, i) => [...buf.subarray(i * 3, i * 3 + 3)];
 
@@ -118,4 +118,50 @@ test("Govee scene clips are listed in the baked header", () => {
   const len = new DataView(blob.buffer).getUint32(5);
   const header = JSON.parse(new TextDecoder().decode(blob.subarray(9, 9 + len)));
   assert.deepEqual(header.scenes, [{ track: 0, start: 20, end: 60, code: 212, param: "AQID" }]);
+});
+
+test("House effects colour each segment by where it is on the house", () => {
+  // Three segments at the left, middle and right of the house; one off the photo.
+  const pos = [[0, 0.5], [0.5, 0.5], [1, 0.5], null];
+  const at = (clip, time) => {
+    const out = new Uint8Array(12).fill(9); // the light's own colour, 9 9 9
+    return [0, 1, 2, 3].map((i) => px(applyHouse([clip], time, pos, out), i));
+  };
+  // A wipe from the left just past halfway: left and middle lit, right still background.
+  const wipe = { ...newClip("housewipe", 0, 2), color: "#ff0000", soft: 0.01 };
+  assert.deepEqual(at(wipe, 1.1), [[255, 0, 0], [255, 0, 0], [0, 0, 0], [9, 9, 9]]);
+  // Wiping over the lights' own effects leaves them where the wipe hasn't reached.
+  assert.deepEqual(at({ ...wipe, outside: "lights' own effects" }, 0.6)[2], [9, 9, 9]);
+  // A sweep's band crosses from left to right, so the middle is lit mid-clip and the ends aren't.
+  const sweep = { ...newClip("sweep", 0, 2), width: 0.2 };
+  const mid = at(sweep, 1);
+  assert.deepEqual(mid[1], [255, 255, 255]);
+  assert.deepEqual(mid[0], [0, 0, 0]);
+  assert.deepEqual(mid[2], [0, 0, 0]);
+  // Right to left reaches the right end first.
+  assert.ok(at({ ...sweep, direction: "right to left" }, 0.4)[2][0] > at(sweep, 0.4)[2][0]);
+});
+
+test("House effects only go on the House lane and show as a strip elsewhere", () => {
+  for (const key of ["sweep", "housewipe", "wave"]) {
+    assert.ok(EFFECTS[key].house, key);
+    const buf = renderTrack([newClip(key, 0, 2)], 1, 10);
+    assert.ok(buf.every((v) => v >= 0 && v <= 255), key);
+  }
+});
+
+test("the bake lays the House lane over every light with a position", () => {
+  const show = { duration: 1, tracks: [
+    { device: HOUSE, clips: [{ ...newClip("housewipe", 0, 1), color: "#00ff00", soft: 0.01 }] },
+    { device: "a", clips: [{ ...newClip("solid", 0, 1), color: "#0000ff" }] },
+    { device: "b", clips: [{ ...newClip("solid", 0, 1), color: "#0000ff" }] },
+  ] };
+  const devices = { a: { segments: 2 }, b: { segments: 1 } };
+  // a's first segment is at the far left, its second off the photo; b isn't traced.
+  const blob = bake(show, devices, 10, { a: [[0, 0], null] });
+  const hlen = new DataView(blob.buffer).getUint32(5);
+  const header = JSON.parse(new TextDecoder().decode(blob.subarray(9, 9 + hlen)));
+  assert.deepEqual(header.tracks.map((t) => t.device), ["a", "b"]);
+  const frame5 = blob.subarray(9 + hlen + 5 * 9, 9 + hlen + 6 * 9);
+  assert.deepEqual([...frame5], [0, 255, 0, 0, 0, 255, 0, 0, 255]);
 });

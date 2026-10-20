@@ -99,6 +99,15 @@ real segment count differs, just change it: effects scale to any number of segme
   light selected you can also **Copy all effects to** another light or all of them, optionally
   replacing what they had. Effects scale to each light's segment count.
 
+- **Effects across the whole house**: the **House** lane at the top of the timeline holds effects
+  that run across every light by where it is on the house photo (see **See it on your house**
+  below), such as a **Sweep** of colour from left to right or bottom to top, a **House wipe** or a
+  **Rainbow wave**. Select a stretch of the House lane and pick one, as on a light. They sit on top
+  of each light's own effects; set **Elsewhere** to *lights' own effects* to let those show
+  outside the band. Only lights traced on the House tab take part. Where each light sits is
+  worked out when the show is saved, so after retracing a light, save the show again (any edit
+  with Auto save on does this) before playing it from an automation.
+
 - To work on one part, drag along the **time ruler** at the top of the timeline to set a **play
   region** (or select a stretch and press **▶ Play this part**). Play then plays just that part,
   and Home goes back to its start. Tick **Loop** to repeat it, or the whole show when there's no
