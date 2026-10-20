@@ -14,6 +14,8 @@ editor inside Home Assistant, with no external sequencing software or separate h
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping
 - Draggable effects (solid, fade, chase, rainbow, strobe, twinkle, wipe) with a live,
   segment-level preview
+- Copy and paste effects between lights (Ctrl+C / Ctrl+V), or copy a whole light's effects to
+  one or every other light
 - Save and load shows; each show is baked into precomputed frames for reliable playback
 - Play the song on any Home Assistant media player (with a per-speaker delay), or in the browser
 - Schedule or trigger shows from automations: MQTT entities (show select, play/stop buttons,
