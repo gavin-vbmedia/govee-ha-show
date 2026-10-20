@@ -213,3 +213,26 @@ async def test_live_preview_shows_frames_then_lets_go(client, monkeypatch):
     assert "192.0.2.11" in out.devices
     assert (await client.post("/api/devices/preview", json={**dev, "stop": True})).status == 200
     assert "192.0.2.11" not in out.devices
+
+
+async def test_house_photo_and_paths(client):
+    assert (await (await client.get("/api/house")).json()) == {"paths": {}, "dim": 0.5, "photo": False}
+    assert (await client.get("/api/house/photo")).status == 404
+    resp = await client.put("/api/house/photo", data=b"\xff\xd8fakejpeg", headers={"Content-Type": "image/jpeg"})
+    assert resp.status == 200
+    resp = await client.get("/api/house/photo")
+    assert resp.status == 200 and await resp.read() == b"\xff\xd8fakejpeg"
+    # A new photo replaces the old one, even in another format.
+    await client.put("/api/house/photo", data=b"\x89PNGfake", headers={"Content-Type": "image/png"})
+    assert await (await client.get("/api/house/photo")).read() == b"\x89PNGfake"
+    assert (await client.put("/api/house/photo", data=b"x", headers={"Content-Type": "text/plain"})).status == 415
+
+    paths = {"porch": [[0.1, 0.2], [0.5, 0.25]], "empty": []}
+    resp = await client.put("/api/house", json={"paths": paths, "dim": 0.7})
+    assert (await resp.json()) == {"paths": {"porch": [[0.1, 0.2], [0.5, 0.25]]}, "dim": 0.7}
+    assert (await (await client.get("/api/house")).json())["photo"] is True
+    assert (await client.put("/api/house", json={"paths": {"a": [[2, 0]]}})).status == 400
+    assert (await client.put("/api/house", json={"paths": {"a": [["x"]]}})).status == 400
+
+    assert (await client.delete("/api/house/photo")).status == 200
+    assert (await client.get("/api/house/photo")).status == 404

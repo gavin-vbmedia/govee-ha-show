@@ -9,6 +9,7 @@ import os
 import re
 from pathlib import Path
 
+PHOTO_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".flac", ".webm"}
 _SLUG = re.compile(r"[^a-z0-9]+")
 _UNSAFE_NAME = re.compile(r"[^\w .()-]+")
@@ -72,6 +73,24 @@ class Storage:
 
     def save_settings(self, settings: dict):
         _write_atomic(self.settings_file, json.dumps(settings, indent=2).encode())
+
+    # house photo ---------------------------------------------------------
+    # One photo of the house for the editor's House view; where each light runs on it is a
+    # setting. Kept in the config folder so it is backed up with everything else.
+    def house_photo(self) -> Path | None:
+        for ext in PHOTO_EXT:
+            p = self.config_dir / f"house{ext}"
+            if p.exists():
+                return p
+        return None
+
+    def save_house_photo(self, data: bytes, ext: str):
+        self.delete_house_photo()
+        _write_atomic(self.config_dir / f"house{ext}", data)
+
+    def delete_house_photo(self):
+        while (p := self.house_photo()):
+            p.unlink()
 
     # shows ---------------------------------------------------------------
     def list_shows(self) -> list[dict]:

@@ -1,6 +1,7 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
 import { EFFECTS, FPS, bake, defaultParams, newClip, renderTrack, showDuration } from "./effects.js";
+import { House } from "./house.js";
 import { Layout } from "./layout.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
@@ -435,6 +436,90 @@ function drawPreview() {
 }
 
 new ResizeObserver(layoutPreview).observe(preview);
+
+// house view ------------------------------------------------------------------
+const house = new House({
+  api, status,
+  frameFor(dev) {
+    const tr = app.show.tracks.find((t) => t.device === dev.id);
+    return tr ? renderTrack(tr.clips, app.time, dev.segments) : new Uint8Array(dev.segments * 3);
+  },
+});
+
+function drawHouse() {
+  house.devices = app.deviceList;
+  const panel = $("house");
+  if (panel.closest(".panel").offsetParent) house.drawPanel(panel, $("house-hint"));
+  if (!$("view-house").hidden) house.drawSetup($("house-setup"));
+}
+
+function renderHouseLights() {
+  $("house-remove").hidden = !house.photo;
+  $("house-dim").value = house.dim;
+  const box = $("house-lights");
+  if (!house.photo) {
+    box.innerHTML = `<p class="hint">Upload a photo of your house to start.</p>`;
+    return;
+  }
+  if (!app.deviceList.length) {
+    box.innerHTML = `<p class="hint">Add your lights on the Devices tab first.</p>`;
+    return;
+  }
+  box.replaceChildren(...app.deviceList.map((d) => {
+    const row = document.createElement("span");
+    row.className = `house-light${house.active === d.id ? " active" : ""}`;
+    const name = document.createElement("span");
+    const pts = house.paths[d.id]?.length || 0;
+    name.textContent = `${d.name}${pts ? "" : " (not traced)"}`;
+    row.append(name);
+    if (house.active === d.id) {
+      row.append(button("Done", () => { house.active = null; renderHouseLights(); }, "primary"));
+    } else {
+      row.append(button(pts ? "Retrace" : "Trace", () => {
+        if (pts && !confirm(`Trace ${d.name} again from the start?`)) return;
+        delete house.paths[d.id];
+        house.active = d.id;
+        house.save();
+        renderHouseLights();
+      }));
+    }
+    if (pts) {
+      row.append(button("Clear", () => {
+        delete house.paths[d.id];
+        if (house.active === d.id) house.active = null;
+        house.save();
+        renderHouseLights();
+      }, "ghost"));
+    }
+    return row;
+  }));
+}
+
+function wireHouse() {
+  house.wireSetup($("house-setup"), renderHouseLights);
+  $("house-upload").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (file) await house.upload(file);
+    renderHouseLights();
+  });
+  $("house-remove").addEventListener("click", async () => {
+    if (!confirm("Remove the house photo? Your traced lights are kept for the next photo.")) return;
+    await house.removePhoto();
+    renderHouseLights();
+  });
+  $("house-dim").addEventListener("input", (e) => { house.dim = Number(e.target.value); house.save(); });
+  document.addEventListener("keydown", (e) => {
+    if ($("view-house").hidden || !house.active || e.target.closest("input, select, textarea")) return;
+    if (e.key === "Enter" || e.key === "Escape") { house.active = null; renderHouseLights(); }
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      house.paths[house.active]?.pop();
+      house.save();
+      renderHouseLights();
+    }
+  });
+}
 
 // clip preview ----------------------------------------------------------------
 // The selected clip loops on its own in the Selection panel, so a change can be seen without playing
@@ -1393,6 +1478,7 @@ function frame() {
   $("clock").textContent = fmtTime(app.time);
   timeline.drawPlayhead();
   drawPreview();
+  drawHouse();
   drawClipPreview();
   requestAnimationFrame(frame);
 }
@@ -1405,6 +1491,8 @@ function wire() {
       $("view-editor").hidden = tab.dataset.view !== "editor";
       $("view-devices").hidden = tab.dataset.view !== "devices";
       $("view-palettes").hidden = tab.dataset.view !== "palettes";
+      $("view-house").hidden = tab.dataset.view !== "house";
+      if (tab.dataset.view === "house") renderHouseLights();
       $("view-settings").hidden = tab.dataset.view !== "settings";
       if (tab.dataset.view === "editor") { layoutPreview(); timeline.layout(); }
     });
@@ -1521,6 +1609,7 @@ function wire() {
 
 async function init() {
   wire();
+  wireHouse();
   const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
   $("btn-reset-layout").addEventListener("click", () => layout.reset());
   $("exp-scenes").checked = experimentalOn();
@@ -1534,6 +1623,7 @@ async function init() {
     loadSpeakers();
     loadModels();
     loadPalettes();
+    house.load().then(renderHouseLights);
     const shows = await api("api/shows");
     const last = prefs.get("lastShow", null);
     const id = shows.some((s) => s.id === last) ? last : shows[0]?.id;

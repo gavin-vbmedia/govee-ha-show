@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.22
+
+- New **House** view. Upload a photo of your house on the House tab and trace where each light
+  runs on it. The editor's House panel then plays the show on the photo, with each segment drawn
+  as a few glowing bulbs.
+
 ## 0.2.21
 
 - The Selection panel can be hidden too. Only the timeline always stays.

@@ -8,11 +8,11 @@ const ALWAYS_SHOWN = new Set(["timeline"]);
 const placesFor = (panel) => (ALWAYS_SHOWN.has(panel) ? DOCKS : { ...DOCKS, [HIDDEN]: "Hidden" });
 export const PANELS = {
   show: "Show", song: "Song", playback: "Playback", beats: "Beats",
-  preview: "Preview", timeline: "Timeline", inspector: "Selection",
+  preview: "Preview", house: "House", timeline: "Timeline", inspector: "Selection",
 };
 export const DEFAULT_LAYOUT = {
   show: "top", song: "top", playback: "top", beats: "top",
-  preview: "top", timeline: "middle", inspector: "bottom",
+  preview: "top", house: "top", timeline: "middle", inspector: "bottom",
 };
 const KEY = "goveeshow.layout";
 

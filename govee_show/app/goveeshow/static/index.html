@@ -15,6 +15,7 @@
   <nav>
     <button class="tab active" data-view="editor">Editor</button>
     <button class="tab" data-view="devices">Devices</button>
+    <button class="tab" data-view="house">House</button>
     <button class="tab" data-view="palettes">Palettes</button>
     <button class="tab" data-view="settings">Settings</button>
   </nav>
@@ -71,6 +72,10 @@
     <section class="panel" data-panel="preview">
       <div class="panel-head"><span class="section-label">Preview</span></div>
       <div class="preview-panel"><canvas id="preview"></canvas></div>
+    </section>
+    <section class="panel" data-panel="house">
+      <div class="panel-head"><span class="section-label">House</span></div>
+      <div class="house-panel"><canvas id="house"></canvas><p id="house-hint" class="hint"></p></div>
     </section>
   </div>
   <div class="editor-middle">
@@ -149,6 +154,22 @@
     <thead><tr><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th title="Caps this light in every show">Brightness %</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th title="How colours are sent to the light">Protocol</th><th></th></tr></thead>
     <tbody id="device-rows"></tbody>
   </table>
+</main>
+
+<main id="view-house" class="view" hidden>
+  <section class="toolbar">
+    <label class="button primary">Upload photo<input id="house-upload" type="file" accept="image/*" hidden></label>
+    <button id="house-remove" class="ghost danger">Remove photo</button>
+    <label title="Darken the photo so the lights stand out, like at dusk">Darken
+      <input id="house-dim" type="range" min="0" max="0.9" step="0.05"></label>
+  </section>
+  <p class="hint">Take the photo from where people will watch, ideally at dusk. Then pick a light below, press
+    <b>Trace</b> and click along where it runs on the photo, <b>starting at the end with the plug</b>. Click once at
+    each corner or bend. Drag a point to move it, right-click a point to remove it, and press Enter or <b>Done</b>
+    when the light is traced. Each light is shown in a rainbow from the plug (red) to the far end, so you can check
+    its direction. The editor's <b>House</b> panel then plays the show on the photo.</p>
+  <div id="house-lights" class="house-lights"></div>
+  <div class="house-stage"><canvas id="house-setup"></canvas></div>
 </main>
 
 <main id="view-palettes" class="view" hidden>

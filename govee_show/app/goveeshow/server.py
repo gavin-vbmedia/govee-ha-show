@@ -373,6 +373,81 @@ async def put_palettes(request):
     return web.json_response(palettes)
 
 
+# house view --------------------------------------------------------------
+MAX_PHOTO = 20 * 1024 * 1024
+MAX_POINTS = 200
+
+
+async def get_house(request):
+    return web.json_response({**_house(request.app[STORAGE].load_settings()),
+                              "photo": request.app[STORAGE].house_photo() is not None})
+
+
+def _house(settings: dict) -> dict:
+    house = settings.get("house", {})
+    return {"paths": house.get("paths", {}), "dim": house.get("dim", 0.5)}
+
+
+async def put_house(request):
+    """Where each light runs on the house photo (points from 0 to 1 across and down the photo,
+    starting at the plug) and how much to darken the photo."""
+    body = await request.json()
+    paths = body.get("paths") if isinstance(body, dict) else None
+    if not isinstance(paths, dict) or len(paths) > 100:
+        raise web.HTTPBadRequest(text="expected paths for up to 100 lights")
+    clean = {}
+    for dev_id, points in paths.items():
+        if not isinstance(points, list) or len(points) > MAX_POINTS:
+            raise web.HTTPBadRequest(text=f"a path has up to {MAX_POINTS} points")
+        try:
+            pts = [[round(float(x), 5), round(float(y), 5)] for x, y in points]
+        except (TypeError, ValueError):
+            raise web.HTTPBadRequest(text="points are [x, y] pairs")
+        if not all(0 <= v <= 1 for p in pts for v in p):
+            raise web.HTTPBadRequest(text="points must be between 0 and 1")
+        if pts:
+            clean[str(dev_id)[:64]] = pts
+    try:
+        dim = min(max(float(body.get("dim", 0.5)), 0), 0.9)
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="dim must be a number")
+    storage = request.app[STORAGE]
+    settings = storage.load_settings()
+    settings["house"] = {"paths": clean, "dim": dim}
+    storage.save_settings(settings)
+    return web.json_response(_house(settings))
+
+
+async def get_house_photo(request):
+    p = request.app[STORAGE].house_photo()
+    if p is None:
+        raise web.HTTPNotFound()
+    return web.FileResponse(p)
+
+
+async def put_house_photo(request):
+    ext = PHOTO_TYPES.get(request.content_type)
+    if ext is None:
+        raise web.HTTPUnsupportedMediaType(text="send a JPEG, PNG or WebP photo")
+    data = bytearray()
+    while chunk := await request.content.read(1 << 16):
+        data += chunk
+        if len(data) > MAX_PHOTO:
+            raise web.HTTPRequestEntityTooLarge(max_size=MAX_PHOTO, actual_size=len(data))
+    if not data:
+        raise web.HTTPBadRequest(text="no photo")
+    request.app[STORAGE].save_house_photo(bytes(data), ext)
+    return web.json_response({"ok": True})
+
+
+async def delete_house_photo(request):
+    request.app[STORAGE].delete_house_photo()
+    return web.json_response({"ok": True})
+
+
+PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+
+
 # player ------------------------------------------------------------------
 async def player_status(request):
     return web.json_response(request.app[RUNNER].status())
@@ -474,6 +549,11 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/palettes", get_palettes)
     r.add_get("/api/scenes", get_scenes)
     r.add_put("/api/palettes", put_palettes)
+    r.add_get("/api/house", get_house)
+    r.add_put("/api/house", put_house)
+    r.add_get("/api/house/photo", get_house_photo)
+    r.add_put("/api/house/photo", put_house_photo)
+    r.add_delete("/api/house/photo", delete_house_photo)
     r.add_post("/api/command", run_command)
     r.add_get("/api/player", player_status)
     r.add_post("/api/player/play", player_play)
