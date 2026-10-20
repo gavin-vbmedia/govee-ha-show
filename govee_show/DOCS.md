@@ -186,8 +186,8 @@ plays the show on it, so you can design without standing outside.
 
 1. Take a photo from where people will watch, ideally at dusk, and press **Upload photo**. It's
    scaled down to 2000 pixels across and kept in the add-on's config folder.
-2. Press **Trace** next to a light and click along where it runs on the photo, starting at the end
-   with the plug. Click once at each corner or bend; the light's segments are spread evenly along
+2. Pick a light in the list beside the photo, press **Trace** and click along where it runs on
+   the photo, starting at the end with the plug. Click once at each corner or bend; the light's segments are spread evenly along
    the line. Set **Bulbs** on the Devices tab to the light's real bulb count and the House view
    draws exactly that many, shared evenly across its segments; left blank, it draws 4 per segment.
 3. Press **Done** (or Enter). Drag a point to move it, right-click a point to remove it, and press
@@ -199,9 +199,9 @@ plays the show on it, so you can design without standing outside.
    panel, while its bulbs still use up their share of the segments, so the bulbs you can see show
    the right part of each effect.
 
-**Icicle lights** are traced along the line they hang from, like any other light. Then change
-**Line** to **Icicle** next to the light and set **Drops** to how many drops it has, and **Length**
-to how far the longest one hangs on the photo. The drops are drawn staggered, each in its
+**Icicle lights** are traced along the line they hang from, like any other light. Then pick the
+light in the list, change its **Style** from Line to **Icicle**, set **Drops** to how many drops it
+has, and set **Length** to how far the longest one hangs on the photo. The drops are drawn staggered, each in its
 segment's colour, with the light's **Bulbs** shared between them. Effects still run along the
 line, as they do on the real lights.
 

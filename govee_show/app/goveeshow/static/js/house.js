@@ -109,6 +109,7 @@ export class House {
     this.photo = null;
     this.devices = [];
     this.active = null; // id of the light being drawn on the House tab
+    this.selected = null; // id of the light picked in the House tab's list
     this.drag = null; // {id, i} while a point is dragged
     this.stretch = null; // {id, i}: the stretch from point i - 1 to point i, picked on the House tab
     this.hover = null; // pointer position on the House tab, for the line to the next point
@@ -282,7 +283,7 @@ export class House {
     for (const dev of this.devices) {
       const pts = this.paths[dev.id];
       if (!pts?.length) continue;
-      const active = dev.id === this.active;
+      const active = dev.id === (this.active || this.selected);
       // Stretches in view are solid; ones out of view are dashed and labelled with their bulbs.
       for (let i = 1; i < pts.length; i++) {
         const [a, b] = [pts[i - 1], pts[i]];
@@ -303,7 +304,7 @@ export class House {
         }
       }
       ctx.setLineDash([]);
-      if (active && this.hover) {
+      if (dev.id === this.active && this.hover) {
         const [x, y] = pts[pts.length - 1];
         ctx.strokeStyle = "rgba(80,170,255,0.9)";
         ctx.lineWidth = 2;
@@ -393,12 +394,19 @@ export class House {
       if (found) {
         this.drag = found;
         canvas.setPointerCapture(e.pointerId);
+        if (!this.active && this.selected !== found.id) {
+          this.selected = found.id;
+          this.stretch = null;
+          onChange();
+        }
       } else if (this.active) {
         (this.paths[this.active] ||= []).push(p);
         this.save();
         onChange();
       } else {
+        // Clicking a light's line picks that stretch and that light; clicking elsewhere drops both.
         this.stretch = hitStretch(p);
+        this.selected = this.stretch?.id ?? null;
         onChange();
       }
     });

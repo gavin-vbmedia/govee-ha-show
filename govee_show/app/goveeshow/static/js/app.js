@@ -465,45 +465,42 @@ function drawHouse() {
   if (!$("view-house").hidden) house.drawSetup($("house-setup"));
 }
 
-// The stretch picked on the photo: in view, or out of view with how many bulbs it holds.
-function renderHouseStretch() {
-  const box = $("house-stretch");
+// The stretch picked on the photo, if it's on light `d`: in view, or out of view with how many
+// bulbs it holds.
+function houseStretchEditor(d) {
   const st = house.active ? null : house.pickedStretch();
-  box.hidden = !st;
-  if (!st) return;
-  const dev = app.deviceList.find((d) => d.id === st.id);
+  if (st?.id !== d.id) return null;
   const hidden = st.hidden != null;
+  const box = document.createElement("div");
+  box.className = "house-stretch row";
   const label = document.createElement("span");
-  label.innerHTML = `<b></b>, from point ${st.i} to ${st.i + 1}:`;
-  label.firstChild.textContent = dev?.name || "Light";
+  label.textContent = `Stretch from point ${st.i} to ${st.i + 1}:`;
   const pick = (text, on, title, fn) => {
     const b = button(text, fn, on ? "primary" : "");
     b.title = title;
     return b;
   };
-  const parts = [label,
+  box.append(label,
     pick("In view", !hidden, "Bulbs on this stretch can be seen from the photo", () => {
-      house.setHidden(null); renderHouseStretch();
+      house.setHidden(null); renderHouseLights();
     }),
     pick("Out of view", hidden, "This stretch runs where the photo can't see, such as round the back of the house, or is an extension lead", () => {
-      house.setHidden(hidden ? st.hidden : 0); renderHouseStretch();
-    })];
+      house.setHidden(hidden ? st.hidden : 0); renderHouseLights();
+    }));
   if (hidden) {
     const n = document.createElement("input");
     n.type = "number";
     n.min = "0";
     n.max = "2000";
     n.value = st.hidden;
-    n.addEventListener("change", () => { house.setHidden(Number(n.value)); renderHouseStretch(); });
+    n.title = "0 for an extension lead";
+    n.addEventListener("change", () => { house.setHidden(Number(n.value)); renderHouseLights(); });
     const l = document.createElement("label");
     l.append("Bulbs on it ", n);
-    const hint = document.createElement("span");
-    hint.className = "hint";
-    hint.textContent = "0 for an extension lead";
-    parts.push(l, hint);
+    box.append(l);
   }
-  parts.push(button("✕", () => { house.stretch = null; renderHouseStretch(); }, "ghost"));
-  box.replaceChildren(...parts);
+  box.append(button("✕", () => { house.stretch = null; renderHouseLights(); }, "ghost"));
+  return box;
 }
 
 // Line or Icicle, and for icicles how many drops and how far the longest hangs.
@@ -518,13 +515,15 @@ function houseStyleControls(d) {
       ? { style: "icicle", drops: Math.max(d.segments * 3, 10), length: 0.06 } : null);
     renderHouseLights();
   });
-  if (!style) return [sel];
+  const l0 = document.createElement("label");
+  l0.className = "row";
+  l0.append("Style ", sel);
+  if (!style) return [l0];
   const drops = document.createElement("input");
   drops.type = "number";
   drops.min = "1";
   drops.max = "2000";
   drops.value = style.drops;
-  drops.className = "house-drops";
   drops.title = "How many drops hang from the light";
   drops.addEventListener("change", () => {
     house.setStyle(d.id, { ...style, drops: Math.min(Math.max(Math.round(Number(drops.value)) || 1, 1), 2000) });
@@ -539,14 +538,17 @@ function houseStyleControls(d) {
   length.title = "How far the longest drop hangs on the photo";
   length.addEventListener("input", () => { style.length = Number(length.value); house.setStyle(d.id, style); });
   const l1 = document.createElement("label");
+  l1.className = "row";
   l1.append("Drops ", drops);
   const l2 = document.createElement("label");
+  l2.className = "row";
   l2.append("Length ", length);
-  return [sel, l1, l2];
+  return [l0, l1, l2];
 }
 
+// The House tab's sidebar: a card per light. The selected light (or the one being traced) is
+// highlighted on the photo and shows its settings; the rest stay one line each.
 function renderHouseLights() {
-  renderHouseStretch();
   $("house-remove").hidden = !house.photo;
   $("house-dim").value = house.dim;
   const box = $("house-lights");
@@ -558,36 +560,68 @@ function renderHouseLights() {
     box.innerHTML = `<p class="hint">Add your lights on the Devices tab first.</p>`;
     return;
   }
+  const current = house.active || house.selected;
   box.replaceChildren(...app.deviceList.map((d) => {
-    const row = document.createElement("span");
-    row.className = `house-light${house.active === d.id ? " active" : ""}`;
-    const name = document.createElement("span");
+    const card = document.createElement("div");
+    const open = current === d.id;
+    card.className = `house-card${open ? " selected" : ""}`;
     const pts = house.paths[d.id]?.length || 0;
-    name.textContent = `${d.name}${pts ? "" : " (not traced)"}`;
-    row.append(name);
+    const head = document.createElement("div");
+    head.className = "house-card-head";
+    const name = document.createElement("b");
+    name.textContent = d.name;
+    const state = document.createElement("span");
+    state.className = "hint";
+    state.textContent = house.active === d.id ? "Tracing…"
+      : !pts ? "Not traced" : house.styles[d.id]?.style === "icicle" ? "Icicle" : "Traced";
+    head.append(name, state);
+    card.append(head);
+    if (!open) {
+      card.title = "Select this light";
+      card.addEventListener("click", () => {
+        if (house.active) return;
+        house.selected = d.id;
+        house.stretch = null;
+        renderHouseLights();
+      });
+      return card;
+    }
+    const actions = document.createElement("div");
+    actions.className = "row";
     if (house.active === d.id) {
-      row.append(button("Done", () => { house.active = null; renderHouseLights(); }, "primary"));
+      actions.append(button("Done", () => { house.active = null; renderHouseLights(); }, "primary"));
     } else {
-      row.append(button(pts ? "Retrace" : "Trace", () => {
+      actions.append(button(pts ? "Retrace" : "Trace", () => {
         if (pts && !confirm(`Trace ${d.name} again from the start?`)) return;
         delete house.paths[d.id];
-        house.active = d.id;
+        house.active = house.selected = d.id;
         house.stretch = null;
         house.save();
         renderHouseLights();
-      }));
+      }, pts ? "" : "primary"));
     }
-    row.append(...houseStyleControls(d));
     if (pts) {
-      row.append(button("Clear", () => {
+      actions.append(button("Clear", () => {
+        if (!confirm(`Remove ${d.name} from the photo?`)) return;
         delete house.paths[d.id];
         if (house.active === d.id) house.active = null;
+        house.stretch = null;
         house.save();
         renderHouseLights();
       }, "ghost"));
     }
-    return row;
+    card.append(actions, ...houseStyleControls(d));
+    const stretch = houseStretchEditor(d);
+    if (stretch) card.append(stretch);
+    else if (pts > 1 && !house.active) {
+      const tip = document.createElement("span");
+      tip.className = "hint";
+      tip.textContent = "Click a line on the photo to mark part of it out of view.";
+      card.append(tip);
+    }
+    return card;
   }));
+  box.querySelector(".house-card.selected")?.scrollIntoView({ block: "nearest" });
 }
 
 function wireHouse() {
@@ -607,7 +641,11 @@ function wireHouse() {
   document.addEventListener("keydown", (e) => {
     if ($("view-house").hidden || e.target.closest("input, select, textarea")) return;
     if (!house.active) {
-      if (e.key === "Escape" && house.stretch) { house.stretch = null; renderHouseStretch(); }
+      if (e.key === "Escape" && (house.stretch || house.selected)) {
+        if (house.stretch) house.stretch = null;
+        else house.selected = null;
+        renderHouseLights();
+      }
       return;
     }
     if (e.key === "Enter" || e.key === "Escape") { house.active = null; renderHouseLights(); }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.28
+
+- The House tab lists your lights in a sidebar beside the photo instead of a row above it, so it
+  stays tidy with lots of lights. Click a light (in the list or on the photo) to highlight it and
+  show its settings: Trace, Clear, Style, and the stretch you clicked. The tracing help is folded
+  away under **How to trace your lights**. On a phone the photo comes first, with the list below.
+
 ## 0.2.27
 
 - House view: icicle lights. Set a light to **Icicle** on the House tab and say how many drops it
