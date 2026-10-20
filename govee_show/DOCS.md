@@ -75,6 +75,12 @@ real segment count differs, just change it: effects scale to any number of segme
   light selected you can also **Copy all effects to** another light or all of them, optionally
   replacing what they had. Effects scale to each light's segment count.
 
+- To work on one part, drag along the **time ruler** at the top of the timeline to set a **play
+  region** (or select a stretch and press **▶ Play this part**). Play then plays just that part,
+  and Home goes back to its start. Tick **Loop** to repeat it, or the whole show when there's no
+  region. Clear the region with the ✕ next to it. Region and Loop apply when the song plays in the
+  browser; on a speaker the whole show plays.
+
 Shortcuts: Space play/pause, B beat, Delete remove clip or clear the selection, Esc deselect, D duplicate, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z / Ctrl+Shift+Z undo
 and redo, Ctrl+S save, + and − zoom, Ctrl+scroll zoom.
 

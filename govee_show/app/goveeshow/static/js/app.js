@@ -51,6 +51,8 @@ const app = {
   // ({tracks, start, end}) when a stretch of time is selected on one or more lights.
   selected: null,
   clipboard: null, // {clips, track, whole}
+  region: null, // {start, end}: the part of the show Play plays (and loops), while designing
+  loop: prefs.get("loop", false),
   paletteEffect: "solid",
   palettes: [], // the user's own colour palettes; presets are in palettes.js
   colourPalette: prefs.get("colourPalette", PRESET_PALETTES[0].name),
@@ -79,6 +81,12 @@ const app = {
     if (hasAudio()) audio.currentTime = this.time;
     else this.clockStart = performance.now() - this.time * 1000;
     if (this.playing) syncLights();
+  },
+
+  setRegion(r) {
+    this.region = r && r.end - r.start >= 0.05 ? { start: Math.max(0, r.start), end: r.end } : null;
+    renderRegion();
+    timeline.draw();
   },
 
   select(sel) {
@@ -363,7 +371,8 @@ function renderInspector() {
     box.innerHTML = `<p class="hint">Drag across a light (or several) to select a stretch of time, then click an
       effect above to add it there, or press Delete to clear it (hold Alt to start a selection on top of a clip). Click a clip to edit it: drag it to move, drag its
       edges to resize, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's name to copy or
-      recolour all its effects. Click the beat lane to add or remove a beat; hold Shift to drag without snapping.</p>`;
+      recolour all its effects. Drag along the time ruler to set a play region, and tick Loop to repeat it. Click the beat lane to add or
+      remove a beat; hold Shift to drag without snapping.</p>`;
     return;
   }
   const clip = sel.clip;
@@ -707,7 +716,8 @@ function renderRangeInspector(r) {
   const overlaps = tracks.some((t) => app.show.tracks[t].clips.some((c) => c.start < r.end && c.end > r.start));
   const del = button("Delete effects here", deleteRange, "ghost danger");
   del.disabled = !overlaps;
-  box.append(timeInput("start"), timeInput("end"), l, button("Add effect", () => addToRange(effect.value), "primary"), del);
+  box.append(timeInput("start"), timeInput("end"), l, button("Add effect", () => addToRange(effect.value), "primary"), del,
+    button("▶ Play this part", () => { app.setRegion(r); app.seek(r.start); play(); }, "ghost"));
   const hint = document.createElement("p");
   hint.className = "hint";
   hint.textContent = "Tip: with a stretch selected, clicking an effect above adds it straight away.";
@@ -790,6 +800,8 @@ async function openShow(id) {
     app.show = blankShow();
   }
   app.showId = id || null;
+  app.region = null;
+  renderRegion();
   app.dirty = false;
   app.bakedKey = null;
   app.selected = null;
@@ -980,9 +992,20 @@ async function syncLights() {
   catch { /* the next sync will retry */ }
 }
 
+// Browser playback plays the region (when set) instead of the whole show.
+const playEnd = () => (app.region && !app.remote ? Math.min(app.region.end, app.duration()) : app.duration());
+
+function renderRegion() {
+  const r = app.region;
+  $("region-wrap").hidden = !r;
+  if (r) $("region-label").textContent = `Region ${fmtTime(r.start)} to ${fmtTime(r.end)}`;
+}
+
 async function play() {
   if (app.playing) return;
-  if (app.time >= app.duration() - 0.01) app.seek(0);
+  const r = app.region;
+  if (r && !speaker() && (app.time < r.start || app.time >= r.end - 0.01)) app.seek(r.start);
+  else if (app.time >= app.duration() - 0.01) app.seek(0);
   if (speaker()) {
     if (!app.show.audio) { status("Pick a song to play on a speaker", true); return; }
     try {
@@ -991,7 +1014,7 @@ async function play() {
       const st = await api("api/player/play", {
         method: "POST", json: { show: app.showId, position: app.time, media_player: speaker() },
       });
-      status("");
+      status(r || app.loop ? "Play region and Loop only work with the song in this browser" : "");
       app.clockStart = performance.now() - st.position * 1000;
     } catch (e) { status(`Couldn't play: ${e.message}`, true); return; }
     app.remote = true;
@@ -1055,9 +1078,19 @@ function fillBeats() {
 function frame() {
   if (app.playing) {
     app.time = currentTime();
-    if (app.time >= app.duration()) {
-      app.time = app.duration();
-      stop();
+    const end = playEnd();
+    if (app.time >= end) {
+      if (app.loop && !app.remote) {
+        app.seek(app.region ? app.region.start : 0);
+        // The add-on's player stops at the end of the show, so start it again for the next lap.
+        if (!app.region && lightsOn()) {
+          api("api/player/play", { method: "POST", json: { show: app.showId, position: 0, offset: offset() } })
+            .catch(() => {});
+        }
+      } else {
+        app.time = end;
+        stop();
+      }
     }
     timeline.follow(app.time);
   }
@@ -1111,7 +1144,10 @@ function wire() {
   audio.addEventListener("ended", stop);
 
   $("btn-play").addEventListener("click", () => (app.playing ? stop() : play()));
-  $("btn-home").addEventListener("click", () => app.seek(0));
+  $("btn-home").addEventListener("click", () => app.seek(app.region ? app.region.start : 0));
+  $("loop").checked = app.loop;
+  $("loop").addEventListener("change", (e) => { app.loop = e.target.checked; prefs.set("loop", app.loop); });
+  $("btn-clear-region").addEventListener("click", () => app.setRegion(null));
   $("btn-tap").addEventListener("click", tapBeat);
   $("btn-fill-beats").addEventListener("click", fillBeats);
   $("btn-clear-beats").addEventListener("click", () => {

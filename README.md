@@ -13,6 +13,7 @@ editor inside Home Assistant, with no external sequencing software or separate h
   them to the real devices later
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping
 - Select a stretch of time on one or more lights, then add effects there or clear it
+- Play just a region of the show, and loop it while you design
 - Effects (solid, two and three colours, pulse, gradient, colour cycle, fade, chase, rainbow, comet,
   scanner, flicker, lightning, strobe, twinkle, wipe) with a live,
   segment-level preview
