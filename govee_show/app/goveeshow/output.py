@@ -13,9 +13,10 @@ from .protocol import CMD_PORT, average, colorwc_msg, razer_colors, razer_enable
 
 log = logging.getLogger(__name__)
 
-# Some lights drop out of realtime mode within a second or two of the last colour packet, so an
-# unchanged frame is re-sent this often. It is a small packet, so this costs next to nothing.
-KEEPALIVE_S = 0.5
+# Some lights (the H70C5 string lights) slip back to their own scene within a fraction of a second
+# of the last colour packet, so an unchanged frame is streamed 10 times a second, as SignalRGB
+# does. It is a small packet, so this costs next to nothing.
+KEEPALIVE_S = 0.1
 REENABLE_S = 60
 # A light that was off is still starting up when the first razer-on arrives and can ignore it,
 # so repeat it often for the first few seconds before settling to once a minute.

@@ -35,7 +35,7 @@ def test_rate_limit_and_keepalive():
     colours = [p for p in razer_packets(sock) if p[3] == 0xB0]
     assert len(colours) == 1
     dev.tick(t + 0.2)  # pending frame goes out once the interval has passed
-    dev.tick(t + 0.3)  # unchanged frame: no resend
+    dev.tick(t + 0.25)  # unchanged frame within the keepalive: no resend
     colours = [p for p in razer_packets(sock) if p[3] == 0xB0]
     assert [p[6:9] for p in colours] == [b"\xff\x00\x00", b"\x00\xff\x00"]
     dev.tick(t + 0.2 + output.KEEPALIVE_S + 1)  # keepalive resends the last frame
@@ -139,7 +139,7 @@ def test_unchanged_frame_is_resent_often_enough_to_stay_in_realtime_mode():
     t = dev.enabled_at + output.STARTUP_S + 1
     dev.last_enable = t  # past start-up, no re-enables in this window
     dev.update(b"\xff\x00\x00")
-    for i in range(30):
-        dev.tick(t + i * 0.1)
+    for i in range(120):
+        dev.tick(t + i * 0.025)
     colours = [p for p in razer_packets(sock) if p[3] == 0xB0]
-    assert len(colours) >= 5  # about every half second over 3 s
+    assert len(colours) >= 20  # roughly 10 a second over 3 s (tick spacing rounds it down a little)
