@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9
+
+- Fix: a light that was switched off could miss the "realtime on" command while it powered up and
+  stay on its last scene. The command is now repeated twice a second for the first 5 seconds.
+
 ## 0.2.8
 
 - Fix: realtime colour packets set the "gradient off" flag the way OpenRGB and SignalRGB do (it
