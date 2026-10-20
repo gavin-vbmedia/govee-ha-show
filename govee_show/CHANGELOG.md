@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.17
+
+- Fix: while playing from the editor, long effects like rainbow skipped every second or so. The
+  lights jumped to match the browser whenever they were more than 40 ms apart, which network
+  delay alone could cause. Small differences are now eased out, the browser allows for the
+  delay, and only a real seek makes the lights jump.
+
 ## 0.2.16
 
 - Fix: lights blinked about once a minute during long effects. The "realtime on" command was

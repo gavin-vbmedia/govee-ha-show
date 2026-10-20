@@ -12,7 +12,12 @@ from .output import Output
 
 log = logging.getLogger(__name__)
 
-RESYNC_S = 0.04  # re-anchor when the browser and player disagree by more than this
+# Keeping the lights in time with the browser. Each sync arrives with some network jitter, so
+# small differences are eased out a little at a time; jumping on every one made long effects
+# like rainbow visibly skip every second or so. Only a big difference (a seek) jumps.
+RESYNC_S = 0.25
+DEADBAND_S = 0.03
+EASE = 0.2
 
 
 class Player:
@@ -67,6 +72,8 @@ class Player:
         drift = self.position() - position
         if abs(drift) > RESYNC_S:
             self.start = time.monotonic() - position
+        elif abs(drift) > DEADBAND_S:
+            self.start += drift * EASE
         return drift
 
     async def stop(self, release: bool = True):

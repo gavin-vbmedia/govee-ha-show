@@ -1156,8 +1156,13 @@ async function followRemote() {
 async function syncLights() {
   if (app.remote) { followRemote(); return; }
   if (!app.playing || !lightsOn()) return;
-  try { await api("api/player/sync", { method: "POST", json: { position: currentTime() } }); }
-  catch { /* the next sync will retry */ }
+  // The position is a little old by the time it arrives, so add half the last round trip.
+  const sent = performance.now();
+  try {
+    await api("api/player/sync", { method: "POST", json: { position: currentTime() + (app.syncLatency || 0) } });
+    const half = (performance.now() - sent) / 2000;
+    app.syncLatency = app.syncLatency == null ? half : app.syncLatency * 0.8 + half * 0.2;
+  } catch { /* the next sync will retry */ }
 }
 
 // Browser playback plays the region (when set) instead of the whole show.
