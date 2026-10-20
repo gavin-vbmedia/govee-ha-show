@@ -116,6 +116,13 @@ change, and when you switch to another show; the note next to it says whether ev
 A new show is saved automatically once it has its first effect. Auto save waits while a show is
 playing, and Ctrl+Z still undoes changes after they've been saved.
 
+Speakers are added on the **Speakers** tab first. Press **Test and add** next to a Home Assistant
+media player: the add-on plays a short chime on it the same way a show starts, and only adds it if
+that works. Media players that can't be sent a song are listed but can't be added, and a failed
+test shows Home Assistant's reason (Echo devices through Alexa Media Player, for example, often
+can't play files from the media folder). The tab also sets each speaker's delay and the default
+show speaker.
+
 Next to Play, choose where the song plays while you edit. This choice is kept in your browser
 and never changes where the real show plays (see **Show speaker** below):
 
@@ -130,7 +137,7 @@ and never changes where the real show plays (see **Show speaker** below):
 
 **Show speaker** in the Song panel is where the song plays when the show is started from an
 automation or the MQTT Play button. Leave it on **Default** to use the **Default show speaker** set
-on the **Settings** tab, which suits most setups with one outdoor speaker, or pick a speaker for this
+on the **Speakers** tab, which suits most setups with one outdoor speaker, or pick a speaker for this
 show only. That way you can design on a speaker indoors and the real show still plays outside.
 
 ## 4. Schedule it with automations

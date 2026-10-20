@@ -4,12 +4,17 @@
 Assistant backups. Uploaded songs go to /media/govee_show so Home Assistant media
 players can play them through the media source.
 """
+import io
 import json
+import math
 import os
 import re
+import struct
+import wave
 from pathlib import Path
 
 PHOTO_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+SPEAKER_TEST = "govee-show-speaker-test.wav"  # the chime that tests a speaker; not listed as a song
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".flac", ".webm"}
 _SLUG = re.compile(r"[^a-z0-9]+")
 _UNSAFE_NAME = re.compile(r"[^\w .()-]+")
@@ -27,6 +32,24 @@ def _write_atomic(path: Path, data: bytes):
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_bytes(data)
     os.replace(tmp, path)
+
+
+def _chime(seconds: float = 2.0, rate: int = 22050) -> bytes:
+    """A soft two-note chime as a mono 16-bit WAV."""
+    frames = bytearray()
+    n = int(seconds * rate)
+    for i in range(n):
+        t = i / rate
+        f = 660 if t < seconds / 2 else 880
+        env = min(1, t * 50) * max(0, 1 - (t % (seconds / 2)) / (seconds / 2)) ** 2
+        frames += struct.pack("<h", int(9000 * env * math.sin(2 * math.pi * f * t)))
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(bytes(frames))
+    return buf.getvalue()
 
 
 def safe_join(root: Path, rel: str) -> Path | None:
@@ -142,12 +165,20 @@ class Storage:
             for dirpath, dirnames, filenames in os.walk(root):
                 dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
                 for f in sorted(filenames):
-                    if Path(f).suffix.lower() in AUDIO_EXT:
+                    if Path(f).suffix.lower() in AUDIO_EXT and f != SPEAKER_TEST:
                         rel = os.path.relpath(os.path.join(dirpath, f), root)
                         out.append({"source": source, "path": rel})
                         if len(out) >= limit:
                             return out
         return out
+
+    def speaker_test_path(self) -> str:
+        """Writes the test chime into the uploads folder if needed; returns its path under /media."""
+        dest = self.upload_dir / SPEAKER_TEST
+        if not dest.exists():
+            self.upload_dir.mkdir(parents=True, exist_ok=True)
+            _write_atomic(dest, _chime())
+        return str(dest.relative_to(self.media_dir))
 
     def audio_path(self, source: str, rel: str) -> Path | None:
         root = self.audio_roots().get(source)

@@ -79,6 +79,26 @@ class Runner:
             self._follow = asyncio.create_task(self._follow_speaker(media_player))
             log.info("playing %s on %s", show_id, media_player)
 
+    async def test_speaker(self, entity: str) -> float:
+        """Play a short chime on a speaker the way a show would, then stop it.
+
+        Returns how many seconds the speaker took to report it was playing. Raises RunnerError
+        with Home Assistant's reason if it can't play the add-on's songs.
+        """
+        async with self._lock:
+            if self.media_player == entity:
+                await self._stop()
+            loop = asyncio.get_running_loop()
+            t0 = loop.time()
+            await self._start_speaker(entity, self.storage.speaker_test_path(), 0)
+            took = loop.time() - t0
+            await asyncio.sleep(1)
+            try:
+                await self.ha.call("media_player", "media_stop", {"entity_id": entity})
+            except HAError as e:
+                log.warning("couldn't stop %s after its test: %s", entity, e)
+            return took
+
     async def _start_speaker(self, entity: str, path: str, position: float):
         asked = datetime.now(timezone.utc)
         try:

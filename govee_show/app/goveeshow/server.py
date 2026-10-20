@@ -313,29 +313,80 @@ async def upload_audio(request):
 
 
 # speakers ----------------------------------------------------------------
+PLAY_MEDIA = 512  # MediaPlayerEntityFeature.PLAY_MEDIA in a media player's supported_features
+
+
+def _media_player(entity) -> str:
+    entity = str(entity or "")
+    if not entity.startswith("media_player."):
+        raise web.HTTPBadRequest(text="expected a media_player entity")
+    return entity
+
+
 async def list_speakers(request):
+    """`speakers` are the ones added on the Speakers tab (each passed a test there); the editor
+    only offers those. `candidates` are all of Home Assistant's media players."""
     ha = request.app[HA]
     settings = request.app[STORAGE].load_settings()
-    delays, show_speaker = settings["speaker_delays"], settings.get("show_speaker")
+    delays, added = settings["speaker_delays"], settings.get("speakers", [])
+    body = {"available": ha.available, "show_speaker": settings.get("show_speaker"), "candidates": []}
+    states = {}
+    if ha.available:
+        try:
+            states = {s["entity_id"]: s for s in await ha.states("media_player")}
+        except HAError as e:
+            body.update(available=False, error=str(e))
+    name = lambda e: states.get(e, {}).get("attributes", {}).get("friendly_name") or e  # noqa: E731
+    body["speakers"] = [{"entity_id": e, "name": name(e), "state": states.get(e, {}).get("state", "unavailable"),
+                         "delay_ms": delays.get(e, 0)} for e in added]
+    body["candidates"] = sorted(({
+        "entity_id": e, "name": name(e), "state": st["state"], "added": e in added,
+        "can_play": bool(int(st.get("attributes", {}).get("supported_features") or 0) & PLAY_MEDIA),
+    } for e, st in states.items()), key=lambda s: s["name"].lower())
+    return web.json_response(body)
+
+
+async def test_speaker(request):
+    """Play a chime on a speaker the way a show would; if it works, add it to the editor's list."""
+    entity = _media_player((await request.json()).get("entity_id"))
+    ha = request.app[HA]
     if not ha.available:
-        return web.json_response({"available": False, "speakers": [], "show_speaker": show_speaker})
+        raise web.HTTPServiceUnavailable(text="Home Assistant isn't reachable from the add-on")
     try:
-        states = await ha.states("media_player")
+        st = await ha.state(entity)
     except HAError as e:
-        return web.json_response({"available": False, "error": str(e), "speakers": [], "show_speaker": show_speaker})
-    speakers = [{"entity_id": s["entity_id"], "state": s["state"],
-                 "name": s.get("attributes", {}).get("friendly_name") or s["entity_id"],
-                 "delay_ms": delays.get(s["entity_id"], 0)} for s in states]
-    return web.json_response({"available": True, "show_speaker": show_speaker,
-                              "speakers": sorted(speakers, key=lambda s: s["name"].lower())})
+        return web.json_response({"ok": False, "error": f"couldn't read {entity}: {e}"})
+    features = int(st.get("attributes", {}).get("supported_features") or 0)
+    if not features & PLAY_MEDIA:
+        return web.json_response({"ok": False, "error": "this media player can't be sent a song to play"})
+    try:
+        took = await request.app[RUNNER].test_speaker(entity)
+    except RunnerError as e:
+        return web.json_response({"ok": False, "error": str(e)})
+    storage = request.app[STORAGE]
+    settings = storage.load_settings()
+    added = settings.setdefault("speakers", [])
+    if entity not in added:
+        added.append(entity)
+    storage.save_settings(settings)
+    return web.json_response({"ok": True, "start_s": round(took, 2)})
+
+
+async def remove_speaker(request):
+    entity = _media_player((await request.json()).get("entity_id"))
+    storage = request.app[STORAGE]
+    settings = storage.load_settings()
+    settings["speakers"] = [e for e in settings.get("speakers", []) if e != entity]
+    storage.save_settings(settings)
+    return web.json_response({"ok": True})
 
 
 async def put_show_speaker(request):
     """The speaker shows play on when started from an automation and the show doesn't pick one."""
     body = await request.json()
     entity = body.get("entity_id") or None
-    if entity is not None and not str(entity).startswith("media_player."):
-        raise web.HTTPBadRequest(text="expected a media_player entity")
+    if entity is not None:
+        entity = _media_player(entity)
     storage = request.app[STORAGE]
     settings = storage.load_settings()
     settings["show_speaker"] = entity
@@ -561,6 +612,8 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/speakers", list_speakers)
     r.add_put("/api/speakers/delay", put_speaker_delay)
     r.add_put("/api/speakers/show", put_show_speaker)
+    r.add_post("/api/speakers/test", test_speaker)
+    r.add_post("/api/speakers/remove", remove_speaker)
     r.add_get("/api/palettes", get_palettes)
     r.add_get("/api/scenes", get_scenes)
     r.add_put("/api/palettes", put_palettes)

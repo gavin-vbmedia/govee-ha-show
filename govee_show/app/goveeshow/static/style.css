@@ -46,6 +46,7 @@ body {
 .topbar nav { display: flex; gap: 4px; }
 .status { margin-left: auto; color: var(--muted); font-size: 13px; }
 .status.error { color: var(--danger); }
+.hint.error { color: var(--danger); }
 
 .view { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
 

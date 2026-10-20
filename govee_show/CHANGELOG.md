@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.24
+
+- New **Speakers** tab. Test a Home Assistant media player there (it plays a short chime the way a
+  show starts) and only speakers that pass are offered in the editor. Media players that can't be
+  sent a song are marked, and a failed test shows Home Assistant's reason. Speaker delays and the
+  default show speaker are set there too. Add your speakers again after updating.
+
 ## 0.2.23
 
 - Separate speakers for editing and for the real show. The speaker in the Playback panel is now
