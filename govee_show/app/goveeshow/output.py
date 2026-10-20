@@ -10,7 +10,8 @@ import logging
 import socket
 import time
 
-from .protocol import CMD_PORT, average, colorwc_msg, razer_colors, razer_enable, razer_msg, wrap
+from .protocol import (CMD_PORT, average, colorwc_msg, ptreal_msg, razer_colors, razer_enable, razer_msg,
+                       scene_packets, wrap)
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class OutputDevice:
         self.last_enable = 0.0
         self.enabled_at = 0.0
         self.enabled = False
+        self.scene: tuple[int, str] | None = None  # (code, param) while a Govee scene is running
 
     def _send(self, payload: bytes):
         try:
@@ -65,10 +67,30 @@ class OutputDevice:
         self.enabled = True
 
     def disable(self):
-        if self.enabled and self.realtime:
+        if self.enabled and self.realtime and self.scene is None:
             self._send(razer_msg(razer_enable(False)))
         self.enabled = False
+        self.scene = None
         self.pending = self.last_frame = None
+
+    def play_scene(self, code: int, param: str):
+        """Experimental: hand the light to one of Govee's built-in scenes until end_scene()."""
+        if self.scene == (code, param):
+            return
+        if self.realtime:
+            self._send(razer_msg(razer_enable(False)))
+        self._send(ptreal_msg(scene_packets(code, param)))
+        self.scene = (code, param)
+        self.pending = self.last_frame = None
+
+    def end_scene(self):
+        if self.scene is None:
+            return
+        self.scene = None
+        if self.realtime:
+            self._send(razer_msg(razer_enable(True)))
+        self.last_enable = self.enabled_at = time.monotonic()  # repeat razer-on as at start-up
+        self.last_sent = 0.0
 
     def update(self, rgb: bytes):
         n = self.segments * 3
@@ -85,7 +107,7 @@ class OutputDevice:
         return razer_msg(razer_colors(frame, self.gradient, self.protocol))
 
     def tick(self, now: float):
-        if not self.enabled:
+        if not self.enabled or self.scene is not None:
             return
         starting = now - self.enabled_at < STARTUP_S
         if self.realtime and starting and now - self.last_enable > STARTUP_REENABLE_S:

@@ -437,10 +437,15 @@ function drawPreview() {
 new ResizeObserver(layoutPreview).observe(preview);
 
 // palette and inspector -------------------------------------------------------
+// Experimental effects (Govee scenes) only appear once switched on in Settings. `keep` stays listed
+// regardless, so a clip that already uses one can still be edited.
+const experimentalOn = () => prefs.get("experimental.scenes", false);
+const visibleEffects = (keep) => Object.entries(EFFECTS).filter(([k, fx]) => !fx.experimental || experimentalOn() || k === keep);
+
 function renderPalette() {
   const box = $("palette");
   box.replaceChildren();
-  for (const [key, fx] of Object.entries(EFFECTS)) {
+  for (const [key, fx] of visibleEffects()) {
     const b = button(fx.label, () => {
       app.paletteEffect = key;
       renderPalette();
@@ -494,7 +499,7 @@ function renderInspector() {
   };
 
   const effect = document.createElement("select");
-  for (const [key, fx] of Object.entries(EFFECTS)) effect.add(new Option(fx.label, key, false, key === clip.effect));
+  for (const [key, fx] of visibleEffects(clip.effect)) effect.add(new Option(fx.label, key, false, key === clip.effect));
   effect.addEventListener("change", () => {
     const defaults = defaultParams(effect.value);
     for (const k of Object.keys(clip)) if (!["effect", "start", "end"].includes(k) && !(k in defaults)) delete clip[k];
@@ -524,6 +529,7 @@ function renderInspector() {
 
   for (const p of EFFECTS[clip.effect].params) {
     target = p.type === "color" ? groups.colours : p.type === "range" ? groups.brightness : groups.settings;
+    if (p.type === "scene") { field(p.label, scenePicker(clip, dev)); continue; }
     let el;
     if (p.type === "select") {
       el = document.createElement("select");
@@ -576,6 +582,38 @@ function renderInspector() {
     button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"),
     button("Delete clip", deleteSelected, "ghost danger"));
   box.append(actions);
+}
+
+// Experimental Govee scenes: the list comes from Govee's scene library for the light's model.
+const sceneLists = {};
+function scenePicker(clip, dev) {
+  const sel = document.createElement("select");
+  const sku = dev?.sku;
+  if (!sku) {
+    sel.add(new Option("Scan for this light to learn its model"));
+    sel.disabled = true;
+    return sel;
+  }
+  sel.add(new Option(clip.scene || "Loading scenes…", ""));
+  (sceneLists[sku] ||= api(`api/scenes?sku=${encodeURIComponent(sku)}`)).then((list) => {
+    sel.replaceChildren(new Option(list.length ? "Pick a scene" : `No scenes listed for ${sku}`, ""));
+    const groups = {};
+    list.forEach((s, i) => {
+      const g = groups[s.category] ||= sel.appendChild(Object.assign(document.createElement("optgroup"), { label: s.category || "Scenes" }));
+      g.append(new Option(s.name, i, false, s.code === clip.code && s.name === clip.scene));
+    });
+    sel.addEventListener("change", () => {
+      const s = list[Number(sel.value)];
+      if (!s) return;
+      Object.assign(clip, { scene: s.name, code: s.code, param: s.param });
+      app.changed();
+    });
+  }).catch((e) => {
+    delete sceneLists[sku];
+    sel.replaceChildren(new Option(`Couldn't load scenes: ${e.message}`));
+    sel.disabled = true;
+  });
+  return sel;
 }
 
 // copy and paste ----------------------------------------------------------------
@@ -832,7 +870,7 @@ function renderRangeInspector(r) {
     return l;
   };
   const effect = document.createElement("select");
-  for (const [key, fx] of Object.entries(EFFECTS)) effect.add(new Option(fx.label, key, false, key === app.paletteEffect));
+  for (const [key, fx] of visibleEffects()) effect.add(new Option(fx.label, key, false, key === app.paletteEffect));
   const l = document.createElement("label");
   l.append("Effect", effect);
   const overlaps = tracks.some((t) => app.show.tracks[t].clips.some((c) => c.start < r.end && c.end > r.start));
@@ -1399,6 +1437,13 @@ async function init() {
   wire();
   const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
   $("btn-reset-layout").addEventListener("click", () => layout.reset());
+  $("exp-scenes").checked = experimentalOn();
+  $("exp-scenes").addEventListener("change", (e) => {
+    prefs.set("experimental.scenes", e.target.checked);
+    if (!e.target.checked && EFFECTS[app.paletteEffect]?.experimental) app.paletteEffect = "solid";
+    renderPalette();
+    renderInspector();
+  });
   renderPalette();
   try {
     await loadDevices();

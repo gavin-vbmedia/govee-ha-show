@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.18
+
+- Experimental **Govee scenes**: switch on in Settings → Experimental to add a Govee scene effect.
+  Its clip hands the light to one of the Govee app's built-in scenes, picked from Govee's scene
+  list for the light's model, then the show takes the light back. Unofficial, so it may not work
+  on every light.
+
 ## 0.2.17
 
 - Fix: while playing from the editor, long effects like rainbow skipped every second or so. The

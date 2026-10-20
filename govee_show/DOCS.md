@@ -170,6 +170,20 @@ button in its corner: use it to move the panel to the top, left, right or bottom
 The **Layout** section of the **Settings** tab lists every panel in one place and has **Reset
 layout**. The layout is saved in your browser, so each computer or phone keeps its own.
 
+## Experimental: Govee scenes
+
+Turn on **Settings → Experimental → Govee scenes** to add a **Govee scene** effect. Its clip hands
+the light to one of the scenes built into the Govee app (the app's Scenes list, not your own saved
+snapshots or DIYs) for as long as the clip lasts, then the show takes the light back.
+
+- Pick the scene in the clip's settings. The list comes from Govee's public scene library for the
+  light's model, so the light needs a model (scan for it on the Devices tab) and Home Assistant
+  needs internet access the first time. The list is then cached for a week.
+- It sends the light the same commands the Govee app sends over Bluetooth, through the LAN API's
+  unofficial `ptReal` command. Not every light accepts it.
+- The preview shows a purple shimmer where a scene runs, because the editor can't know what the
+  scene looks like. The light may blink as it switches in and out of a scene.
+
 ## Where things are stored
 
 Shows, devices and settings live in the add-on's config folder

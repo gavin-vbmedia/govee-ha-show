@@ -23,3 +23,14 @@ def test_rejects_wrong_length():
     blob = baked.encode(40, [{"device": "a", "segments": 2}], [bytes(6)])
     with pytest.raises(baked.BakedError):
         baked.decode(blob[:-1])
+
+
+def test_scenes_round_trip_and_are_validated():
+    blob = baked.encode(10, [{"device": "a", "segments": 1}], [b"\0\0\0"] * 10,
+                        scenes=[{"track": 0, "start": 2, "end": 5, "code": 212, "param": ""}])
+    b = baked.decode(blob)
+    assert b.scenes == [baked.Scene(0, 2, 5, 212, "")]
+    bad = baked.encode(10, [{"device": "a", "segments": 1}], [b"\0\0\0"] * 10,
+                       scenes=[{"track": 3, "start": 0, "end": 1, "code": 1}])
+    with pytest.raises(baked.BakedError):
+        baked.decode(bad)

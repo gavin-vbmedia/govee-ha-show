@@ -99,6 +99,7 @@ test("bake writes the GVSF layout the player reads", () => {
 
 test("every effect has a brightness slider that scales its output", () => {
   for (const key of Object.keys(EFFECTS)) {
+    if (EFFECTS[key].experimental) continue; // Govee scenes set their own brightness
     assert.equal(EFFECTS[key].params.filter((p) => p.key === "brightness").length, 1, key);
   }
   const clip = { ...newClip("solid", 0, 1), color: "#ff8000", brightness: 50 };
@@ -106,4 +107,15 @@ test("every effect has a brightness slider that scales its output", () => {
   // An older rainbow clip saved with its own brightness keeps that level.
   const rainbow = { ...newClip("rainbow", 0, 1), speed: 0, brightness: 40 };
   assert.deepEqual(px(renderTrack([rainbow], 0, 4), 0), [102, 0, 0]);
+});
+
+test("Govee scene clips are listed in the baked header", () => {
+  const show = { duration: 2, tracks: [{ device: "a", clips: [
+    { ...newClip("scene", 0.5, 1.5), scene: "Forest", code: 212, param: "AQID" },
+    newClip("scene", 1.5, 2), // no scene picked yet: left out
+  ] }] };
+  const blob = bake(show, { a: { segments: 3 } });
+  const len = new DataView(blob.buffer).getUint32(5);
+  const header = JSON.parse(new TextDecoder().decode(blob.subarray(9, 9 + len)));
+  assert.deepEqual(header.scenes, [{ track: 0, start: 20, end: 60, code: 212, param: "AQID" }]);
 });

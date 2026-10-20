@@ -81,3 +81,36 @@ def average(rgb: bytes) -> tuple[int, int, int]:
 
 def scan_msg() -> bytes:
     return wrap("scan", {"account_topic": "reserve"})
+
+
+# Experimental: Govee's built-in scenes over the LAN. The light is sent the same 20-byte packets the
+# Govee app sends over Bluetooth, wrapped in the "ptReal" command. A scene is its parameter data
+# (from Govee's public scene library, base64) split into "a3" lines, then "33 05 04 <code>" to
+# start it. Matches govee2mqtt and https://github.com/AlgoClaw/Govee/blob/main/decoded/explanation
+def _ble_packet(data: bytes) -> bytes:
+    cs = 0
+    for b in data:
+        cs ^= b
+    return bytes(data).ljust(19, b"\0") + bytes([cs])
+
+
+def scene_packets(code: int, param: str) -> list[bytes]:
+    raw = base64.b64decode(param) if param else b""
+    data = bytearray([0xA3, 0x00, 0x01, 0x00, 0x02])
+    lines, last_marker = 0, 1
+    for b in raw:
+        if len(data) % 19 == 0:
+            lines += 1
+            data.append(0xA3)
+            last_marker = len(data)
+            data.append(lines)
+        data.append(b)
+    data[last_marker] = 0xFF  # the last line is marked ff instead of its number
+    data[3] = lines + 1
+    packets = [_ble_packet(data[i: i + 19]) for i in range(0, len(data), 19)]
+    packets.append(_ble_packet(bytes([0x33, 0x05, 0x04, code & 0xFF, (code >> 8) & 0xFF])))
+    return packets
+
+
+def ptreal_msg(packets: list[bytes]) -> bytes:
+    return wrap("ptReal", {"command": [base64.b64encode(p).decode() for p in packets]})

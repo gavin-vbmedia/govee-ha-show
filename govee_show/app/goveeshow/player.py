@@ -96,11 +96,16 @@ class Player:
             if idx >= b.frames:
                 break
             if idx >= 0 and idx != last:
-                for t in b.tracks:
+                for k, t in enumerate(b.tracks):
                     d = self.devices.get(t.device)
                     if d:
                         dev = self.output.devices.get(d["ip"])
                         if dev:
+                            scene = next((s for s in b.scenes if s.track == k and s.start <= idx < s.end), None)
+                            if scene:
+                                dev.play_scene(scene.code, scene.param)
+                            else:
+                                dev.end_scene()
                             dev.update(b.track_frame(t, idx))
                 last = idx
             await asyncio.sleep(frame_s / 4)
