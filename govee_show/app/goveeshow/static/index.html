@@ -68,13 +68,6 @@
         <label title="Snap clips and selections to beats and other clips"><input id="snap" type="checkbox" checked> Snap</label>
       </div>
     </section>
-    <section class="panel" data-panel="zoom">
-      <div class="panel-head"><span class="section-label">Zoom</span></div>
-      <div class="group">
-        <button id="btn-zoom-out" title="Zoom out (-)">−</button>
-        <button id="btn-zoom-in" title="Zoom in (+)">+</button>
-      </div>
-    </section>
     <section class="panel" data-panel="preview">
       <div class="panel-head"><span class="section-label">Preview</span></div>
       <div class="preview-panel"><canvas id="preview"></canvas></div>
@@ -84,7 +77,11 @@
     <div class="dock" data-dock="left"></div>
     <div class="dock" data-dock="middle">
       <section class="panel" data-panel="timeline">
-        <div class="panel-head"><span class="section-label">Timeline</span></div>
+        <div class="panel-head"><span class="section-label">Timeline</span>
+          <span class="panel-tools" title="Zoom the timeline">
+            <button id="btn-zoom-out" class="ghost" title="Zoom out (-)">−</button>
+            <button id="btn-zoom-in" class="ghost" title="Zoom in (+)">+</button>
+          </span></div>
         <div class="timeline-wrap">
           <div id="timeline-scroll" class="timeline-scroll">
             <div id="timeline-inner" class="timeline-inner">
@@ -182,8 +179,9 @@
   <section class="card">
     <h2>Layout</h2>
     <p class="hint">Choose where each editor panel sits: along the top or bottom, down the left or right, or in
-      the middle. Choose <b>Hidden</b> to tuck a panel away and bring it back here. You can also use the ⋯ button on
-      a panel. The layout is saved in this browser.</p>
+      the middle. Choose <b>Hidden</b> to tuck a panel away and bring it back here. In the editor you can also
+      drag a panel by its title to move it or change its order, or use the ⋯ button on it. The layout is saved
+      in this browser.</p>
     <div id="layout-rows" class="layout-rows"></div>
     <p><button id="btn-reset-layout" class="ghost">Reset layout</button></p>
   </section>

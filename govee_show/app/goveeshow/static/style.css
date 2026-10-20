@@ -139,8 +139,10 @@ button.swatch:hover { border-color: var(--text); }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
 .panel-move { padding: 0 6px; line-height: 1.2; border-color: transparent; color: var(--muted); }
 .panel-move:hover { color: var(--text); }
+.panel-tools { display: flex; gap: 4px; margin-left: auto; }
+.panel-tools button { padding: 0 8px; line-height: 1.3; }
 .dock { display: flex; gap: 8px; }
-.dock[hidden] { display: none; }
+.dock.empty { display: none; }
 .dock[data-dock="top"], .dock[data-dock="bottom"] { flex-wrap: wrap; align-items: stretch; }
 .dock[data-dock="top"] > .panel, .dock[data-dock="bottom"] > .panel { flex: 0 1 auto; }
 .dock[data-dock="top"] > :is([data-panel="preview"], [data-panel="inspector"], [data-panel="timeline"]),
@@ -149,7 +151,17 @@ button.swatch:hover { border-color: var(--text); }
 .dock[data-dock="left"], .dock[data-dock="right"] { width: 320px; flex: none; }
 .dock[data-dock="middle"] { flex: 1; min-width: 0; }
 .editor-middle { display: flex; gap: 10px; align-items: flex-start; }
-.editor-middle > .dock[hidden] + .dock[data-dock="right"] { margin-left: auto; }
+.editor-middle > .dock.empty + .dock[data-dock="right"] { margin-left: auto; }
+.panel-head[draggable="true"] { cursor: grab; }
+.panel.drag-source { opacity: 0.4; }
+/* While a panel is dragged, every dock shows, so an empty one can be dropped into. */
+body.dragging-panel .dock { min-height: 48px; outline: 2px dashed var(--line); outline-offset: 2px; border-radius: 8px; }
+body.dragging-panel .dock.empty { display: flex; }
+.drop-marker { flex: none; background: var(--accent); border-radius: 2px; width: 4px; align-self: stretch; }
+.dock[data-dock="left"] > .drop-marker, .dock[data-dock="middle"] > .drop-marker,
+.dock[data-dock="right"] > .drop-marker { width: auto; height: 4px; }
+.panel-menu-order { display: flex; gap: 4px; }
+.panel-menu-order button { flex: 1; text-align: center; }
 .panel-menu {
   position: absolute; z-index: 10; display: flex; flex-direction: column; gap: 4px; min-width: 150px;
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px;

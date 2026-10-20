@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.21
+
+- The Selection panel can be hidden too. Only the timeline always stays.
+- Drag a panel by its title to move it or change its order within a zone. The ⋯ menu also has
+  **Earlier** and **Later**.
+- Zoom is no longer its own panel: its − and + buttons are in the Timeline's title bar.
+
 ## 0.2.20
 
 - Fix: the Brightness slider's handle stopped short of the end at 100%. Sliders no longer pick up

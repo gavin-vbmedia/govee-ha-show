@@ -470,7 +470,8 @@ function clipPreviewRow(clip, dev) {
 
 function drawClipPreview() {
   const c = clipPreview.canvas, sel = app.selected;
-  const track = sel?.clip && c?.isConnected && app.show.tracks[sel.track];
+  // offsetParent is null while the Selection panel is hidden: no preview, on screen or on the light.
+  const track = sel?.clip && c?.isConnected && c.offsetParent && app.show.tracks[sel.track];
   const dev = track && app.devices[track.device];
   if (!dev) { if (clipPreview.dev) stopLightPreview(); return; }
   const clip = sel.clip, len = Math.max(clip.end - clip.start, 0.05);

@@ -169,10 +169,13 @@ Send `input: {action: stop}` to stop. The exact input for the open show is shown
 
 ## Arrange the editor
 
-Every editor panel (Show, Song, Playback, Beats, Zoom, Preview, Timeline and Selection) has a **⋯**
-button in its corner: use it to move the panel to the top, left, middle, right or bottom. Top and
+Drag any editor panel (Show, Song, Playback, Beats, Preview, Timeline and Selection) by its
+title to move it to the top, left, middle, right or bottom, or to change its order there; a blue
+bar shows where it will land. The **⋯** button in its corner does the same from a menu, with
+**Earlier** and **Later** to change the order, which also works on a touch screen. Top and
 bottom run the full width; left, middle and right sit side by side between them. Any panel except
-the Timeline and Selection can also be **Hidden**. The **Layout** section of the **Settings** tab
+the Timeline can also be **Hidden**; with Selection hidden, clips can still be moved, resized,
+copied and deleted on the timeline, but adding or editing effects needs it back. The **Layout** section of the **Settings** tab
 lists every panel in one place, which is where a hidden panel is brought back, and has **Reset
 layout**. The layout is saved in your browser, so each computer or phone keeps its own.
 
