@@ -334,7 +334,7 @@ function renderDevices() {
     cell(model);
     const segs = document.createElement("span");
     const find = button("Find", () => findSegments(d), "ghost");
-    find.disabled = !d.ip || d.protocol === "whole";
+    find.disabled = !d.ip || ["whole", "segments"].includes(d.protocol);
     find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
     segs.append(input("number", "segments", { min: 1, max: 255 }), " ", find);
     cell(segs);
@@ -664,6 +664,7 @@ const PROTOCOLS = {
   razer: "Realtime (Razer)",
   v2: "Realtime v2",
   whole: "Whole light only",
+  segments: "App segments (experimental)",
 };
 
 const skuOf = (text) => (text || "").trim().split(/\s+/)[0].toUpperCase();

@@ -17,6 +17,8 @@ Lights differ in which form they accept, so each device picks a protocol:
   razer     B0 with the fixed Razer Chroma header length 0x0E (SignalRGB "Razer")
   v2        B4 with zone bytes (SignalRGB "DreamView V2")
   whole     no realtime mode, the official colorwc command with the average colour
+  segments  no realtime mode: the Govee app's own segment colour command (experimental, see
+            segment_colour_packets), for lights whose realtime mode doesn't reach every bulb
 """
 import base64
 import json
@@ -29,7 +31,7 @@ CMD_COLORS = 0xB0
 CMD_ENABLE = 0xB1
 CMD_COLORS_V2 = 0xB4
 
-PROTOCOLS = ("standard", "razer", "v2", "whole")
+PROTOCOLS = ("standard", "razer", "v2", "whole", "segments")
 
 
 def frame(cmd: int, data: bytes) -> bytes:
@@ -114,3 +116,24 @@ def scene_packets(code: int, param: str) -> list[bytes]:
 
 def ptreal_msg(packets: list[bytes]) -> bytes:
     return wrap("ptReal", {"command": [base64.b64encode(p).decode() for p in packets]})
+
+
+# The command the Govee app sends to colour some of a light's own segments, as seen in govee2mqtt and
+# govee-homeassistant: 33 05 15 01 <r g b> 00 00 00 00 00 <segment bitmask, little-endian, bit 0 is
+# segment 1>, sent over the LAN with ptReal. The mask has room for 56 segments.
+SEGMENT_MASK_MAX = 56
+
+
+def segment_colour_packets(rgb: bytes, previous: bytes | None = None) -> list[bytes]:
+    """One packet per colour in the frame, covering every segment that colour. With `previous`
+    (the last frame sent, the same length), segments that haven't changed are left out."""
+    n = min(len(rgb) // 3, SEGMENT_MASK_MAX)
+    if previous is not None and len(previous) != len(rgb):
+        previous = None
+    masks: dict[bytes, int] = {}
+    for i in range(n):
+        c = bytes(rgb[i * 3: i * 3 + 3])
+        if previous is None or previous[i * 3: i * 3 + 3] != c:
+            masks[c] = masks.get(c, 0) | 1 << i
+    return [_ble_packet(bytes([0x33, 0x05, 0x15, 0x01, *c, 0, 0, 0, 0, 0]) + mask.to_bytes((n + 7) // 8, "little"))
+            for c, mask in masks.items()]

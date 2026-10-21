@@ -71,3 +71,21 @@ a3 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 5c
     assert [p.hex(" ") for p in protocol.scene_packets(212, param)] == expected.strip().splitlines()
     msg = json.loads(protocol.ptreal_msg(protocol.scene_packets(212, param)))["msg"]
     assert msg["cmd"] == "ptReal" and len(msg["data"]["command"]) == 8
+
+
+def test_segment_colour_packets_match_known_command():
+    # Segment 4 blue, as sent to an H8057 in govee-homeassistant (PR #248).
+    rgb = bytes(9) + b"\x00\x00\xff" + bytes(18)
+    [blue, black] = sorted(protocol.segment_colour_packets(rgb), key=lambda p: p[6] == 0)
+    assert blue.hex(" ").startswith("33 05 15 01 00 00 ff 00 00 00 00 00 08 00 00")
+    assert black[12:14] == (0b1111110111).to_bytes(2, "little")  # every other segment
+    assert all(len(p) == 20 and p[-1] == protocol._ble_packet(p[:19])[-1] for p in (blue, black))
+
+
+def test_segment_colour_packets_skip_unchanged_segments():
+    before = b"\xff\x00\x00" * 3
+    after = b"\xff\x00\x00\x00\xff\x00\xff\x00\x00"
+    [only] = protocol.segment_colour_packets(after, before)
+    assert only[4:7] == b"\x00\xff\x00" and only[12] == 0b010
+    assert protocol.segment_colour_packets(after, after) == []
+    assert len(protocol.segment_colour_packets(after, before[:3])) == 2  # a resized frame is sent whole

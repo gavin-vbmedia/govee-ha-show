@@ -23,8 +23,8 @@ KNOWN_SEGMENTS = {
 
 # What testing on real lights found that the product list doesn't say, shown on the Devices tab.
 KNOWN_NOTES = {
-    "H70C5": "In realtime mode it only lights its first 44 bulbs, one per segment. "
-             "Set Protocol to Whole light only to light the whole string, one colour at a time.",
+    "H70C5": "In realtime mode it only lights its first 44 bulbs, one per segment. To light the whole "
+             "string, set Protocol to App segments (experimental) with 10 segments, or Whole light only.",
 }
 
 
