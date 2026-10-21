@@ -221,7 +221,10 @@ segments with **Preview on**). Rename it, change its **Effect** (or start again 
 effect's presets), tick or untick **Include colours**, and change its colours (palettes work here
 too), settings and brightness; the previews follow every change and it saves by itself.
 **Duplicate** makes a copy to try variations, and **Delete preset** removes it. **New preset**
-starts one from scratch: pick an effect, or any built-in preset, to start from. Changing or deleting
+starts one from scratch: pick an effect, or any built-in preset, to start from. Or describe a look in
+the box above, such as "slow icy shimmer" or "warm fire flicker", and press **✨ Make presets**: the AI
+suggests up to three, each with a live preview, and **Keep** adds one to your presets (it needs an AI
+set up, as for **Describe it**). Changing or deleting
 a preset doesn't change clips that already used it. They're saved in the add-on, so every browser
 sees the same ones. Tick **Show on the light** to loop it on the real light too while the show is
 stopped; the light goes back to normal when you click away. Every effect has a **Brightness %**
@@ -402,7 +405,7 @@ browser, so each computer or phone keeps its own.
 
 ## Setting up the AI
 
-**Describe it** needs one of these:
+**Describe it** and **✨ Make presets** need one of these:
 
 - **Claude, with your own API key.** Create a key at console.anthropic.com, then in Home Assistant open
   **Settings → Add-ons → Govee Light Show → Configuration**, paste it into **Claude API key** and save.

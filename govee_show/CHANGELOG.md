@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.46
+
+- **✨ Make presets** on the Presets tab: describe a look ("slow icy shimmer", "warm fire flicker")
+  and the AI suggests up to three presets with live previews. **Keep** the ones you like.
+
 ## 0.2.45
 
 - **Detect** on the **Music** tab: finds a song's tempo, beats, bars and sections, draws them over the

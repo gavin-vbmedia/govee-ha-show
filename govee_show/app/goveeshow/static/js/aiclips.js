@@ -6,10 +6,9 @@ import { EFFECTS, defaultParams } from "./effects.js";
 
 const r2 = (t) => Math.round(t * 100) / 100;
 
-// The show as the AI sees it. lights: [{name, trackIndex, segments, house}], with the House lane
-// as a light named "House" (only when lights are traced on the house photo); selection: {start, end, lights: [names]} or null.
-export function buildContext({ show, lights, duration, selection = null, palettes = [] }) {
-  const effects = Object.entries(EFFECTS).filter(([, fx]) => !fx.experimental).map(([key, fx]) => ({
+// Every effect with its settings, as the AI sees them.
+export function effectsForAI() {
+  return Object.entries(EFFECTS).filter(([, fx]) => !fx.experimental).map(([key, fx]) => ({
     key, label: fx.label, ...(fx.house ? { house: true } : {}),
     settings: fx.params.map((p) => ({
       key: p.key, type: p.type === "range" ? "number" : p.type,
@@ -18,6 +17,12 @@ export function buildContext({ show, lights, duration, selection = null, palette
       default: p.default,
     })),
   }));
+}
+
+// The show as the AI sees it. lights: [{name, trackIndex, segments, house}], with the House lane
+// as a light named "House" (only when lights are traced on the house photo); selection: {start, end, lights: [names]} or null.
+export function buildContext({ show, lights, duration, selection = null, palettes = [] }) {
+  const effects = effectsForAI();
   const beats = show.beats || [];
   return {
     song: {
@@ -54,6 +59,17 @@ function settingValue(def, raw) {
   return undefined;
 }
 
+// Checks the AI's settings for an effect: {key: value} with only valid keys and values.
+function checkSettings(fx, settings) {
+  const out = {};
+  for (const s of Array.isArray(settings) ? settings : []) {
+    const def = fx.params.find((p) => p.key === s?.key);
+    const v = def && settingValue(def, s.value);
+    if (v !== undefined) out[def.key] = v;
+  }
+  return out;
+}
+
 const norm = (s) => String(s || "").trim().toLowerCase();
 
 // Checks the AI's clips and turns them into real ones: [{trackIndex, clip}], plus how many were
@@ -69,12 +85,7 @@ export function checkClips(reply, lights, duration) {
     if (!!fx.house !== !!light.house) { skipped.push(`${fx.label} can't go on ${light.name}`); continue; }
     const start = Math.max(0, Number(c.start)), end = Math.min(duration, Number(c.end));
     if (!Number.isFinite(start) || !Number.isFinite(end) || end - start < 0.05) { skipped.push("a clip with bad times"); continue; }
-    const clip = { effect: c.effect, start: r2(start), end: r2(end), ...defaultParams(c.effect) };
-    for (const s of Array.isArray(c.settings) ? c.settings : []) {
-      const def = fx.params.find((p) => p.key === s?.key);
-      const v = def && settingValue(def, s.value);
-      if (v !== undefined) clip[def.key] = v;
-    }
+    const clip = { effect: c.effect, start: r2(start), end: r2(end), ...defaultParams(c.effect), ...checkSettings(fx, c.settings) };
     placed.push({ trackIndex: light.trackIndex, clip });
   }
   return { placed, skipped };
@@ -100,4 +111,17 @@ export function placeClips(show, placed) {
     const added = placed.filter((p) => p.trackIndex === t).map((p) => p.clip).sort((a, b) => a.start - b.start);
     show.tracks[t].clips = [...kept, ...added];
   }
+}
+
+// Checks the AI's presets and turns them into real ones: [{name, effect, params}], plus how many
+// were left out and why. A preset keeps only the settings the AI chose, like one saved from a clip.
+export function checkPresets(reply) {
+  const presets = [], skipped = [];
+  for (const p of Array.isArray(reply?.presets) ? reply.presets : []) {
+    const fx = EFFECTS[p?.effect];
+    if (!fx || fx.experimental) { skipped.push(`no effect called "${p?.effect}"`); continue; }
+    const name = String(p.name || "").trim().slice(0, 60) || `AI ${fx.label.toLowerCase()}`;
+    presets.push({ name, effect: p.effect, params: checkSettings(fx, p.settings) });
+  }
+  return { presets, skipped };
 }

@@ -103,7 +103,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
   app/goveeshow/commands.py             Automation commands over add-on stdin
   app/goveeshow/mqtt.py                 MQTT discovery entities
   app/goveeshow/server.py               HTTP API for the editor
-  app/goveeshow/ai.py                   Describe it: asks Claude or Home Assistant's AI Task
+  app/goveeshow/ai.py                   Describe it and AI presets: asks Claude or HA's AI Task
   app/goveeshow/static/                 The editor (plain ES modules, no build step)
     index.html, style.css               Page and styles
     js/app.js                           Editor state, panels, inspector and playback
@@ -115,7 +115,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/analysis.js                      Song analysis: tempo, beats, bars and sections
     js/analysis-worker.js               Runs the analysis off the main thread
     js/autogen.js                       Generates a draft show from the analysis
-    js/aiclips.js                       Describe it: context for the AI, and checking its clips
+    js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
     models.json                         Govee model names and segment counts
 tools/build_models.py                   Regenerates models.json
 tests/                                  pytest and node tests (tests/js)

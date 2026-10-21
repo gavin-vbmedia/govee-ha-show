@@ -311,6 +311,15 @@
     <h2>Your presets</h2>
     <button id="btn-new-preset" class="primary">New preset</button>
   </section>
+  <section class="card ai-presets">
+    <form id="ai-preset-form" class="group ai-form">
+      <input id="ai-preset-request" maxlength="2000" autocomplete="off"
+        placeholder="Describe a look, e.g. slow icy shimmer, or a warm fire flicker">
+      <button id="btn-ai-preset" class="primary" type="submit" title="Ask the AI for presets that match">✨ Make presets</button>
+    </form>
+    <p id="ai-preset-hint" class="hint"></p>
+    <div id="ai-preset-ideas" class="ai-preset-ideas"></div>
+  </section>
   <div class="preset-layout">
     <div id="my-presets" class="preset-list"></div>
     <section id="preset-editor" class="card preset-editor"></section>

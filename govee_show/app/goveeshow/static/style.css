@@ -274,6 +274,14 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
 .preset-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .preset-preview-strip { flex: 1; min-width: 200px; height: 28px; }
 @media (max-width: 800px) { .preset-layout { grid-template-columns: minmax(0, 1fr); } }
+.ai-presets { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.ai-presets .hint:empty { display: none; }
+.ai-preset-ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.ai-preset-ideas:empty { display: none; }
+.ai-preset-idea { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
+.ai-preset-idea .fx-strip { width: 100%; height: 24px; }
+.ai-preset-idea-name { font-weight: 600; }
+.ai-preset-idea .insp-actions { display: flex; gap: 6px; }
 .save-preset-dialog { width: min(420px, calc(100vw - 32px)); }
 .save-preset-dialog form { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
 .save-preset-dialog h3 { margin: 0; }
