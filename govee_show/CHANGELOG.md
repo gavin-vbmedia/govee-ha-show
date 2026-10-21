@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.52
+
+- Easier shortening on the **Music** tab. Once a song is detected, selection edges snap to bars (or beats);
+  hold Shift to place them freely. Click a section in the lane to select exactly its stretch of song, and
+  Shift-click to add more, then **Cut selection**. **Preview cut** plays the few seconds either side of the
+  join before you commit.
+- Beats, bars and sections now follow your cuts and splices instead of disappearing, so you can keep
+  snapping, and saving keeps them (with your section names, colours and notes) rather than detecting again.
+
 ## 0.2.51
 
 - **Generate** can be made by the AI: pick **AI** under **Made by** and it makes the whole show in your

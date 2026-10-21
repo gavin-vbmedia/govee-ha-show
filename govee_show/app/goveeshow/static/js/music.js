@@ -143,6 +143,39 @@ export function hueHex(h) {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+// Where the base song's beats, bars and sections land in the edited result, so they follow cuts
+// and splices. Only pieces of the base song (src) carry them; a section cut in two by an edit that
+// joins up again becomes one.
+export function mapInfo(info, pieces, crossfade, src) {
+  const { places, total } = arrange(pieces, crossfade);
+  const r3 = (t) => Math.round(t * 1000) / 1000;
+  const beats = [], bars = [], parts = [];
+  pieces.forEach((p, i) => {
+    if (p.src !== src) return;
+    const { at, xf } = places[i];
+    const own0 = i === 0 ? 0 : at + xf / 2;
+    const own1 = i === pieces.length - 1 ? total : places[i + 1].at + places[i + 1].xf / 2;
+    const map = (t) => at + (t - p.start);
+    const keep = (list, out) => {
+      for (const t of list) if (t >= p.start && t <= p.end && map(t) >= own0 - EPS && map(t) < own1 - EPS) out.push(r3(map(t)));
+    };
+    keep(info.beats, beats);
+    keep(info.bars, bars);
+    for (const sec of info.sections) {
+      const a = Math.max(map(sec.start), own0), b = Math.min(map(sec.end), own1);
+      if (b - a > 1e-3) parts.push({ ...sec, start: r3(a), end: r3(b) });
+    }
+  });
+  const sections = [];
+  for (const sec of parts) {
+    const last = sections[sections.length - 1];
+    if (last && last.label === sec.label && last.color === sec.color && last.notes === sec.notes
+        && Math.abs(last.end - sec.start) < 2e-3) last.end = sec.end;
+    else sections.push(sec);
+  }
+  return { ...info, beats, bars, sections };
+}
+
 // rendering ---------------------------------------------------------------------
 // sources: { [src]: Float32Array[] } (one array per channel), all at `rate`.
 export function render(pieces, sources, rate, { crossfade = 0, fadeIn = 0, fadeOut = 0 } = {}) {
@@ -388,6 +421,48 @@ export class MusicEditor {
   // section editing -----------------------------------------------------------
   get sections() { return (!this.dirty && this.info?.sections) || null; }
 
+  // The base song's beats, bars and sections where they fall in the result, following any edits.
+  get shown() {
+    if (!this.info || !this.base) return null;
+    if (!this.dirty) return this.info;
+    return mapInfo(this.info, this.pieces, this.crossfade, keyOf(this.base));
+  }
+
+  // t pulled to the nearest bar or section edge within reach, else the nearest beat; Shift places freely.
+  snap(t, e) {
+    const info = this.shown;
+    if (!info || e?.shiftKey) return t;
+    const near = (list, px) => {
+      let best = null;
+      for (const c of list) if (Math.abs(this.x(c) - this.x(t)) <= px && (best === null || Math.abs(c - t) < Math.abs(best - t))) best = c;
+      return best;
+    };
+    const edges = [0, this.total, ...info.bars, ...info.sections.flatMap((x) => [x.start, x.end])];
+    return near(edges, 16) ?? near(info.beats, 6) ?? t;
+  }
+
+  // Plays a few seconds either side of where the selection would be cut, without cutting it.
+  previewCut() {
+    if (!this.sel) return;
+    const { start, end } = this.sel, xf = this.crossfade;
+    const joined = cut(this.pieces, xf, start, end);
+    const around = slice(joined, xf, Math.max(0, start - 3), start + 3);
+    if (!around.length) return;
+    this.stop();
+    const rate = this.audio.sampleRate;
+    const channels = render(around, this.sources, rate, { crossfade: xf });
+    const buf = this.audio.createBuffer(channels.length, channels[0].length || 1, rate);
+    channels.forEach((ch, c) => buf.copyToChannel(ch, c));
+    const node = this.audio.createBufferSource();
+    node.buffer = buf;
+    node.connect(this.audio.destination);
+    this.audio.resume();
+    node.start();
+    this.playing = { node, from: this.time, at: this.audio.currentTime, preview: true };
+    node.onended = () => { if (this.playing?.node === node) this.stop(); };
+    $("music-play").textContent = "⏸ Stop";
+  }
+
   // Applies a change to the base song's sections and saves it with the song shortly after.
   editSections(sections, select = this.secSel) {
     if (!sections) return;
@@ -472,14 +547,15 @@ export class MusicEditor {
   updateControls() {
     const has = this.pieces.length > 0, sel = this.sel;
     for (const id of ["music-play", "music-insert", "music-append", "music-save", "music-zoom-in", "music-zoom-out", "music-fit"]) $(id).disabled = !has;
-    for (const id of ["music-cut", "music-keep", "music-play-sel", "music-zoom-sel"]) $(id).disabled = !sel;
+    for (const id of ["music-cut", "music-keep", "music-play-sel", "music-zoom-sel", "music-preview"]) $(id).disabled = !sel;
     $("music-undo").disabled = !this.history.length;
     $("music-detect").disabled = !this.base || this.dirty;
-    const info = !this.dirty && this.info;
+    const info = this.shown;
     $("music-analysis").textContent = !has ? ""
-      : this.dirty ? "Save the edit to find its beats and sections"
+      : this.dirty && !info ? "Save the edit to find its beats and sections"
         : info ? `${info.tempo ? `${info.tempo} BPM, ` : ""}${info.beats.length} beats, ${info.sections.length} sections${info.sections.length ? `: ${info.sections.map((x) => x.label).join(", ")}` : ""}`
           : "Not detected yet";
+    if (this.dirty && info) $("music-analysis").textContent += " (following your edits)";
     $("music-redo").disabled = !this.future.length;
     if (!this.sections || this.secSel >= this.sections.length) this.secSel = -1;
     this.renderSection();
@@ -541,6 +617,10 @@ export class MusicEditor {
     const blob = new Blob([encodeWav(this.rendered, this.audio.sampleRate)], { type: "audio/wav" });
     const form = new FormData();
     form.append("file", blob, name);
+    // Beats and sections that followed the edit carry over, with their names, colours and notes, as
+    // long as the result is all from the base song; anything spliced in is detected afresh.
+    const baseKey = this.base && keyOf(this.base);
+    const carry = this.shown && this.pieces.every((p) => p.src === baseKey) ? this.shown : null;
     try {
       const ref = await this.host.api("api/audio", { method: "POST", body: form });
       // Carry on from the saved file, so Detect and further edits work on it.
@@ -558,7 +638,14 @@ export class MusicEditor {
       $("music-src").value = JSON.stringify(ref);
       $("music-name").value = editName(ref.path, this.host.songs().map((r) => r.path));
       this.host.status(`Saved ${ref.path}. Pick it under Song in the editor.`);
-      await this.detect();
+      if (carry) {
+        await this.host.api(infoUrl(ref), { method: "PUT", json: carry });
+        this.info = carry;
+        this.updateControls();
+        this.draw();
+      } else {
+        await this.detect();
+      }
     } catch (e) {
       this.host.status(`Couldn't save: ${e.message}`, true);
     }
@@ -622,7 +709,7 @@ export class MusicEditor {
     const rate = this.audio.sampleRate;
 
     const laneT = RULER_H + BEAT_H, waveT = laneT + SEC_H, waveB = h; // beats, sections, then the waveform
-    const info = !this.dirty && this.info;
+    const info = this.shown;
     const names = info ? [...new Set(info.sections.map((x) => x.label))] : [];
 
     // sections: tinted bands behind the waveform, one tint per name
@@ -755,25 +842,33 @@ export class MusicEditor {
     if (!this.rendered) return;
     const x = e.offsetX, t = Math.min(Math.max(this.t(x), 0), this.total);
     this.canvas.setPointerCapture(e.pointerId);
-    if (this.inLane(e.offsetY) && this.sections) {
-      const edge = this.edgeNear(x);
+    if (this.inLane(e.offsetY) && this.shown) {
+      const edge = this.sections ? this.edgeNear(x) : -1;
       if (edge > 0) { this.drag = { section: edge, before: this.sections }; return; }
-      this.secSel = sectionAt(this.sections, t);
+      // A click selects the section's stretch of song, ready to cut; Shift-click extends it.
+      const secs = this.shown.sections, i = sectionAt(secs, t);
       this.drag = null;
+      if (i < 0) return;
+      const sec = secs[i];
+      this.sel = e.shiftKey && this.sel
+        ? { start: Math.min(this.sel.start, sec.start), end: Math.max(this.sel.end, sec.end) }
+        : { start: sec.start, end: sec.end };
+      this.secSel = this.sections ? i : -1;
       this.updateControls();
       this.draw();
       return;
     }
     if (this.sel && Math.abs(x - this.x(this.sel.start)) < EDGE_PX) this.drag = { edge: "start" };
     else if (this.sel && Math.abs(x - this.x(this.sel.end)) < EDGE_PX) this.drag = { edge: "end" };
-    else this.drag = { anchor: t, x, moved: false };
+    else this.drag = { anchor: this.snap(t, e), x, moved: false };
   }
 
   move(e) {
-    const x = e.offsetX, t = Math.min(Math.max(this.t(x), 0), this.total), d = this.drag;
+    const x = e.offsetX, raw = Math.min(Math.max(this.t(x), 0), this.total), d = this.drag;
+    const t = d && !d.section ? this.snap(raw, e) : raw;
     if (!d) {
-      const lane = this.inLane(e.offsetY) && this.sections;
-      const near = lane ? this.edgeNear(x) > 0
+      const lane = this.inLane(e.offsetY) && this.shown;
+      const near = lane ? this.sections && this.edgeNear(x) > 0
         : this.sel && [this.sel.start, this.sel.end].some((s) => Math.abs(x - this.x(s)) < EDGE_PX);
       this.canvas.style.cursor = near ? "ew-resize" : lane ? "pointer" : "text";
       return;
@@ -868,6 +963,7 @@ export class MusicEditor {
     });
     $("music-play").addEventListener("click", () => (this.playing ? this.stop() : this.play()));
     $("music-play-sel").addEventListener("click", () => this.sel && this.play(this.sel.start, this.sel.end));
+    $("music-preview").addEventListener("click", () => this.previewCut());
     $("music-cut").addEventListener("click", () => this.cutSelection());
     $("music-keep").addEventListener("click", () => this.keepSelection());
     $("music-insert").addEventListener("click", () => this.addSong(false));
