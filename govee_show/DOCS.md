@@ -140,7 +140,10 @@ another song, which is then selected so you can trim it. Joins blend over the **
 time (a few hundredths of a second hides the click, a few seconds blends one song into the next), and
 **Fade in** and **Fade out** soften the ends. Zoom with the wheel, or type the selection's times for
 precision. **Save as new file** writes a WAV to `/media/govee_show/` and leaves the original alone, so
-pick the new file under **Song** in the editor. Edit the song before placing clips, because cutting it
+pick the new file under **Song** in the editor. Once the song is detected, selection edges snap to bars
+(hold Shift to place them freely), clicking a section in the lane selects exactly its stretch (Shift-click
+adds the next), and **Preview cut** plays the join before you cut. Beats and sections follow your edits
+and are kept when you save. Edit the song before placing clips, because cutting it
 afterwards won't move them.
 
 **Detect on the Music tab** finds a song's beats, bars and sections and keeps them with the song file,

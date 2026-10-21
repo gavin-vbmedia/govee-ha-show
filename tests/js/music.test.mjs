@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  arrange, cut, editName, encodeWav, hueHex, insert, joins, keep, merge, mergeSections, moveEdge, removeSection,
+  arrange, cut, editName, mapInfo, encodeWav, hueHex, insert, joins, keep, merge, mergeSections, moveEdge, removeSection,
   render, sectionAt, splitSection,
 } from "../../govee_show/app/goveeshow/static/js/music.js";
 
@@ -105,4 +105,25 @@ test("sections can be found, split, merged, removed and resized", () => {
 test("the colour picker starts on the editor's tint", () => {
   assert.equal(hueHex(0), "#d92626"); // hsl(0 70% 50%)
   assert.equal(hueHex(120), "#26d926");
+});
+
+test("beats, bars and sections follow cuts and splices", () => {
+  const info = {
+    tempo: 120, beats: [1, 5, 15, 25, 35], bars: [1, 25],
+    sections: [{ start: 0, end: 10, label: "Intro" }, { start: 10, end: 30, label: "Chorus", notes: "loud" }, { start: 30, end: 40, label: "Outro" }],
+  };
+  const song40 = [{ src: "a", start: 0, end: 40 }];
+  // Cut the middle of the chorus: its halves join up again, and later times move 10 s earlier.
+  let m = mapInfo(info, cut(song40, 0, 15, 25), 0, "a");
+  assert.deepEqual(m.beats, [1, 5, 15, 25]);
+  assert.deepEqual(m.bars, [1, 15]);
+  assert.deepEqual(m.sections.map((x) => [x.start, x.end, x.label, x.notes]),
+    [[0, 10, "Intro", undefined], [10, 20, "Chorus", "loud"], [20, 30, "Outro", undefined]]);
+  // Cut the whole intro.
+  m = mapInfo(info, cut(song40, 0, 0, 10), 0, "a");
+  assert.deepEqual(m.sections.map((x) => [x.start, x.end, x.label]), [[0, 20, "Chorus"], [20, 30, "Outro"]]);
+  // Another song spliced in carries nothing, and pushes later times on.
+  m = mapInfo(info, insert(song40, 0, 10, [{ src: "b", start: 0, end: 5 }]), 0, "a");
+  assert.deepEqual(m.sections.map((x) => [x.start, x.end, x.label]), [[0, 10, "Intro"], [15, 35, "Chorus"], [35, 45, "Outro"]]);
+  assert.deepEqual(m.beats, [1, 5, 20, 30, 40]);
 });
