@@ -138,11 +138,15 @@ export class Timeline {
     ctx.fillText("Beats", 10, RULER_H + WAVE_H + 12);
     // A split light's tracks (its own, then its parts) are drawn as one group: a bar down the
     // left, a tint behind them and a heavier line around them, with the parts indented.
+    // A group of one track is drawn like any other track.
     const tracks = this.app.show.tracks;
-    const groupOf = (k) => {
+    const lightOf = (k) => {
       const d = this.app.devices[tracks[k]?.device];
       return d?.light?.id || d?.parent || null;
     };
+    const sizes = {};
+    tracks.forEach((_, k) => { const g = lightOf(k); if (g) sizes[g] = (sizes[g] || 0) + 1; });
+    const groupOf = (k) => { const g = lightOf(k); return g && sizes[g] > 1 ? g : null; };
     tracks.forEach((tr, i) => {
       const g = groupOf(i);
       if (!g) return;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.58
+
+- Parts on the **Devices** tab are listed one per line, each with a colour and its segment count, under a
+  bar that maps the light's segments (parts in their colours, unused ones grey).
+- A split light with only one track on the timeline is drawn like any other light, without the group bar.
+
 ## 0.2.57
 
 - A split light's tracks are grouped on the timeline: a coloured bar, a tint, the parts indented under the
