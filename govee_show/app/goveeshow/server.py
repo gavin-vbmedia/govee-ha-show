@@ -355,8 +355,14 @@ def _clean_song_info(body) -> dict | None:
         energy = sec.get("energy", 0)
         if span is None or isinstance(energy, bool) or not isinstance(energy, (int, float)) or not math.isfinite(energy):
             return None
-        clean.append({"start": span[0], "end": span[1], "label": str(sec.get("label", ""))[:40],
-                      "energy": round(float(energy), 4)})
+        item = {"start": span[0], "end": span[1], "label": str(sec.get("label", ""))[:40],
+                "energy": round(float(energy), 4)}
+        color = sec.get("color")
+        if color is not None:
+            if not isinstance(color, str) or not _HEX.match(color):
+                return None
+            item["color"] = color.lower()
+        clean.append(item)
     return {"tempo": tempo, "beats": beats, "bars": bars, "sections": clean}
 
 

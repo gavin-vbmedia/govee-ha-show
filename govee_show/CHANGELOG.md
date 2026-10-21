@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.49
+
+- Edit a song's sections on the **Music** tab. A new lane above the waveform shows each section in its
+  colour; click one to rename it, pick its colour (every section with that name changes), split it at the
+  playhead, merge it with the next or delete it, and drag the line between two sections to move it.
+  Changes save with the song, and the editor's timeline uses the colours you pick.
+
 ## 0.2.48
 
 - On the **Music** tab the beat lane is now above the waveform, and each beat's orange line runs down

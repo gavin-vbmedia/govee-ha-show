@@ -6,11 +6,13 @@
 // a song's beats and sections and keeps them with the file, for any show that uses it.
 
 import { analyseInWorker, toMono } from "./analysis.js";
-import { SECTION_ALPHA, fmtTime, sectionTint } from "./timeline.js";
+import { SECTION_ALPHA, fmtTime, sectionHue, sectionTint } from "./timeline.js";
 
 const EPS = 1e-6;
 const RULER_H = 22;
 const BEAT_H = 16; // the beat lane above the waveform, as in the editor
+const SEC_H = 20; // the section lane under it, where sections are picked and their edges dragged
+const MIN_SECTION = 0.5;
 const EDGE_PX = 6;
 const BLOCK = 256; // samples per waveform peak
 
@@ -90,6 +92,55 @@ export function keep(pieces, crossfade, a, b) {
 export function insert(pieces, crossfade, t, added) {
   const { total } = arrange(pieces, crossfade);
   return merge([...slice(pieces, crossfade, 0, t), ...added, ...slice(pieces, crossfade, t, total)]);
+}
+
+// sections ----------------------------------------------------------------------
+// [{start, end, label, energy, color?}], in order. Edits return a new list.
+
+export function sectionAt(sections, t) {
+  return sections.findIndex((s, i) => t >= s.start && (t < s.end || i === sections.length - 1));
+}
+
+// Splits section i at t into two with the same name and colour.
+export function splitSection(sections, i, t) {
+  const s = sections[i];
+  if (!s || t - s.start < MIN_SECTION || s.end - t < MIN_SECTION) return null;
+  return [...sections.slice(0, i), { ...s, end: t }, { ...s, start: t }, ...sections.slice(i + 1)];
+}
+
+// Joins section i and the next into one, keeping section i's name and colour.
+export function mergeSections(sections, i) {
+  if (i < 0 || i + 1 >= sections.length) return null;
+  return [...sections.slice(0, i), { ...sections[i], end: sections[i + 1].end }, ...sections.slice(i + 2)];
+}
+
+// Removes section i; the one before (or after, for the first) takes over its time.
+export function removeSection(sections, i) {
+  if (sections.length < 2 || !sections[i]) return null;
+  const out = sections.map((s) => ({ ...s }));
+  if (i > 0) out[i - 1].end = out[i].end;
+  else out[1].start = out[0].start;
+  out.splice(i, 1);
+  return out;
+}
+
+// Moves the edge between section i - 1 and section i to t, keeping both at least MIN_SECTION long.
+export function moveEdge(sections, i, t) {
+  const a = sections[i - 1], b = sections[i];
+  if (!a || !b) return sections;
+  const at = Math.min(Math.max(t, a.start + MIN_SECTION), b.end - MIN_SECTION);
+  const out = sections.map((s) => ({ ...s }));
+  out[i - 1].end = out[i].start = Math.round(at * 1000) / 1000;
+  return out;
+}
+
+// #rrggbb for a hue at the editor's 70% saturation, 50% lightness, for the colour picker.
+export function hueHex(h) {
+  const f = (n) => {
+    const k = (n + h / 30) % 12, a = 0.35; // saturation × min(lightness, 1 - lightness)
+    return Math.round(255 * (0.5 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
 }
 
 // rendering ---------------------------------------------------------------------
@@ -182,6 +233,7 @@ export class MusicEditor {
     this.playing = null;
     this.dirty = false;
     this.info = null; // the base song's saved beats and sections
+    this.secSel = -1; // the section picked for editing
     this.wire();
     new ResizeObserver(() => this.layout()).observe(this.canvas.parentElement);
   }
@@ -234,7 +286,7 @@ export class MusicEditor {
       $("music-name").value = editName(ref.path, this.host.songs().map((r) => r.path));
       this.changed(true);
       const info = await this.host.api(infoUrl(ref)).catch(() => null);
-      if (this.base === ref) { this.info = info; this.updateControls(); this.draw(); }
+      if (this.base === ref) { this.info = info; this.secSel = -1; this.updateControls(); this.draw(); }
     } catch (e) {
       this.host.status(`Couldn't load the song: ${e.message}`, true);
     }
@@ -252,7 +304,7 @@ export class MusicEditor {
       const r = await analyseInWorker(samples, rate);
       const info = { tempo: r.tempo || null, beats: r.beats, bars: r.bars, sections: r.sections };
       await this.host.api(infoUrl(ref), { method: "PUT", json: info });
-      if (this.base === ref) this.info = info;
+      if (this.base === ref) { this.info = info; this.secSel = -1; }
       const parts = `${info.sections.length} section${info.sections.length === 1 ? "" : "s"}`;
       this.host.status(info.tempo ? `Found ${info.beats.length} beats at ${info.tempo} BPM, and ${parts}` : `No steady beat found; found ${parts}`);
     } catch (e) {
@@ -333,6 +385,62 @@ export class MusicEditor {
     }
   }
 
+  // section editing -----------------------------------------------------------
+  get sections() { return (!this.dirty && this.info?.sections) || null; }
+
+  // Applies a change to the base song's sections and saves it with the song shortly after.
+  editSections(sections, select = this.secSel) {
+    if (!sections) return;
+    this.info = { ...this.info, sections };
+    this.secSel = select;
+    clearTimeout(this.saveTimer);
+    const ref = this.base, info = this.info;
+    this.saveTimer = setTimeout(() => {
+      this.host.api(infoUrl(ref), { method: "PUT", json: info })
+        .catch((e) => this.host.status(`Couldn't save the sections: ${e.message}`, true));
+    }, 400);
+    this.updateControls();
+    this.draw();
+  }
+
+  renderSection() {
+    const secs = this.sections, s = secs?.[this.secSel];
+    $("music-section").hidden = !s;
+    if (!s) return;
+    const names = [...new Set(secs.map((x) => x.label))];
+    $("music-sec-name").value = s.label;
+    $("music-sec-colour").value = s.color || hueHex(sectionHue(names, s.label));
+    $("music-sec-time").textContent = `${fmtTime(s.start)} to ${fmtTime(s.end)}`;
+    $("music-sec-merge").disabled = this.secSel + 1 >= secs.length;
+    $("music-sec-delete").disabled = secs.length < 2;
+    $("music-sec-colour-hint").textContent = secs.filter((x) => x.label === s.label).length > 1
+      ? `Colour changes every "${s.label}"` : "";
+  }
+
+  wireSections() {
+    $("music-sec-name").addEventListener("change", (e) => {
+      const name = e.target.value.trim().slice(0, 40);
+      if (!name) { this.renderSection(); return; }
+      this.editSections(this.sections.map((x, i) => (i === this.secSel ? { ...x, label: name } : x)));
+    });
+    $("music-sec-colour").addEventListener("input", (e) => {
+      const label = this.sections[this.secSel].label, color = e.target.value;
+      this.editSections(this.sections.map((x) => (x.label === label ? { ...x, color } : x)));
+    });
+    $("music-sec-split").addEventListener("click", () => {
+      const secs = this.sections, i = sectionAt(secs, this.time);
+      const out = splitSection(secs, i, this.time);
+      if (!out) return this.host.status("Move the playhead inside a section, at least half a second from its edges", true);
+      this.editSections(out, i + 1);
+    });
+    $("music-sec-merge").addEventListener("click", () => this.editSections(mergeSections(this.sections, this.secSel)));
+    $("music-sec-delete").addEventListener("click", () => {
+      const i = this.secSel;
+      this.editSections(removeSection(this.sections, i), Math.max(0, i - 1));
+    });
+    $("music-sec-close").addEventListener("click", () => { this.secSel = -1; this.updateControls(); this.draw(); });
+  }
+
   // Re-render after any change; `fit` also zooms out to the whole result.
   changed(fit = false) {
     const rate = this.audio?.sampleRate || 44100;
@@ -364,6 +472,8 @@ export class MusicEditor {
         : info ? `${info.tempo ? `${info.tempo} BPM, ` : ""}${info.beats.length} beats, ${info.sections.length} sections${info.sections.length ? `: ${info.sections.map((x) => x.label).join(", ")}` : ""}`
           : "Not detected yet";
     $("music-redo").disabled = !this.future.length;
+    if (!this.sections || this.secSel >= this.sections.length) this.secSel = -1;
+    this.renderSection();
     $("music-sel-start").disabled = $("music-sel-end").disabled = !sel;
     $("music-sel-start").value = sel ? sel.start.toFixed(2) : "";
     $("music-sel-end").value = sel ? sel.end.toFixed(2) : "";
@@ -449,7 +559,7 @@ export class MusicEditor {
   layout() {
     const wrap = this.canvas.parentElement, dpr = window.devicePixelRatio || 1;
     this.w = wrap.clientWidth;
-    this.h = 190;
+    this.h = 210;
     this.canvas.width = Math.round(this.w * dpr);
     this.canvas.height = Math.round(this.h * dpr);
     this.canvas.style.width = `${this.w}px`;
@@ -502,7 +612,7 @@ export class MusicEditor {
     }
     const rate = this.audio.sampleRate;
 
-    const waveT = RULER_H + BEAT_H, waveB = h; // the waveform sits under the beat lane
+    const laneT = RULER_H + BEAT_H, waveT = laneT + SEC_H, waveB = h; // beats, sections, then the waveform
     const info = !this.dirty && this.info;
     const names = info ? [...new Set(info.sections.map((x) => x.label))] : [];
 
@@ -512,7 +622,7 @@ export class MusicEditor {
       for (const sec of info.sections) {
         const x0 = Math.max(0, this.x(sec.start)), x1 = Math.min(w, this.x(sec.end));
         if (x1 <= x0) continue;
-        ctx.fillStyle = sectionTint(names, sec.label);
+        ctx.fillStyle = sectionTint(names, sec.label, sec.color);
         ctx.globalAlpha = SECTION_ALPHA;
         ctx.fillRect(x0, waveT, x1 - x0, waveB - waveT);
         ctx.globalAlpha = 1;
@@ -557,14 +667,34 @@ export class MusicEditor {
     }
     ctx.setLineDash([]);
 
-    // section names over the waveform
+    // section lane: each section in its colour with its name, the picked one outlined
+    ctx.fillStyle = col("--panel");
+    ctx.fillRect(0, laneT, w, SEC_H);
     if (info) {
       ctx.font = "11px system-ui, sans-serif";
-      ctx.fillStyle = col("--text");
-      for (const sec of info.sections) {
+      info.sections.forEach((sec, i) => {
         const x0 = Math.max(0, this.x(sec.start)), x1 = Math.min(w, this.x(sec.end));
-        if (x1 - x0 > 40) ctx.fillText(sec.label, x0 + 4, waveT + 12);
-      }
+        if (x1 <= x0) return;
+        ctx.fillStyle = sectionTint(names, sec.label, sec.color);
+        ctx.globalAlpha = 0.45;
+        ctx.fillRect(x0, laneT + 1, x1 - x0, SEC_H - 2);
+        ctx.globalAlpha = 1;
+        if (i === this.secSel) {
+          ctx.strokeStyle = col("--accent");
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x0 + 1, laneT + 1, x1 - x0 - 2, SEC_H - 2);
+          ctx.lineWidth = 1;
+        }
+        ctx.fillStyle = col("--line");
+        ctx.fillRect(Math.round(this.x(sec.start)), laneT, 1, SEC_H);
+        ctx.fillStyle = col("--text");
+        if (x1 - x0 > 30) {
+          ctx.save();
+          ctx.beginPath(); ctx.rect(x0, laneT, x1 - x0 - 2, SEC_H); ctx.clip();
+          ctx.fillText(sec.label, x0 + 5, laneT + 14);
+          ctx.restore();
+        }
+      });
     }
 
     // beat lane above the waveform, each beat's line running down through it, bar starts stronger
@@ -604,10 +734,27 @@ export class MusicEditor {
   }
 
   // input ---------------------------------------------------------------------
+  inLane(y) { return y >= RULER_H + BEAT_H && y < RULER_H + BEAT_H + SEC_H; }
+
+  // The section edge (index of the section it starts) within reach of x, or -1.
+  edgeNear(x) {
+    const secs = this.sections || [];
+    return secs.findIndex((s, i) => i > 0 && Math.abs(x - this.x(s.start)) < EDGE_PX);
+  }
+
   down(e) {
     if (!this.rendered) return;
     const x = e.offsetX, t = Math.min(Math.max(this.t(x), 0), this.total);
     this.canvas.setPointerCapture(e.pointerId);
+    if (this.inLane(e.offsetY) && this.sections) {
+      const edge = this.edgeNear(x);
+      if (edge > 0) { this.drag = { section: edge, before: this.sections }; return; }
+      this.secSel = sectionAt(this.sections, t);
+      this.drag = null;
+      this.updateControls();
+      this.draw();
+      return;
+    }
     if (this.sel && Math.abs(x - this.x(this.sel.start)) < EDGE_PX) this.drag = { edge: "start" };
     else if (this.sel && Math.abs(x - this.x(this.sel.end)) < EDGE_PX) this.drag = { edge: "end" };
     else this.drag = { anchor: t, x, moved: false };
@@ -616,8 +763,16 @@ export class MusicEditor {
   move(e) {
     const x = e.offsetX, t = Math.min(Math.max(this.t(x), 0), this.total), d = this.drag;
     if (!d) {
-      const near = this.sel && [this.sel.start, this.sel.end].some((s) => Math.abs(x - this.x(s)) < EDGE_PX);
-      this.canvas.style.cursor = near ? "ew-resize" : "text";
+      const lane = this.inLane(e.offsetY) && this.sections;
+      const near = lane ? this.edgeNear(x) > 0
+        : this.sel && [this.sel.start, this.sel.end].some((s) => Math.abs(x - this.x(s)) < EDGE_PX);
+      this.canvas.style.cursor = near ? "ew-resize" : lane ? "pointer" : "text";
+      return;
+    }
+    if (d.section) {
+      this.info = { ...this.info, sections: moveEdge(d.before, d.section, t) };
+      this.renderSection();
+      this.draw();
       return;
     }
     if (d.edge) {
@@ -636,6 +791,7 @@ export class MusicEditor {
   up(e) {
     const d = this.drag;
     this.drag = null;
+    if (d?.section) { this.editSections(this.info.sections); return; }
     if (!d || d.edge || d.moved) return;
     this.sel = null;
     this.time = Math.min(Math.max(this.t(e.offsetX), 0), this.total);
@@ -720,6 +876,7 @@ export class MusicEditor {
     }
     $("music-save").addEventListener("click", () => this.save());
     $("music-detect").addEventListener("click", () => this.detect());
+    this.wireSections();
     window.addEventListener("beforeunload", (e) => { if (this.dirty) e.preventDefault(); });
   }
 

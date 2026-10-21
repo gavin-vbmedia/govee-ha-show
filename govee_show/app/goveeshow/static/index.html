@@ -194,6 +194,19 @@
       <button id="music-detect" title="Find the tempo, beats, bars and sections (verse, chorus…) and keep them with this song. A show that picks the song uses them.">Detect</button>
       <span id="music-analysis" class="hint"></span>
     </div>
+    <p class="hint">Click a section in the lane above the waveform to rename it or change its colour, and drag the line
+      between two sections to move it. Changes save with the song; a show already using the song picks them up with
+      <b>From song</b>.</p>
+    <div id="music-section" class="group music-section" hidden>
+      <span id="music-sec-time" class="hint"></span>
+      <label>Name <input id="music-sec-name" size="14" maxlength="40"></label>
+      <label>Colour <input id="music-sec-colour" type="color"></label>
+      <span id="music-sec-colour-hint" class="hint"></span>
+      <button id="music-sec-split" title="Split the section under the playhead in two">Split at playhead</button>
+      <button id="music-sec-merge" title="Join this section and the next into one">Merge with next</button>
+      <button id="music-sec-delete" class="ghost danger" title="Remove this section; the one before takes its time">Delete</button>
+      <button id="music-sec-close" class="ghost" title="Done">✕</button>
+    </div>
   </section>
   <section class="toolbar">
     <label>File name <input id="music-name" size="32" placeholder="song (edit).wav"></label>

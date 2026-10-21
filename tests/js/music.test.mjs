@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  arrange, cut, editName, encodeWav, insert, joins, keep, merge, render,
+  arrange, cut, editName, encodeWav, hueHex, insert, joins, keep, merge, mergeSections, moveEdge, removeSection,
+  render, sectionAt, splitSection,
 } from "../../govee_show/app/goveeshow/static/js/music.js";
 
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg ?? ""} ${a} != ${b}`);
@@ -77,4 +78,31 @@ test("WAV header describes the data", () => {
 test("edited copies get a fresh name", () => {
   assert.equal(editName("songs/Jingle.mp3"), "Jingle (edit).wav");
   assert.equal(editName("govee_show/Jingle (edit).wav", ["govee_show/Jingle (edit).wav"]), "Jingle (edit 2).wav");
+});
+
+const secs = [
+  { start: 0, end: 10, label: "Intro", energy: 0.2 },
+  { start: 10, end: 30, label: "Chorus", energy: 0.9, color: "#ff0000" },
+  { start: 30, end: 40, label: "Outro", energy: 0.3 },
+];
+
+test("sections can be found, split, merged, removed and resized", () => {
+  assert.equal(sectionAt(secs, 15), 1);
+  assert.equal(sectionAt(secs, 40), 2);
+  const split = splitSection(secs, 1, 20);
+  assert.deepEqual(split.map((s) => [s.start, s.end, s.label, s.color]),
+    [[0, 10, "Intro", undefined], [10, 20, "Chorus", "#ff0000"], [20, 30, "Chorus", "#ff0000"], [30, 40, "Outro", undefined]]);
+  assert.equal(splitSection(secs, 1, 10.2), null, "too close to an edge");
+  assert.deepEqual(mergeSections(secs, 0).map((s) => [s.start, s.end, s.label]), [[0, 30, "Intro"], [30, 40, "Outro"]]);
+  assert.equal(mergeSections(secs, 2), null);
+  assert.deepEqual(removeSection(secs, 1).map((s) => [s.start, s.end]), [[0, 30], [30, 40]]);
+  assert.deepEqual(removeSection(secs, 0).map((s) => [s.start, s.end]), [[0, 30], [30, 40]]);
+  assert.deepEqual(moveEdge(secs, 1, 12).map((s) => [s.start, s.end]), [[0, 12], [12, 30], [30, 40]]);
+  assert.deepEqual(moveEdge(secs, 1, 50).map((s) => [s.start, s.end]), [[0, 29.5], [29.5, 30], [30, 40]], "clamped");
+  assert.equal(secs[0].end, 10, "the original is untouched");
+});
+
+test("the colour picker starts on the editor's tint", () => {
+  assert.equal(hueHex(0), "#d92626"); // hsl(0 70% 50%)
+  assert.equal(hueHex(120), "#26d926");
 });
