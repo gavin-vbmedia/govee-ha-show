@@ -3,12 +3,20 @@
 Build music-synchronised light shows for Govee lights, preview them on a photo of your house, and
 play them from Home Assistant. Open **Light Shows** from the Home Assistant sidebar.
 
-**Contents:** [Requirements](#requirements) · [Quick start](#quick-start) ·
+**Contents:** [Finding your way](#finding-your-way) · [Requirements](#requirements) · [Quick start](#quick-start) ·
 [Devices](#1-devices) · [Speakers](#2-speakers) · [Your house](#3-your-house) ·
 [Build a show](#4-build-a-show) · [Effects](#effects) · [Play it](#5-play-it) ·
 [Automations](#6-automations) · [Arrange the editor](#arrange-the-editor) ·
 [Settings](#settings) · [Setting up the AI](#setting-up-the-ai) · [Govee scenes](#experimental-govee-scenes) ·
 [Troubleshooting](#troubleshooting) · [Where things are stored](#where-things-are-stored)
+
+## Finding your way
+
+Four tabs run along the top. **Editor** is where shows are made and **Music** is where songs are cut
+and detected. **Library** holds **Palettes** and **Presets**, the colours and effect settings you reuse
+across shows. **Setup** holds **Devices**, **Speakers**, **House** and **Settings**, the things you set
+up once. Library and Setup list their pages down the side (along the top on a phone), and each
+remembers the page you last had open. Below, "the House tab" and so on mean that page.
 
 ## Requirements
 
@@ -22,11 +30,11 @@ play them from Home Assistant. Open **Light Shows** from the Home Assistant side
 
 ## Quick start
 
-1. **Devices** tab: **Scan network**, **Add** each light, then press **Find** or **Test** to set
+1. **Setup → Devices**: **Scan network**, **Add** each light, then press **Find** or **Test** to set
    its segment count.
-2. **Speakers** tab (optional): **Test and add** your speaker and pick it as the default show
+2. **Setup → Speakers** (optional): **Test and add** your speaker and pick it as the default show
    speaker.
-3. **House** tab (optional): upload a photo of your house and trace each light on it.
+3. **Setup → House** (optional): upload a photo of your house and trace each light on it.
 4. **Editor** tab: pick or upload a song, drag across a light's track, press **＋ Add effect…** and pick one. Press
    Space to play.
 5. Run it from an automation with the MQTT **Play** button or the `hassio.addon_stdin` action.
@@ -313,8 +321,8 @@ Effects scale to each light's segment count. **D** duplicates the selected clip.
 **Colour palettes.** An effect's settings include a **Palette** picker. Click a colour to put it in
 the colour field you last clicked, or press **Apply palette** to fill them all in order. Click a
 light's name to **Recolour this light** or **Recolour all lights**: each light steps through the
-palette effect by effect, so the lights stay matched (backgrounds are left alone). The **Palettes**
-tab lists the presets and your own: press **New palette**, or **Copy to my palettes** on a preset,
+palette effect by effect, so the lights stay matched (backgrounds are left alone). **Library →
+Palettes** lists the built-in palettes and your own: press **New palette**, or **Copy** on a built-in one,
 then rename it and change its colours (up to 12). Your palettes are available in every show.
 
 **Lights that are gone.** A track whose light was removed from the Devices tab shows as **Missing
@@ -400,10 +408,10 @@ and never changes where the real show plays:
 
 - **Song in this browser**: the song plays in your browser and the add-on streams the lights in
   sync. Untick **Lights** to preview in the browser only. If the lights lead or lag, adjust
-  **Light offset** on the **Settings** tab.
+  **Light offset** under **Setup → Speakers**.
 - **Speaker: …**: the add-on starts the song on that speaker and the lights with it, and the
-  playhead follows along. Line the lights up with the speaker's **Delay ms** on the Speakers tab
-  (also shown on the Settings tab while that speaker is picked).
+  playhead follows along. Line the lights up with the speaker's **Delay ms** under **Setup →
+  Speakers** (also shown under Timing there while that speaker is picked).
 
 **The real show.** **Show speaker** in the Song panel is where the song plays when the show is
 started from an automation or the MQTT Play button. Leave it on **Default** to use the default show
@@ -447,7 +455,7 @@ actions:
         media_player: media_player.garden   # optional; defaults to the show speaker
 ```
 
-Send `input: {action: stop}` to stop. The **Settings** tab shows the exact input for the open show.
+Send `input: {action: stop}` to stop. **Setup → Speakers** shows the exact input for the open show, under Automations.
 
 ## Arrange the editor
 
@@ -478,10 +486,12 @@ browser, so each computer or phone keeps its own.
 
 ## Settings
 
+**Setup → Settings** holds the rest. Timing and Automations sit with the speakers, under **Setup →
+Speakers**: **Light offset** for playing in the browser (positive values delay the lights), or the
+picked speaker's delay, and the exact `hassio.addon_stdin` input for the open show.
+
 | Section | What's there |
 | --- | --- |
-| Timing | **Light offset** for playing in the browser (positive values delay the lights), or the picked speaker's delay. |
-| Automations | The exact `hassio.addon_stdin` input for the open show. |
 | AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
 | Experimental | **Govee scenes** (below). |
@@ -524,7 +534,7 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 | Scan finds nothing | Check **LAN Control** is on for each light in the Govee Home app, and that Home Assistant and the lights are on the same network with multicast allowed. Add the light by IP instead. |
 | Test only turns the light on | Change **Protocol** on the Devices tab and test again. |
 | Effects run from the wrong end | Tick **Reverse** on the Devices tab. |
-| Lights run ahead of or behind the music | In the browser, adjust **Light offset** on the Settings tab. On a speaker, adjust its **Delay ms** on the Speakers tab. |
+| Lights run ahead of or behind the music | In the browser, adjust **Light offset** under **Setup → Speakers**. On a speaker, adjust its **Delay ms** in the same place. |
 | A speaker can't be added | The test shows Home Assistant's reason. Some integrations can't play files from the media folder; use another media player for the song. |
 | A show from an automation plays no music | Set a **Show speaker** for the show, or a **Default show speaker** on the Speakers tab. |
 | House lane effects do nothing | Trace the lights on the House tab first. |

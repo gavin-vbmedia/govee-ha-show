@@ -717,7 +717,7 @@ function drawPreview() {
   pctx.font = "12px system-ui, sans-serif";
   if (!tracks.length) {
     pctx.fillStyle = "#888";
-    pctx.fillText("Add devices on the Devices tab to see a preview here.", 4, 17);
+    pctx.fillText("Add devices under Setup → Devices to see a preview here.", 4, 17);
     return;
   }
   const pos = housePositions(), composed = {};
@@ -993,7 +993,7 @@ function renderHouseLights() {
     return;
   }
   if (!app.deviceList.length) {
-    box.innerHTML = `<p class="hint">Add your lights on the Devices tab first.</p>`;
+    box.innerHTML = `<p class="hint">Add your lights under Setup → Devices first.</p>`;
     return;
   }
   const current = house.active || house.selected;
@@ -1628,7 +1628,7 @@ function renderTrackInspector(i) {
     p.className = "hint";
     p.textContent = Object.keys(housePositionsAll()).length
       ? "Effects here run across all your lights by where they are on the house photo, on top of each light's own effects. Drag across this lane to add one."
-      : "Effects here run across all your lights by where they are on the house photo. Trace your lights on the House tab first.";
+      : "Effects here run across all your lights by where they are on the house photo. Trace your lights under Setup → House first.";
     box.append(p);
   }
   if (!isHouse(i) && otherTracks(i).length && clips.length) {
@@ -1677,7 +1677,7 @@ function renderTrackInspector(i) {
     p.className = "hint";
     p.textContent = app.devices[app.show.tracks[i].device]
       ? "This light plays its parts only, so this track isn't played."
-      : "This light isn't on the Devices tab any more, so this track isn't played.";
+      : "This light isn't under Setup → Devices any more, so this track isn't played.";
     box.append(p, button("Remove from show", () => remove([app.show.tracks[i]]), "danger"));
     if (dead.length > 1) box.append(button(`Remove all ${dead.length} unplayed tracks`, () => remove(dead), "ghost danger"));
   }
@@ -2088,20 +2088,29 @@ function renderPalettes() {
     renderPalettes();
   };
   presets.replaceChildren(...PRESET_PALETTES.map((p) => {
-    const row = document.createElement("div");
-    row.className = "palette-item";
+    // A card per built-in palette: its colours as one bar, then its name and Copy.
+    const card = document.createElement("div");
+    card.className = "palette-card";
+    const bar = document.createElement("div");
+    bar.className = "palette-bar";
+    for (const c of p.colors) {
+      const el = document.createElement("span");
+      el.style.background = c;
+      bar.append(el);
+    }
     const name = document.createElement("span");
     name.className = "palette-name";
     name.textContent = p.name;
-    const sw = document.createElement("span");
-    sw.className = "swatches";
-    sw.append(...p.colors.map((c) => swatch(c)));
-    row.append(name, sw, button("Copy to my palettes", () =>
-      addMine({ name: uniqueName(`My ${p.name}`), colors: [...p.colors] }), "ghost"));
-    return row;
+    const copy = button("Copy", () => addMine({ name: uniqueName(`My ${p.name}`), colors: [...p.colors] }), "ghost");
+    copy.title = "Copy to your palettes, to change it";
+    const foot = document.createElement("div");
+    foot.className = "palette-foot";
+    foot.append(name, copy);
+    card.append(bar, foot);
+    return card;
   }));
   if (!app.palettes.length) {
-    mine.innerHTML = `<p class="hint">None yet. Press New palette, or copy a preset and change it.</p>`;
+    mine.innerHTML = `<p class="hint">None yet. Press New palette, or copy a built-in one and change it.</p>`;
     return;
   }
   mine.replaceChildren(...app.palettes.map((p, i) => {
@@ -2584,7 +2593,7 @@ function speakerOptions(sel, first, current, label = (s) => s.name) {
   sel.replaceChildren(new Option(first, ""));
   for (const s of app.speakers) sel.add(new Option(label(s), s.entity_id));
   if (current && !app.speakers.some((s) => s.entity_id === current)) {
-    sel.add(new Option(`${current} (not added on the Speakers tab)`, current));
+    sel.add(new Option(`${current} (not added under Setup → Speakers)`, current));
   }
   sel.value = current || "";
 }
@@ -2879,7 +2888,7 @@ async function generate({ colors, style, house }) {
   // A split light gets effects on its parts; its own track (all the parts at once) is left for you.
   const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && playingDev(tr) && !playingDev(tr).light)
     .map((tr) => ({ id: tr.device, segments: app.devices[tr.device].segments }));
-  if (!lights.length) { status("Add your lights on the Devices tab first", true); return; }
+  if (!lights.length) { status("Add your lights under Setup → Devices first", true); return; }
   // Listen to the song first if that hasn't been done yet.
   if (songBuffer && !app.show.beats.length && !app.show.sections?.length && !(await analyseSong())) return;
   const show = app.show;
@@ -2974,7 +2983,7 @@ async function loadAiStatus() {
     : st.via === "ha" ? `Using Home Assistant's AI Task${st.entity ? ` (${st.entity})` : ""}.`
       : "Not set up yet: add a Claude API key on the add-on's Configuration tab, or set up an AI integration with an AI Task entity in Home Assistant.";
   $("ai-status").textContent = text;
-  $("ai-hint").textContent = st.via ? "" : "Set up an AI on the Settings tab to use this.";
+  $("ai-hint").textContent = st.via ? "" : "Set up an AI under Setup → Settings to use this.";
   $("ai-hint").hidden = !!st.via;
   $("ai-preset-hint").textContent = st.via ? "" : $("ai-hint").textContent;
   $("ai-preset-hint").hidden = !!st.via;
@@ -3015,7 +3024,7 @@ async function describeIt(e) {
 // selectionFor(lights) gives the selection to send; replaceAll clears the lights first, as Generate does.
 async function describe(request, selectionFor, { replaceAll = false, what = "your effects" } = {}) {
   const lights = aiLights();
-  if (!lights.some((l) => !l.house)) { status("Add your lights on the Devices tab first", true); return; }
+  if (!lights.some((l) => !l.house)) { status("Add your lights under Setup → Devices first", true); return; }
   const selection = selectionFor ? selectionFor(lights) : null;
   const show = app.show, duration = app.duration();
   const context = buildContext({ show, lights, duration, selection, palettes: allPalettes() });
@@ -3096,25 +3105,31 @@ function frame() {
 }
 
 // wiring ----------------------------------------------------------------------
-function wire() {
-  for (const tab of document.querySelectorAll(".tab")) {
-    tab.addEventListener("click", () => {
-      for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t === tab);
-      tab.scrollIntoView({ block: "nearest", inline: "nearest" }); // on a phone the tab row scrolls
-      $("view-editor").hidden = tab.dataset.view !== "editor";
-      $("view-devices").hidden = tab.dataset.view !== "devices";
-      $("view-music").hidden = tab.dataset.view !== "music";
-      if (tab.dataset.view === "music") refreshAudio().catch(() => {}).then(() => music.show()); else music.hide();
-      $("view-palettes").hidden = tab.dataset.view !== "palettes";
-      $("view-presets").hidden = tab.dataset.view !== "presets";
-      $("view-house").hidden = tab.dataset.view !== "house";
-      $("view-speakers").hidden = tab.dataset.view !== "speakers";
-      if (tab.dataset.view === "speakers") loadSpeakers();
-      if (tab.dataset.view === "house") renderHouseLights();
-      $("view-settings").hidden = tab.dataset.view !== "settings";
-      if (tab.dataset.view === "editor") { layoutPreview(); timeline.layout(); }
-    });
+// Library and Setup each hold several pages; each remembers the page last open in it.
+const SECTIONS = { library: ["palettes", "presets"], setup: ["devices", "speakers", "house", "settings"] };
+const sectionPage = { library: "palettes", setup: "devices" };
+
+// Opens a tab (editor, music, library, setup) or a page in Library or Setup (devices, palettes…).
+function showView(view) {
+  const section = Object.keys(SECTIONS).find((k) => SECTIONS[k].includes(view));
+  if (section) sectionPage[section] = view;
+  const page = SECTIONS[view] ? sectionPage[view] : view;
+  const top = section || view;
+  for (const t of document.querySelectorAll(".tab")) {
+    t.classList.toggle("active", t.dataset.view === top);
+    if (t.dataset.view === top) t.scrollIntoView({ block: "nearest", inline: "nearest" }); // on a phone the tab row scrolls
   }
+  for (const t of document.querySelectorAll(".subtab")) t.classList.toggle("active", t.dataset.view === page);
+  for (const k of Object.keys(SECTIONS)) $(`section-${k}`).hidden = k !== top;
+  for (const v of ["editor", "music", ...Object.values(SECTIONS).flat()]) $(`view-${v}`).hidden = v !== page;
+  if (page === "music") refreshAudio().catch(() => {}).then(() => music.show()); else music.hide();
+  if (page === "speakers") loadSpeakers();
+  if (page === "house") renderHouseLights();
+  if (page === "editor") { layoutPreview(); timeline.layout(); }
+}
+
+function wire() {
+  for (const tab of document.querySelectorAll(".tab, .subtab")) tab.addEventListener("click", () => showView(tab.dataset.view));
 
   $("show-select").addEventListener("change", async (e) => {
     const v = e.target.value;
