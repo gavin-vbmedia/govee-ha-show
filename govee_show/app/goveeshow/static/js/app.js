@@ -7,6 +7,7 @@ import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, composeLight, defaultParams, matchesPreset, presetParams,
   renderTrack, showDuration,
 } from "./effects.js";
+import { partsFrame } from "./devicetest.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
 import { MusicEditor } from "./music.js";
@@ -253,7 +254,46 @@ async function saveDevices() {
   try {
     app.deviceList = await api("api/devices", { method: "PUT", json: app.deviceList });
     indexDevices();
-  } catch (e) { status(`Couldn't save devices: ${e.message}`, true); }
+  } catch (e) { status(`Couldn't save devices: ${e.message}`, true); return; }
+  for (const d of app.deviceList) retestLight(d);
+}
+
+// Tests running on the Devices tab, by light id. A light that changes while its test is still on
+// gets the test again, so new segment counts, parts or Reverse show on the light straight away.
+const deviceTests = {}; // id -> {what: "rainbow" | "parts" | a part's id, until, sent}
+
+async function testLight(d, what = "rainbow") {
+  const seconds = what === "rainbow" ? 20 : 60;
+  const json = { ...d, seconds };
+  if (what !== "rainbow") json.rgb = toHex(partsFrame(d, what === "parts" ? undefined : what));
+  const sent = JSON.stringify({ ...json, seconds: 0 });
+  try {
+    await api("api/devices/test", { method: "POST", json });
+    deviceTests[d.id] = { what, until: Date.now() + seconds * 1000, sent };
+    return true;
+  } catch (e) {
+    delete deviceTests[d.id];
+    status(`Test failed: ${e.message}`, true);
+    return false;
+  }
+}
+
+function retestLight(d) {
+  const t = deviceTests[d.id];
+  if (!t) return;
+  const gone = !["rainbow", "parts"].includes(t.what) && !(d.parts || []).some((p) => p.id === t.what);
+  if (t.until < Date.now() || !d.ip || (d.protocol === "whole" && t.what !== "rainbow") || gone) {
+    delete deviceTests[d.id];
+    return;
+  }
+  const json = { ...d, seconds: 0 };
+  if (t.what !== "rainbow") json.rgb = toHex(partsFrame(d, t.what === "parts" ? undefined : t.what));
+  if (JSON.stringify(json) !== t.sent) testLight(d, t.what);
+}
+
+async function stopTest(d) {
+  delete deviceTests[d.id];
+  try { await api("api/devices/test", { method: "POST", json: { ...d, stop: true } }); } catch { /* it lets go by itself */ }
 }
 
 function renderDevices() {
@@ -317,10 +357,7 @@ function renderDevices() {
     cell(proto);
     const actions = document.createElement("td");
     const test = button(d.ip ? "Test" : "Planned", async () => {
-      try {
-        await api("api/devices/test", { method: "POST", json: { ...d, seconds: 20 } });
-        status(`Testing ${d.name} for 20 seconds`);
-      } catch (e) { status(`Test failed: ${e.message}`, true); }
+      if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`);
     });
     const remove = button("Remove", () => {
       if (!confirm(`Remove ${d.name}? Its clips stay in your shows.`)) return;
@@ -507,10 +544,15 @@ function partsRow(d) {
       saveDevices();
     }, "ghost small");
     del.title = `Remove ${p.name}. Its clips stay in your shows.`;
+    const test = button("Test", async () => {
+      if (await testLight(d, p.id)) status(`${p.name} is lit for a minute, white at its first segment. Change its segments to move it.`);
+    }, "ghost small");
+    test.title = "Light just this part on the real light, so you can see where it starts and ends";
+    test.disabled = !d.ip || d.protocol === "whole";
     const count = document.createElement("span");
     count.className = "hint";
     count.textContent = `${p.to - p.from + 1} segments`;
-    chip.append(swatch, name, " segments ", num("from"), "–", num("to"), count, del);
+    chip.append(swatch, name, " segments ", num("from"), "–", num("to"), count, test, del);
     list.append(chip);
   });
   const more = button("+ Add part", add, "ghost small");
@@ -529,7 +571,15 @@ function partsRow(d) {
   note.textContent = unused.length ? `Unused, off in shows: ${runText(unused)}` : "Every segment is in a part";
   const foot = document.createElement("div");
   foot.className = "parts-foot";
-  foot.append(more, asOne, note);
+  const testAll = button("Test parts", async () => {
+    if (await testLight(d, "parts")) status(`${d.name}'s parts are lit in their colours for a minute, each white at its first segment`);
+  }, "ghost small");
+  testAll.title = "Light every part in its colour on the real light, with unused segments off";
+  testAll.disabled = !d.ip || d.protocol === "whole";
+  const stop = button("Stop", () => stopTest(d), "ghost small");
+  stop.title = "Let the light go back to what it was doing";
+  stop.disabled = !d.ip;
+  foot.append(more, testAll, stop, asOne, note);
   panel.append(foot);
   return tr;
 }

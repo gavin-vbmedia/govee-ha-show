@@ -208,6 +208,13 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
         output.release(ip)
 
 
+async def run_hold(output: Output, ip: str, rgb: bytes, segments: int, seconds: float = 60, **settings):
+    """Show one still frame (a light's parts, from the Devices tab) until it times out or is replaced."""
+    output.claim(ip, segments, **settings).update(rgb)
+    await asyncio.sleep(seconds)
+    output.release(ip)
+
+
 PROBE_MAX = 128  # the most segments Find segments will look for
 
 

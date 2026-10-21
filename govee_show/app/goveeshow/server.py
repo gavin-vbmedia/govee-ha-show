@@ -18,7 +18,7 @@ from . import __version__, ai, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .mqtt import MqttBridge
-from .output import PROBE_MAX, LivePreview, Output, run_probe, run_test_pattern
+from .output import PROBE_MAX, LivePreview, Output, run_hold, run_probe, run_test_pattern
 from .player import Player
 from .protocol import PROTOCOLS
 from .runner import Runner, RunnerError
@@ -181,14 +181,32 @@ async def test_device(request):
     if not d["ip"]:
         raise web.HTTPBadRequest(text="link this device to a real light before testing it")
     seconds = min(max(float(body.get("seconds", 15)), 1), 60)
+    rgb = None
+    if body.get("rgb") is not None:
+        # A still frame instead of the rainbow, e.g. the light's parts in their colours.
+        try:
+            rgb = bytes.fromhex(str(body["rgb"]))
+        except ValueError:
+            raise web.HTTPBadRequest(text="rgb must be hex")
+        if len(rgb) != d["segments"] * 3:
+            raise web.HTTPBadRequest(text="rgb must have 3 bytes per segment")
     app = request.app
-    await app[RUNNER].stop()
     tests = app[TESTS]
     if (old := tests.pop(d["ip"], None)):
         old.cancel()
-    tests[d["ip"]] = asyncio.create_task(run_test_pattern(
-        app[OUTPUT], d["ip"], d["segments"], seconds, reverse=d["reverse"], gradient=d["gradient"],
-        protocol=d["protocol"], brightness=d["brightness"]))
+        with contextlib.suppress(asyncio.CancelledError):
+            await old
+    if body.get("stop"):
+        app[OUTPUT].release(d["ip"])
+        return web.json_response({"ok": True})
+    if app[RUNNER].player.playing:  # stopping lets go of every light, which makes a lit test blink
+        await app[RUNNER].stop()
+    settings = dict(reverse=d["reverse"], gradient=d["gradient"], protocol=d["protocol"], brightness=d["brightness"])
+    if rgb is None:
+        task = run_test_pattern(app[OUTPUT], d["ip"], d["segments"], seconds, **settings)
+    else:
+        task = run_hold(app[OUTPUT], d["ip"], rgb, d["segments"], seconds, **settings)
+    tests[d["ip"]] = asyncio.create_task(task)
     return web.json_response({"ok": True, "seconds": seconds})
 
 
