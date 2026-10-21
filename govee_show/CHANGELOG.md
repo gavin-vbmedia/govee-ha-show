@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.53
+
+- The selection on the **Music** tab is much easier to see: the selected waveform turns green, everything
+  outside it is dimmed, and its edges are solid lines with grips across the ruler.
+
 ## 0.2.52
 
 - Easier shortening on the **Music** tab. Once a song is detected, selection edges snap to bars (or beats);
