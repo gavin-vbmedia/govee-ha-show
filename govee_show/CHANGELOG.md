@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.40
+
+- **Detect** on the Beats panel listens to the song and finds its tempo, beats, bars and sections.
+  Bar starts are drawn as stronger beat markers, and sections (Intro, Verse, Chorus, Bridge, Outro)
+  as tinted, named bands behind the waveform. It runs in the browser, in a background worker, so
+  nothing leaves your network. **Clear** now removes sections too.
+
 ## 0.2.39
 
 - A **Music** tab for editing songs before you build a show. Select part of the waveform to **Cut** it or

@@ -143,9 +143,15 @@ precision. **Save as new file** writes a WAV to `/media/govee_show/` and leaves 
 pick the new file under **Song** in the editor. Edit the song before placing clips, because cutting it
 afterwards won't move them.
 
-**Beats.** Press **B** (or **Tap beat**) in time with the music while it plays, type a **BPM** and
-press **Fill** to add beats from the playhead, or click the beat lane to add or remove one. With
-**Snap** ticked, clips and selections snap to beats and to each other; hold Shift to place freely.
+**Beats.** Press **Detect** to have the editor listen to the song and find its tempo, every beat,
+where each bar starts (drawn as stronger markers) and its sections, which show as tinted, named bands
+behind the waveform (Intro, Verse, Chorus, Bridge, Outro). It runs in your browser in a few seconds,
+with nothing sent anywhere. Detection reads songs as 4/4 and prefers a lively tempo, so a slow ballad
+may come out at double time; type the BPM you want and press **Fill** if so. You can also press **B**
+(or **Tap beat**) in time with the music while it plays, type a **BPM** and press **Fill** to add beats
+from the playhead, or click the beat lane to add or remove one. **Clear** removes the beats and
+sections. With **Snap** ticked, clips and selections snap to beats and to each other; hold Shift to
+place freely.
 
 **The timeline.** Each light has a track, with the **House** lane at the top. Scroll with the mouse
 wheel; zoom with the **−** and **+** buttons in the Timeline panel, the + and − keys, or
