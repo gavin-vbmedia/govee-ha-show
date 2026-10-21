@@ -241,6 +241,13 @@ button.swatch:hover { border-color: var(--text); }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
 .panel-move { padding: 0 6px; line-height: 1.2; border-color: transparent; color: var(--muted); }
 .panel-move:hover { color: var(--text); }
+/* A collapsed panel shows only its title row; the arrow before the title folds and unfolds it. */
+.panel-fold { padding: 0 4px; line-height: 1.2; border-color: transparent; color: var(--muted); margin-right: -2px; }
+.panel-fold:hover { color: var(--text); }
+.panel-head { justify-content: flex-start; }
+.panel-head > .section-label { flex: 1; }
+.panel.collapsed > :not(.panel-head) { display: none; }
+.panel.collapsed { padding-bottom: 6px; }
 .panel-tools { display: flex; gap: 4px; margin-left: auto; }
 .panel-tools button { padding: 0 8px; line-height: 1.3; }
 .dock { display: flex; gap: 8px; }

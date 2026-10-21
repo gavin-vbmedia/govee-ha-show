@@ -36,7 +36,8 @@ const OLD_DEFAULT = {
 };
 const KEY = "goveeshow.layout";
 
-// Saved as { place: {panel: dock}, order: [panels], frame }; panels sit in their dock in `order`.
+// Saved as { place: {panel: dock}, order: [panels], frame, collapsed: [panels] }; panels sit in
+// their dock in `order`, and collapsed ones show just their title.
 // Older versions saved only the place map, which still loads with the default order.
 export function loadLayout() {
   let saved = {};
@@ -50,7 +51,8 @@ export function loadLayout() {
   const order = (Array.isArray(saved.order) ? saved.order : []).filter((k, i, a) => k in PANELS && a.indexOf(k) === i);
   for (const k of DEFAULT_ORDER) if (!order.includes(k)) order.push(k);
   const frame = saved.frame in FRAMES ? saved.frame : DEFAULT_FRAME;
-  return { place, order, frame };
+  const collapsed = (Array.isArray(saved.collapsed) ? saved.collapsed : []).filter((k) => k in PANELS && !ALWAYS_SHOWN.has(k));
+  return { place, order, frame, collapsed };
 }
 
 const gridAreas = (frame) => FRAMES[frame].areas.map((r) => `"${r}"`).join(" ");
@@ -92,6 +94,12 @@ export class Layout {
       btn.addEventListener("click", (e) => { e.stopPropagation(); this.openMenu(panel.dataset.panel, btn); });
       const head = panel.querySelector(".panel-head");
       head.append(btn);
+      if (!ALWAYS_SHOWN.has(panel.dataset.panel)) {
+        const fold = document.createElement("button");
+        fold.className = "panel-fold ghost";
+        fold.addEventListener("click", (e) => { e.stopPropagation(); this.toggleCollapsed(panel.dataset.panel); });
+        head.prepend(fold);
+      }
       this.makeDraggable(panel, head);
     }
     for (const [name, dock] of Object.entries(this.docks)) this.makeDropZone(name, dock);
@@ -122,6 +130,15 @@ export class Layout {
     this.move(panel, dock, by < 0 ? same[i] : same[i + 1] || null);
   }
 
+  // Shows just a panel's title, or all of it again.
+  toggleCollapsed(panel) {
+    const { collapsed } = this.layout;
+    const i = collapsed.indexOf(panel);
+    if (i < 0) collapsed.push(panel); else collapsed.splice(i, 1);
+    saveLayout(this.layout);
+    this.apply();
+  }
+
   setFrame(frame) {
     if (!(frame in FRAMES)) return;
     this.layout.frame = frame;
@@ -130,7 +147,7 @@ export class Layout {
   }
 
   reset() {
-    this.layout = { place: { ...DEFAULT_LAYOUT }, order: [...DEFAULT_ORDER], frame: DEFAULT_FRAME };
+    this.layout = { place: { ...DEFAULT_LAYOUT }, order: [...DEFAULT_ORDER], frame: DEFAULT_FRAME, collapsed: [] };
     saveLayout(this.layout);
     this.apply();
   }
@@ -147,6 +164,14 @@ export class Layout {
       if (!el) continue;
       el.hidden = place[key] === HIDDEN;
       if (!el.hidden) this.docks[place[key]].append(el);
+      const folded = this.layout.collapsed.includes(key);
+      el.classList.toggle("collapsed", folded);
+      const fold = el.querySelector(".panel-fold");
+      if (fold) {
+        fold.textContent = folded ? "▸" : "▾";
+        fold.title = folded ? `Show ${PANELS[key]}` : `Collapse ${PANELS[key]} to its title`;
+        fold.setAttribute("aria-expanded", String(!folded));
+      }
     }
     for (const d of Object.values(this.docks)) d.classList.toggle("empty", !d.querySelector(".panel:not([hidden])"));
     this.updateSticky();

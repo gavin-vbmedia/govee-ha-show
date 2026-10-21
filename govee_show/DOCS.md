@@ -466,7 +466,8 @@ title to move it to the top, left, middle, right or bottom, or to change its ord
 bar shows where it will land. The **⋯** button in its corner does the same from a menu: it shows a
 small picture of the page, so click the area you want the panel in. **Earlier** and **Later**
 change its order, which also works on a touch screen. Any panel except the Timeline can be
-**Hidden**.
+**Hidden**. To keep a panel to hand but out of the way, press the **▾** before its name to
+collapse it to its title, and **▸** to open it again.
 
 The **page layout** sets how those five areas fit together. Pick it at the bottom of any panel's
 **⋯** menu or under **Settings → Layout**:
