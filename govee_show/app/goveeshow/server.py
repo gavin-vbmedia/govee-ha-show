@@ -91,6 +91,35 @@ async def get_devices(request):
     return web.json_response(request.app[STORAGE].load_devices())
 
 
+_PART_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+MAX_PARTS = 32
+
+
+def _clean_parts(parts, segments: int) -> list:
+    """A light split into parts: each a named run of its segments (1-based, inclusive). Parts can't
+    overlap; segments outside every part stay off in shows."""
+    if not parts:
+        return []
+    if not isinstance(parts, list) or len(parts) > MAX_PARTS:
+        raise web.HTTPBadRequest(text=f"parts must be a list of up to {MAX_PARTS}")
+    clean, used = [], set()
+    for p in parts:
+        try:
+            pid, start, end = str(p["id"]), int(p["from"]), int(p["to"])
+        except (KeyError, TypeError, ValueError):
+            raise web.HTTPBadRequest(text="each part needs an id, from and to")
+        if not _PART_ID.match(pid) or any(c["id"] == pid for c in clean):
+            raise web.HTTPBadRequest(text="part ids must be short and unique")
+        if not 1 <= start <= end <= segments:
+            raise web.HTTPBadRequest(text=f"a part must run within segments 1-{segments}")
+        span = set(range(start, end + 1))
+        if span & used:
+            raise web.HTTPBadRequest(text="parts can't overlap")
+        used |= span
+        clean.append({"id": pid, "name": str(p.get("name") or f"Part {len(clean) + 1}")[:64], "from": start, "to": end})
+    return sorted(clean, key=lambda c: c["from"])
+
+
 def _clean_device(d: dict) -> dict:
     """A device with no IP is planned: it has tracks in shows but nothing to send to yet."""
     ip = str(d.get("ip") or "").strip()
@@ -123,7 +152,8 @@ def _clean_device(d: dict) -> dict:
     return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64],
             "ip": ip, "sku": str(d.get("sku", "")), "segments": segments,
             "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient")),
-            "protocol": protocol, "brightness": brightness, "bulbs": bulbs}
+            "protocol": protocol, "brightness": brightness, "bulbs": bulbs,
+            "parts": _clean_parts(d.get("parts"), segments)}
 
 
 async def put_devices(request):

@@ -466,21 +466,42 @@ export function showDuration(show) {
 // Bake every frame into the layout the Python player reads (see baked.py).
 // devices maps device id -> {segments}. Tracks without a known device are skipped. positions maps
 // device id -> each segment's [u, v] on the house (or null), for the House lane's clips.
+// A light split into parts (devices[id].parts) has a track per part instead of one for the whole
+// light: devices holds each part too, keyed "lightId#partId" with parent, from and to (1-based,
+// inclusive). The bake puts the parts back together into the light's own frame, and its segments
+// outside every part stay off. A split light's own track is not played.
 export function bake(show, devices, fps = FPS, positions = {}) {
   const houseClips = (show.tracks || []).find((tr) => tr.device === HOUSE)?.clips || [];
-  const tracks = (show.tracks || []).filter((tr) => devices[tr.device]);
+  const lights = []; // [{device, segments, members: [{track, offset, segments}]}] in track order
+  const byLight = {};
+  for (const tr of show.tracks || []) {
+    const dev = devices[tr.device];
+    if (!dev || dev.parts?.length) continue;
+    const light = dev.parent ? devices[dev.parent] : dev;
+    if (!light) continue;
+    const id = dev.parent || tr.device;
+    let entry = byLight[id];
+    if (!entry) {
+      entry = byLight[id] = { device: id, segments: light.segments, members: [] };
+      lights.push(entry);
+    }
+    entry.members.push({ track: tr, device: tr.device, offset: dev.parent ? dev.from - 1 : 0, segments: dev.segments });
+  }
   const header = {
     fps,
     frames: Math.ceil(showDuration(show) * fps),
-    tracks: tracks.map((tr) => ({ device: tr.device, segments: devices[tr.device].segments })),
+    tracks: lights.map((l) => ({ device: l.device, segments: l.segments })),
   };
-  // Govee scene clips: the player hands those lights to the scene between these frames.
+  // Govee scene clips: the player hands those lights (the whole light, for a part) to the scene
+  // between these frames.
   const scenes = [];
-  tracks.forEach((tr, k) => {
-    for (const c of tr.clips) {
-      if (c.effect === "scene" && c.code) {
-        scenes.push({ track: k, start: Math.max(0, Math.round(c.start * fps)), end: Math.round(c.end * fps),
-          code: c.code, param: c.param || "" });
+  lights.forEach((l, k) => {
+    for (const m of l.members) {
+      for (const c of m.track.clips) {
+        if (c.effect === "scene" && c.code) {
+          scenes.push({ track: k, start: Math.max(0, Math.round(c.start * fps)), end: Math.round(c.end * fps),
+            code: c.code, param: c.param || "" });
+        }
       }
     }
   });
@@ -494,12 +515,14 @@ export function bake(show, devices, fps = FPS, positions = {}) {
   let off = 9 + headerBytes.length;
   for (let f = 0; f < header.frames; f++) {
     const time = f / fps;
-    tracks.forEach((tr, k) => {
-      const n = header.tracks[k].segments;
-      const frame = renderTrack(tr.clips, time, n, out.subarray(off, off + n * 3));
-      if (houseClips.length && positions[tr.device]) applyHouse(houseClips, time, positions[tr.device], frame);
-      off += n * 3;
-    });
+    for (const l of lights) {
+      for (const m of l.members) {
+        const at = off + m.offset * 3;
+        const frame = renderTrack(m.track.clips, time, m.segments, out.subarray(at, at + m.segments * 3));
+        if (houseClips.length && positions[m.device]) applyHouse(houseClips, time, positions[m.device], frame);
+      }
+      off += l.segments * 3;
+    }
   }
   return out;
 }

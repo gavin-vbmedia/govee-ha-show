@@ -157,8 +157,24 @@ async function loadDevices() {
   indexDevices();
 }
 
+// A light split into parts plays as one pseudo-light per part, keyed "light#part". Segments
+// outside every part stay off. The whole light's own track isn't played.
+const partId = (d, p) => `${d.id}#${p.id}`;
+function partDevice(d, p) {
+  const segments = p.to - p.from + 1;
+  return { ...d, id: partId(d, p), name: `${d.name} · ${p.name}`, partName: p.name, parent: d.id,
+    from: p.from, to: p.to, segments, parts: undefined,
+    bulbs: d.bulbs ? Math.max(1, Math.round(d.bulbs * segments / d.segments)) : null };
+}
+// The device a track plays on, or null when it doesn't play (a missing or split light).
+const playingDev = (tr) => { const d = app.devices[tr.device]; return d && !d.parts?.length ? d : null; };
+
 function indexDevices() {
-  app.devices = Object.fromEntries(app.deviceList.map((d) => [d.id, d]));
+  app.devices = {};
+  for (const d of app.deviceList) {
+    app.devices[d.id] = d;
+    for (const p of d.parts || []) app.devices[partId(d, p)] = partDevice(d, p);
+  }
   ensureTracks();
   renderDevices();
   layoutPreview();
@@ -171,12 +187,40 @@ function ensureTracks() {
     app.show.tracks.unshift({ device: HOUSE, clips: [] });
     app.selected = null; // track numbers have moved
   }
+  const tracks = app.show.tracks, before = tracks.map((t) => t.device).join();
+  const has = (id) => tracks.some((t) => t.device === id);
   for (const d of app.deviceList) {
-    if (!app.show.tracks.some((t) => t.device === d.id)) app.show.tracks.push({ device: d.id, clips: [] });
+    if (!d.parts?.length) {
+      // Back where its parts were, if it had any.
+      const at = tracks.findIndex((t) => t.device.startsWith(`${d.id}#`));
+      if (!has(d.id)) tracks.splice(at < 0 ? tracks.length : at, 0, { device: d.id, clips: [] });
+      continue;
+    }
+    // Part tracks go where the whole light's track sits (just under it while it has clips), in order.
+    let at = tracks.findIndex((t) => t.device === d.id || app.devices[t.device]?.parent === d.id);
+    if (at < 0) at = tracks.length;
+    else if (tracks[at].device === d.id) at++;
+    for (const p of d.parts) {
+      const id = partId(d, p);
+      const i = tracks.findIndex((t) => t.device === id);
+      if (i >= 0) { at = Math.max(at, i + 1); continue; }
+      tracks.splice(at, 0, { device: id, clips: [] });
+      at++;
+    }
+    // The whole light's track goes once it has nothing on it.
+    const whole = tracks.findIndex((t) => t.device === d.id);
+    if (whole >= 0 && !tracks[whole].clips.length) tracks.splice(whole, 1);
   }
+  // Empty tracks for parts that no longer exist.
+  app.show.tracks = tracks.filter((t) => !t.device.includes("#") || app.devices[t.device] || t.clips.length);
+  if (app.show.tracks.map((t) => t.device).join() !== before) app.selected = null; // track numbers have moved
 }
 
 async function saveDevices() {
+  // Parts have to fit the light, so a light made shorter trims them.
+  for (const d of app.deviceList) {
+    d.parts = (d.parts || []).filter((p) => p.from <= d.segments).map((p) => ({ ...p, to: Math.min(p.to, d.segments) }));
+  }
   try {
     app.deviceList = await api("api/devices", { method: "PUT", json: app.deviceList });
     indexDevices();
@@ -256,8 +300,100 @@ function renderDevices() {
     test.disabled = !d.ip;
     actions.append(test, " ", remove);
     tr.append(actions);
-    rows.append(tr);
+    rows.append(tr, partsRow(d));
   }
+}
+
+// Runs of segments (1-based, inclusive) that no part covers.
+function unusedRuns(d) {
+  const used = new Uint8Array(d.segments + 2);
+  for (const p of d.parts || []) for (let s = p.from; s <= p.to; s++) used[s] = 1;
+  const runs = [];
+  for (let s = 1; s <= d.segments; s++) {
+    if (used[s]) continue;
+    const from = s;
+    while (s < d.segments && !used[s + 1]) s++;
+    runs.push([from, s]);
+  }
+  return runs;
+}
+
+const runText = (runs) => runs.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(", ");
+
+// Parts split a light into pieces that each get their own track, like a roof line that runs
+// round a corner. Segments outside every part stay off in shows.
+function partsRow(d) {
+  const tr = document.createElement("tr");
+  tr.className = "parts-row";
+  const td = document.createElement("td");
+  td.colSpan = 10;
+  tr.append(td);
+  const parts = d.parts || [];
+  const add = () => {
+    // The first gap after the last part, so parts go on round the light in order.
+    const runs = unusedRuns(d), end = Math.max(0, ...parts.map((p) => p.to));
+    const run = runs.find(([a]) => a > end) || runs[0];
+    if (!run) { status("Every segment is already in a part", true); return; }
+    let n = 1;
+    while (parts.some((p) => p.id === `p${n}` || p.name === `Part ${n}`)) n++;
+    d.parts = [...parts, { id: `p${n}`, name: `Part ${n}`, from: run[0], to: run[1] }].sort((a, b) => a.from - b.from);
+    saveDevices();
+  };
+  if (!parts.length) {
+    const b = button("Split into parts…", add, "ghost small");
+    b.title = "Give stretches of this light their own tracks, and leave segments you can't see off";
+    td.append(b);
+    return tr;
+  }
+  const label = document.createElement("span");
+  label.className = "section-label";
+  label.textContent = "Parts";
+  td.append(label);
+  for (const p of parts) {
+    const chip = document.createElement("span");
+    chip.className = "part-chip";
+    const name = document.createElement("input");
+    Object.assign(name, { value: p.name, size: 10, maxLength: 40, title: "The part's name on the timeline" });
+    name.addEventListener("change", () => { p.name = name.value.trim() || p.name; saveDevices(); });
+    const num = (key) => {
+      const el = document.createElement("input");
+      Object.assign(el, { type: "number", min: 1, max: d.segments, value: p[key], className: "seg-num",
+        title: key === "from" ? "First segment, counted from the start of the show" : "Last segment" });
+      el.addEventListener("change", () => {
+        const v = Math.round(Number(el.value));
+        const next = { ...p, [key]: v };
+        const clash = parts.find((o) => o !== p && o.from <= next.to && next.from <= o.to);
+        if (!(v >= 1 && v <= d.segments) || next.from > next.to) {
+          status(`Segments run from 1 to ${d.segments}, and a part's first comes before its last`, true);
+        } else if (clash) {
+          status(`That overlaps ${clash.name}`, true);
+        } else {
+          p[key] = v;
+          d.parts.sort((a, b) => a.from - b.from);
+          saveDevices();
+          return;
+        }
+        el.value = p[key];
+      });
+      return el;
+    };
+    const del = button("✕", () => {
+      d.parts = parts.filter((o) => o !== p);
+      saveDevices();
+    }, "ghost small");
+    del.title = `Remove ${p.name}. Its clips stay in your shows.`;
+    chip.append(name, " segments ", num("from"), "–", num("to"), del);
+    td.append(chip);
+  }
+  const more = button("+ Add part", add, "ghost small");
+  more.disabled = !unusedRuns(d).length;
+  td.append(more);
+  const unused = unusedRuns(d);
+  const note = document.createElement("span");
+  note.className = "hint";
+  note.textContent = unused.length ? `Unused, off in shows: ${runText(unused)}` : "Every segment is in a part";
+  td.append(note);
+  return tr;
 }
 
 // Find segments: light one segment at a time and halve the range on each answer. A light with
@@ -424,7 +560,7 @@ const pctx = preview.getContext("2d");
 const ROW_H = 26, LABEL_W = 140;
 
 function previewTracks() {
-  return app.show.tracks.filter((t) => app.devices[t.device]);
+  return app.show.tracks.filter(playingDev);
 }
 
 function layoutPreview() {
@@ -471,8 +607,7 @@ new ResizeObserver(layoutPreview).observe(preview);
 const house = new House({
   api, status,
   frameFor(dev) {
-    const tr = app.show.tracks.find((t) => t.device === dev.id);
-    return tr ? lightFrame(tr, dev, app.time, housePositions()) : new Uint8Array(dev.segments * 3);
+    return physicalFrame(dev, app.time, housePositions());
   },
 });
 
@@ -492,7 +627,12 @@ function housePositionsAll() {
   const now = performance.now();
   if (now - posMemo.at > 100) {
     house.devices = app.deviceList;
-    Object.assign(posMemo, { at: now, value: house.positions() });
+    const value = house.positions();
+    // A part sits on its slice of the light's traced path.
+    for (const d of app.deviceList) {
+      for (const p of d.parts || []) if (value[d.id]) value[partId(d, p)] = value[d.id].slice(p.from - 1, p.to);
+    }
+    Object.assign(posMemo, { at: now, value });
   }
   return posMemo.value;
 }
@@ -502,6 +642,18 @@ function lightFrame(tr, dev, time, pos) {
   const rgb = renderTrack(tr.clips, time, dev.segments);
   if (pos[dev.id]) applyHouse(houseClips(), time, pos[dev.id], rgb);
   return rgb;
+}
+
+// A whole physical light's colours: from its own track, or from its parts' tracks with the
+// segments outside every part left off.
+function physicalFrame(dev, time, pos) {
+  const out = new Uint8Array(dev.segments * 3);
+  const members = dev.parts?.length ? dev.parts.map((p) => app.devices[partId(dev, p)]) : [dev];
+  for (const m of members) {
+    const tr = m && app.show.tracks.find((t) => t.device === m.id);
+    if (tr) out.set(lightFrame(tr, m, time, pos), m.parent ? (m.from - 1) * 3 : 0);
+  }
+  return out;
 }
 
 function drawHouse() {
@@ -779,7 +931,7 @@ function drawClipPreview() {
   if (!dev) { if (clipPreview.dev) stopLightPreview(); return; }
   const rgb = renderTrack([clip], t, dev.segments);
   drawStrip(c, rgb, dev.segments, (dev.brightness ?? 100) / 100);
-  const onLight = previewOnLight() && dev.ip && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
+  const onLight = previewOnLight() && dev.ip && !dev.parts?.length && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
   if (onLight) sendPreview(dev, rgb);
   else if (clipPreview.dev) stopLightPreview();
 }
@@ -802,8 +954,14 @@ function drawStrip(c, rgb, n, cap = 1) {
   }
 }
 
-// The add-on applies the light's brightness cap, so the clip's own colours are sent.
+// The add-on applies the light's brightness cap, so the clip's own colours are sent. A part
+// lights its own slice of the light, with the rest off.
 function sendPreview(dev, rgb) {
+  if (dev.parent) {
+    const light = app.devices[dev.parent], full = new Uint8Array(light.segments * 3);
+    full.set(rgb.subarray(0, dev.segments * 3), (dev.from - 1) * 3);
+    [dev, rgb] = [light, full];
+  }
   const now = performance.now();
   if (clipPreview.pending || now - clipPreview.sent < PREVIEW_SEND_MS || now - clipPreview.failedAt < 5000) return;
   if (clipPreview.dev && clipPreview.dev !== dev.id) { stopLightPreview(); return; }
@@ -1159,7 +1317,7 @@ function scenePicker(clip, dev) {
 const trackName = (i) => (isHouse(i) ? "the House lane"
   : app.devices[app.show.tracks[i]?.device]?.name || "missing light");
 // The other lights' tracks (never the House lane, whose effects are a different kind).
-const otherTracks = (i) => app.show.tracks.map((_, k) => k).filter((k) => k !== i && !isHouse(k));
+const otherTracks = (i) => app.show.tracks.map((_, k) => k).filter((k) => k !== i && !isHouse(k) && playingDev(app.show.tracks[k]));
 const clone = (clip) => JSON.parse(JSON.stringify(clip));
 
 function copySelection() {
@@ -1932,7 +2090,7 @@ async function save() {
     prefs.set("lastShow", id);
   }
   const pos = housePositions();
-  const key = JSON.stringify([app.deviceList.map((d) => [d.id, d.segments]), pos]);
+  const key = JSON.stringify([app.deviceList.map((d) => [d.id, d.segments, d.parts]), pos]);
   if (app.dirty || app.bakedKey === null) {
     app.show.duration = app.duration();
     const edits = app.edits;
@@ -2181,7 +2339,7 @@ async function offsetChanged(e) {
 }
 
 // transport -------------------------------------------------------------------
-const lightsOn = () => $("lights").checked && app.show.tracks.some((t) => app.devices[t.device]?.ip);
+const lightsOn = () => $("lights").checked && app.show.tracks.some((t) => playingDev(t)?.ip);
 const offset = () => (Number($("offset").value) || 0) / 1000;
 
 function currentTime() {
@@ -2440,7 +2598,7 @@ function generateDialog() {
 }
 
 async function generate({ colors, style, house }) {
-  const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && app.devices[tr.device])
+  const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && playingDev(tr))
     .map((tr) => ({ id: tr.device, segments: app.devices[tr.device].segments }));
   if (!lights.length) { status("Add your lights on the Devices tab first", true); return; }
   // Listen to the song first if that hasn't been done yet.
@@ -2552,7 +2710,7 @@ function aiLights() {
       if (traced) lights.push({ name: "House", trackIndex: i, segments: 0, house: true });
       return;
     }
-    const dev = app.devices[tr.device];
+    const dev = playingDev(tr);
     if (!dev) return;
     let name = dev.name || tr.device;
     for (let k = 2; seen.has(name.toLowerCase()); k++) name = `${dev.name || tr.device} (${k})`;

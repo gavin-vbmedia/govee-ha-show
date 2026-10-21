@@ -53,7 +53,7 @@ async def test_devices_round_trip_and_validation(client):
     devices = await (await client.get("/api/devices")).json()
     assert devices == [{"id": "192.168.1.50", "name": "Porch", "ip": "192.168.1.50", "sku": "",
                         "segments": 12, "reverse": False, "gradient": False,
-                        "protocol": "standard", "brightness": 100, "bulbs": None}]
+                        "protocol": "standard", "brightness": 100, "bulbs": None, "parts": []}]
     resp = await client.put("/api/devices", json=[{"ip": "192.168.1.50", "segments": 12, "bulbs": 200}])
     assert (await resp.json())[0]["bulbs"] == 200
     assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "bulbs": 5000}])).status == 400
@@ -61,6 +61,19 @@ async def test_devices_round_trip_and_validation(client):
     assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "protocol": "dmx"}])).status == 400
     assert (await client.put("/api/devices", json=[{"ip": "nope"}])).status == 400
     assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "segments": 0}])).status == 400
+
+
+async def test_device_parts_validation(client):
+    roof = {"ip": "192.168.1.60", "name": "Roof", "segments": 60}
+    parts = [{"id": "side", "name": "Side", "from": 24, "to": 40}, {"id": "front", "name": "Front roof", "from": 3, "to": 23}]
+    resp = await client.put("/api/devices", json=[{**roof, "parts": parts}])
+    assert resp.status == 200
+    assert [p["id"] for p in (await resp.json())[0]["parts"]] == ["front", "side"]  # in segment order
+    for bad in ([{"id": "a", "from": 0, "to": 3}], [{"id": "a", "from": 3, "to": 61}],
+                [{"id": "a", "from": 5, "to": 3}], [{"id": "a", "from": 1, "to": 5}, {"id": "b", "from": 5, "to": 9}],
+                [{"id": "a", "from": 1, "to": 2}, {"id": "a", "from": 3, "to": 4}], [{"id": "bad id!", "from": 1, "to": 2}],
+                [{"name": "x"}], "nope"):
+        assert (await client.put("/api/devices", json=[{**roof, "parts": bad}])).status == 400
 
 
 async def test_show_lifecycle(client):
