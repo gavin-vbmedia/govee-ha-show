@@ -23,7 +23,8 @@ editor inside Home Assistant, with no external sequencing software or separate h
   still lines up; those bulbs still play in the real show
 - Put your lights in any order (drag them on the Devices tab) and every show's timeline follows
 - Split a light into parts (say, the front, side and back of a roof line) that each get their own
-  track; segments in no part stay off during the show
+  track, while the light's own track still plays across all of them as one; segments in no part
+  stay off during the show
 - Draw icicle lights as hanging drops and spotlights (such as the H7093) as beams aimed at the wall
 - A sidebar lists every light so houses with many lights stay manageable
 
