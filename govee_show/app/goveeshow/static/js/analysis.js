@@ -353,3 +353,25 @@ export function analyse(samples, rate) {
     sections: findSections(units, f, duration),
   };
 }
+
+// Runs analyse() in a worker so the page stays responsive; falls back to the main thread.
+export function analyseInWorker(samples, rate) {
+  let worker;
+  try {
+    worker = new Worker(new URL("./analysis-worker.js", import.meta.url), { type: "module" });
+  } catch {
+    return Promise.resolve(analyse(samples, rate));
+  }
+  return new Promise((resolve, reject) => {
+    worker.onmessage = (e) => {
+      worker.terminate();
+      if (e.data.error) reject(new Error(e.data.error));
+      else resolve(e.data.result);
+    };
+    worker.onerror = (e) => {
+      worker.terminate();
+      reject(new Error(e.message || "the analysis stopped"));
+    };
+    worker.postMessage({ samples, rate }, [samples.buffer]);
+  });
+}

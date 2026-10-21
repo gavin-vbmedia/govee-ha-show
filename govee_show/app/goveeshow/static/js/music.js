@@ -2,8 +2,10 @@
 //
 // An edit is a list of pieces of source songs played one after another, overlapping by a short
 // crossfade at each join, plus a fade in and out. The source files are never changed: Save renders
-// the pieces to a WAV and uploads it like any other song, ready to pick in the editor.
+// the pieces to a WAV and uploads it like any other song, ready to pick in the editor. Detect finds
+// a song's beats and sections and keeps them with the file, for any show that uses it.
 
+import { analyseInWorker, toMono } from "./analysis.js";
 import { fmtTime } from "./timeline.js";
 
 const EPS = 1e-6;
@@ -158,7 +160,9 @@ export function editName(path, taken = []) {
 const $ = (id) => document.getElementById(id);
 const keyOf = (ref) => `${ref.source}:${ref.path}`;
 const nameOf = (ref) => ref.path.split("/").pop();
-const urlOf = (ref) => `api/audio/file?source=${encodeURIComponent(ref.source)}&path=${encodeURIComponent(ref.path)}`;
+const query = (ref) => `source=${encodeURIComponent(ref.source)}&path=${encodeURIComponent(ref.path)}`;
+const urlOf = (ref) => `api/audio/file?${query(ref)}`;
+const infoUrl = (ref) => `api/audio/info?${query(ref)}`;
 
 export class MusicEditor {
   // host provides: api(path, opts), status(msg, error), songs() -> [ref], songsChanged() -> Promise.
@@ -176,6 +180,7 @@ export class MusicEditor {
     this.view = { start: 0, span: 0 };
     this.playing = null;
     this.dirty = false;
+    this.info = null; // the base song's saved beats and sections
     this.wire();
     new ResizeObserver(() => this.layout()).observe(this.canvas.parentElement);
   }
@@ -218,6 +223,7 @@ export class MusicEditor {
       const key = await this.source(ref);
       this.pieces = [{ src: key, start: 0, end: this.sources[key][0].length / this.audio.sampleRate }];
       this.base = ref;
+      this.info = null;
       this.history = [];
       this.future = [];
       this.dirty = false;
@@ -226,9 +232,33 @@ export class MusicEditor {
       $("music-src").value = JSON.stringify(ref);
       $("music-name").value = editName(ref.path, this.host.songs().map((r) => r.path));
       this.changed(true);
+      const info = await this.host.api(infoUrl(ref)).catch(() => null);
+      if (this.base === ref) { this.info = info; this.updateControls(); this.draw(); }
     } catch (e) {
       this.host.status(`Couldn't load the song: ${e.message}`, true);
     }
+  }
+
+  // Finds the beats, bars and sections of the base song and saves them with the file.
+  async detect() {
+    if (!this.base) return;
+    if (this.dirty) return this.host.status("Save the edit as a new file first; it's detected when saved", true);
+    const ref = this.base, channels = this.sources[keyOf(ref)];
+    const { samples, rate } = toMono(channels, this.audio.sampleRate);
+    this.host.status(`Listening to ${nameOf(ref)}…`);
+    $("music-detect").disabled = true;
+    try {
+      const r = await analyseInWorker(samples, rate);
+      const info = { tempo: r.tempo || null, beats: r.beats, bars: r.bars, sections: r.sections };
+      await this.host.api(infoUrl(ref), { method: "PUT", json: info });
+      if (this.base === ref) this.info = info;
+      const parts = `${info.sections.length} section${info.sections.length === 1 ? "" : "s"}`;
+      this.host.status(info.tempo ? `Found ${info.beats.length} beats at ${info.tempo} BPM, and ${parts}` : `No steady beat found; found ${parts}`);
+    } catch (e) {
+      this.host.status(`Couldn't analyse the song: ${e.message}`, true);
+    }
+    this.updateControls();
+    this.draw();
   }
 
   async upload(file) {
@@ -326,6 +356,12 @@ export class MusicEditor {
     for (const id of ["music-play", "music-insert", "music-append", "music-save", "music-zoom-in", "music-zoom-out", "music-fit"]) $(id).disabled = !has;
     for (const id of ["music-cut", "music-keep", "music-play-sel", "music-zoom-sel"]) $(id).disabled = !sel;
     $("music-undo").disabled = !this.history.length;
+    $("music-detect").disabled = !this.base || this.dirty;
+    const info = !this.dirty && this.info;
+    $("music-analysis").textContent = !has ? ""
+      : this.dirty ? "Save the edit to find its beats and sections"
+        : info ? `${info.tempo ? `${info.tempo} BPM, ` : ""}${info.beats.length} beats, ${info.sections.length} sections${info.sections.length ? `: ${info.sections.map((x) => x.label).join(", ")}` : ""}`
+          : "Not detected yet";
     $("music-redo").disabled = !this.future.length;
     $("music-sel-start").disabled = $("music-sel-end").disabled = !sel;
     $("music-sel-start").value = sel ? sel.start.toFixed(2) : "";
@@ -387,12 +423,22 @@ export class MusicEditor {
     form.append("file", blob, name);
     try {
       const ref = await this.host.api("api/audio", { method: "POST", body: form });
-      delete this.sources[keyOf(ref)]; // replaced on disk
+      // Carry on from the saved file, so Detect and further edits work on it.
+      const key = keyOf(ref);
+      this.sources[key] = this.rendered;
+      this.refs[key] = ref;
+      this.pieces = [{ src: key, start: 0, end: this.rendered[0].length / this.audio.sampleRate }];
+      this.base = ref;
+      this.info = null;
+      this.dirty = false;
+      $("music-fadein").value = $("music-fadeout").value = 0;
+      this.changed();
       await this.host.songsChanged();
       this.fillSongLists();
-      this.dirty = false;
-      $("music-name").value = name;
+      $("music-src").value = JSON.stringify(ref);
+      $("music-name").value = editName(ref.path, this.host.songs().map((r) => r.path));
       this.host.status(`Saved ${ref.path}. Pick it under Song in the editor.`);
+      await this.detect();
     } catch (e) {
       this.host.status(`Couldn't save: ${e.message}`, true);
     }
@@ -480,6 +526,29 @@ export class MusicEditor {
       }
       const hgt = Math.max(1, m * amp);
       ctx.fillRect(px, mid - hgt, 1, hgt * 2);
+    }
+
+    // the song's beats (bars taller) and sections, while it's unedited
+    if (this.info && !this.dirty) {
+      const { start, span } = this.view, end = start + span;
+      ctx.font = "11px system-ui, sans-serif";
+      this.info.sections.forEach((sec, i) => {
+        if (sec.end < start || sec.start > end) return;
+        const x0 = this.x(sec.start), x1 = this.x(sec.end);
+        ctx.fillStyle = col("--beat");
+        ctx.globalAlpha = i % 2 ? 0.06 : 0.12;
+        ctx.fillRect(x0, RULER_H, x1 - x0, h - RULER_H);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = col("--muted");
+        ctx.fillText(sec.label, Math.max(x0, 0) + 4, h - 6);
+      });
+      ctx.fillStyle = col("--beat");
+      const bars = new Set(this.info.bars.map((b) => b.toFixed(3)));
+      const visible = this.info.beats.filter((b) => b >= start && b <= end);
+      // Too dense to read when zoomed right out, so beats show once there's room.
+      if (visible.length < w / 4) {
+        for (const b of visible) ctx.fillRect(Math.round(this.x(b)), RULER_H, 1, bars.has(b.toFixed(3)) ? 10 : 5);
+      }
     }
 
     // joins between pieces
@@ -626,6 +695,7 @@ export class MusicEditor {
       $(id).addEventListener("change", () => { this.stop(); if (this.pieces.length) this.dirty = true; this.changed(); });
     }
     $("music-save").addEventListener("click", () => this.save());
+    $("music-detect").addEventListener("click", () => this.detect());
     window.addEventListener("beforeunload", (e) => { if (this.dirty) e.preventDefault(); });
   }
 

@@ -143,6 +143,12 @@ precision. **Save as new file** writes a WAV to `/media/govee_show/` and leaves 
 pick the new file under **Song** in the editor. Edit the song before placing clips, because cutting it
 afterwards won't move them.
 
+**Detect on the Music tab** finds a song's beats, bars and sections and keeps them with the song file,
+drawn over its waveform; a saved edit is detected straight after saving. When a show picks that song
+under **Song**, it takes them automatically (asking first if the show already has beats), and **From
+song** in the Beats panel brings them back later. Detect in the editor also saves its results with the
+song. Each show keeps its own copy, so moving beats in one show doesn't change the song or other shows.
+
 **Beats.** Press **Detect** to have the editor listen to the song and find its tempo, every beat,
 where each bar starts (drawn as stronger markers) and its sections, which show as tinted, named bands
 behind the waveform (Intro, Verse, Chorus, Bridge, Outro). It runs in your browser in a few seconds,

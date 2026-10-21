@@ -320,6 +320,61 @@ async def upload_audio(request):
     return web.json_response({"source": "media", "path": str(dest.relative_to(storage.media_dir))})
 
 
+MAX_MARKS = 50000
+MAX_SECTIONS = 500
+
+
+def _times(v) -> list[float] | None:
+    if not isinstance(v, list) or len(v) > MAX_MARKS:
+        return None
+    out = []
+    for t in v:
+        if isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t) or t < 0:
+            return None
+        out.append(round(float(t), 4))
+    return out
+
+
+def _clean_song_info(body) -> dict | None:
+    """Detect's results for a song: {tempo, beats, bars, sections: [{start, end, label, energy}]}."""
+    if not isinstance(body, dict):
+        return None
+    tempo = body.get("tempo")
+    if tempo is not None and (isinstance(tempo, bool) or not isinstance(tempo, (int, float))
+                              or not math.isfinite(tempo) or not 0 < tempo < 1000):
+        return None
+    beats, bars = _times(body.get("beats", [])), _times(body.get("bars", []))
+    sections = body.get("sections", [])
+    if beats is None or bars is None or not isinstance(sections, list) or len(sections) > MAX_SECTIONS:
+        return None
+    clean = []
+    for sec in sections:
+        if not isinstance(sec, dict):
+            return None
+        span = _times([sec.get("start"), sec.get("end")])
+        energy = sec.get("energy", 0)
+        if span is None or isinstance(energy, bool) or not isinstance(energy, (int, float)) or not math.isfinite(energy):
+            return None
+        clean.append({"start": span[0], "end": span[1], "label": str(sec.get("label", ""))[:40],
+                      "energy": round(float(energy), 4)})
+    return {"tempo": tempo, "beats": beats, "bars": bars, "sections": clean}
+
+
+async def get_song_info(request):
+    q = request.query
+    return web.json_response(request.app[STORAGE].load_song_info(q.get("source", ""), q.get("path", "")))
+
+
+async def put_song_info(request):
+    info = _clean_song_info(await request.json())
+    if info is None:
+        raise web.HTTPBadRequest(text="expected {tempo, beats, bars, sections}")
+    q = request.query
+    if not request.app[STORAGE].save_song_info(q.get("source", ""), q.get("path", ""), info):
+        raise web.HTTPNotFound()
+    return web.json_response({"ok": True})
+
+
 # speakers ----------------------------------------------------------------
 PLAY_MEDIA = 512  # MediaPlayerEntityFeature.PLAY_MEDIA in a media player's supported_features
 
@@ -721,6 +776,8 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/audio", list_audio)
     r.add_post("/api/audio", upload_audio)
     r.add_get("/api/audio/file", get_audio)
+    r.add_get("/api/audio/info", get_song_info)
+    r.add_put("/api/audio/info", put_song_info)
     r.add_get("/api/speakers", list_speakers)
     r.add_put("/api/speakers/delay", put_speaker_delay)
     r.add_put("/api/speakers/show", put_show_speaker)
