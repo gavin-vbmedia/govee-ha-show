@@ -220,12 +220,17 @@
   <div id="preset-palettes" class="palette-list"></div>
 </main>
 <main id="view-presets" class="view" hidden>
-  <p class="hint">Presets are ready-made settings for an effect. Save your own from any clip with <b>Save as
-    preset…</b> in its settings; they show in the effect chooser with a ★ when <b>Show presets</b> is ticked. Here
-    you can rename them, change their settings, duplicate or delete them. Built-in presets can't be changed, but
-    you can apply one to a clip, tweak it and save it as your own.</p>
-  <h2>Your presets</h2>
-  <div id="my-presets" class="preset-groups"></div>
+  <p class="hint">Presets are ready-made settings for an effect. Make your own here with <b>New preset</b>, or
+    save one from any clip with <b>Save as preset…</b>. They show in the effect chooser with a ★ when <b>Show
+    presets</b> is ticked. Changes here save as you make them and don't alter clips already using a preset.</p>
+  <section class="toolbar">
+    <h2>Your presets</h2>
+    <button id="btn-new-preset" class="primary">New preset</button>
+  </section>
+  <div class="preset-layout">
+    <div id="my-presets" class="preset-list"></div>
+    <section id="preset-editor" class="card preset-editor"></section>
+  </div>
 </main>
 <main id="view-settings" class="view settings" hidden>
   <section class="card">

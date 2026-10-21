@@ -1234,7 +1234,6 @@ function renderTrackInspector(i) {
 // your own effect presets -----------------------------------------------------------
 // Saved from a clip, they show in the effect chooser with a ★ and are managed on the Presets tab.
 const presetTabPreview = { items: [], started: 0 };
-let presetSettingsOpen = null; // the preset whose settings are showing on the Presets tab
 const asPreset = (p) => ({ name: p.name, effect: p.effect, params: p.params, label: p.name, mine: true });
 
 async function loadPresets() {
@@ -1314,39 +1313,47 @@ function savePresetFrom(clip) {
   name.select();
 }
 
-// One input for an effect setting, as in the clip's settings. onChange gets the new value.
-function settingInput(p, value, onChange) {
-  let el;
-  if (p.type === "select") {
-    el = document.createElement("select");
-    for (const o of p.options) el.add(new Option(o, o, false, o === value));
-  } else {
-    el = document.createElement("input");
-    el.type = p.type === "range" ? "number" : p.type;
-    if (p.type === "number" || p.type === "range") Object.assign(el, { min: p.min, max: p.max, step: p.step });
-    el.value = value;
-  }
-  const numeric = p.type === "number" || p.type === "range";
-  el.addEventListener("change", () => {
-    const v = numeric ? Number(el.value) : el.value;
-    if (!numeric || Number.isFinite(v)) onChange(v);
+// The Presets tab: a list of your presets by effect on one side, and an editor for the one picked
+// on the other, with a live preview and the same grouped settings as a clip. Changes apply as you
+// make them and save a moment later.
+let presetEditing = null;
+const presetPreviewDev = () => app.devices[prefs.get("presetPreviewLight", "")] || null;
+const presetClip = (p) => ({ effect: p.effect, start: 0, end: 4, ...chosenParams(p.effect, p) });
+const hasColours = (effect) => EFFECTS[effect].params.some((q) => q.type === "color");
+const keepsColours = (p) => EFFECTS[p.effect].params.some((q) => q.type === "color" && q.key in p.params);
+
+// Built-in groups for picking an effect for a preset: lights' effects and the House lane's.
+const PRESET_EFFECT_GROUPS = [["Light effects", false], ["House lane effects", true]];
+
+function newPreset() {
+  chooseEffect({
+    title: "New preset: pick an effect to start from",
+    groups: PRESET_EFFECT_GROUPS, dev: presetPreviewDev(), length: 4,
+    onPick: (key, preset) => {
+      const fx = EFFECTS[key];
+      const name = freePresetName(key, preset ? `My ${preset.label.toLowerCase()}` : `My ${fx.label.toLowerCase()}`);
+      const params = chosenParams(key, preset);
+      const created = asPreset({ name, effect: key, params });
+      app.myPresets.push(created);
+      presetEditing = created;
+      savePresets();
+      renderPresetsTab();
+    },
   });
-  const l = document.createElement("label");
-  l.append(p.label, el);
-  return l;
 }
 
-// The Presets tab: your presets by effect, each previewed, with rename, settings, duplicate and delete.
 function renderPresetsTab() {
-  const box = $("my-presets");
-  if (!box) return;
+  const list = $("my-presets"), editor = $("preset-editor");
+  if (!list) return;
   presetTabPreview.items = [];
   presetTabPreview.started = performance.now();
+  if (!app.myPresets.includes(presetEditing)) presetEditing = app.myPresets[0] || null;
+  list.replaceChildren();
   if (!app.myPresets.length) {
-    box.innerHTML = `<p class="hint">None yet. In the editor, select a clip and press <b>Save as preset…</b>.</p>`;
-    return;
+    list.innerHTML = `<p class="hint">None yet. Press <b>New preset</b>, or select a clip in the editor and press
+      <b>Save as preset…</b>.</p>`;
   }
-  box.replaceChildren();
+  const dev = presetPreviewDev();
   for (const [key, fx] of Object.entries(EFFECTS)) {
     const mine = app.myPresets.filter((p) => p.effect === key);
     if (!mine.length) continue;
@@ -1356,62 +1363,187 @@ function renderPresetsTab() {
     legend.textContent = fx.label;
     g.append(legend);
     for (const preset of mine) {
-      const row = document.createElement("div");
-      row.className = "preset-item";
+      const item = button("", () => { presetEditing = preset; renderPresetsTab(); },
+        `preset-list-item${preset === presetEditing ? " active" : ""}`);
       const strip = document.createElement("canvas");
       strip.className = "fx-strip";
-      presetTabPreview.items.push({ canvas: strip, clip: { effect: key, start: 0, end: 4, ...chosenParams(key, preset) } });
-      const name = document.createElement("input");
-      name.value = preset.name;
-      name.maxLength = 60;
-      name.addEventListener("change", () => {
-        const v = name.value.trim();
-        if (!v) { name.value = preset.name; return; }
-        preset.name = preset.label = freePresetName(key, v, preset);
-        name.value = preset.name;
-        savePresets();
-      });
-      const settings = document.createElement("div");
-      settings.className = "preset-settings";
-      settings.hidden = presetSettingsOpen !== preset;
-      for (const p of fx.params) {
-        if (p.type === "scene") continue;
-        const kept = p.key in preset.params;
-        if (p.type === "color" && !kept) continue; // saved without colours: clips keep theirs
-        settings.append(settingInput(p, preset.params[p.key] ?? p.default, (v) => {
-          preset.params[p.key] = v;
-          savePresets();
-          renderPresetsTab();
-        }));
-      }
-      const edit = button("Settings", () => {
-        settings.hidden = !settings.hidden;
-        presetSettingsOpen = settings.hidden ? null : preset;
-        edit.classList.toggle("active", !settings.hidden);
-      }, settings.hidden ? "ghost" : "ghost active");
-      const dup = button("Duplicate", () => {
-        const copy = asPreset({ name: freePresetName(key, `${preset.name} copy`), effect: key,
-          params: { ...preset.params } });
-        app.myPresets.splice(app.myPresets.indexOf(preset) + 1, 0, copy);
-        savePresets();
-        renderPresetsTab();
-      }, "ghost");
-      const del = button("Delete", () => {
-        if (!confirm(`Delete the preset ${preset.name}? Clips using its settings keep them.`)) return;
-        app.myPresets.splice(app.myPresets.indexOf(preset), 1);
-        savePresets();
-        renderPresetsTab();
-      }, "ghost danger");
-      const colours = document.createElement("span");
-      colours.className = "hint";
-      colours.textContent = fx.params.some((p) => p.type === "color")
-        ? (fx.params.some((p) => p.type === "color" && p.key in preset.params) ? "with colours" : "keeps clip colours")
-        : "";
-      row.append(strip, name, colours, edit, dup, del, settings);
-      g.append(row);
+      const name = document.createElement("span");
+      name.textContent = preset.name;
+      item.append(strip, name);
+      presetTabPreview.items.push({ canvas: strip, clip: presetClip(preset), dev, preset });
+      g.append(item);
     }
-    box.append(g);
+    list.append(g);
   }
+  renderPresetEditor(editor, dev);
+}
+
+// Keeps the previews in step with a preset while its settings change.
+function refreshPresetPreviews(preset) {
+  for (const item of presetTabPreview.items) if (item.preset === preset) item.clip = presetClip(preset);
+}
+
+function renderPresetEditor(box, dev) {
+  box.replaceChildren();
+  const preset = presetEditing;
+  if (!preset) {
+    box.innerHTML = `<p class="hint">Pick a preset to edit it here.</p>`;
+    return;
+  }
+  const fx = EFFECTS[preset.effect];
+  const changed = () => { refreshPresetPreviews(preset); savePresets(); };
+
+  const head = document.createElement("div");
+  head.className = "preset-editor-head";
+  const name = document.createElement("input");
+  name.className = "preset-name";
+  name.value = preset.name;
+  name.maxLength = 60;
+  name.title = "The preset's name";
+  name.addEventListener("change", () => {
+    const v = name.value.trim();
+    if (!v) { name.value = preset.name; return; }
+    preset.name = preset.label = freePresetName(preset.effect, v, preset);
+    savePresets();
+    renderPresetsTab();
+  });
+  const effect = button(`${fx.label} ▾`, () => chooseEffect({
+    title: `Change the effect of ${preset.name}`,
+    groups: PRESET_EFFECT_GROUPS, dev, length: 4, from: { ...preset.params }, current: preset.effect,
+    onPick: (key, start) => {
+      const keep = keepsColours(preset);
+      const params = chosenParams(key, start, preset.params);
+      if (!keep) for (const q of EFFECTS[key].params) if (q.type === "color") delete params[q.key];
+      preset.effect = key;
+      preset.params = params;
+      preset.name = preset.label = freePresetName(key, preset.name, preset);
+      savePresets();
+      renderPresetsTab();
+    },
+  }), "ghost effect-change");
+  effect.title = "Change the effect, or start again from one of its presets";
+  const el = document.createElement("label");
+  el.append("Effect", effect);
+  head.append(name, el);
+
+  // A large looping preview, on a chosen light's segments.
+  const previewRow = document.createElement("div");
+  previewRow.className = "preset-preview";
+  const strip = document.createElement("canvas");
+  strip.className = "fx-strip preset-preview-strip";
+  presetTabPreview.items.push({ canvas: strip, clip: presetClip(preset), dev, preset });
+  const on = document.createElement("select");
+  on.add(new Option("15 segments", ""));
+  for (const d of app.deviceList) on.add(new Option(`${d.name} (${d.segments})`, d.id, false, d === dev));
+  on.addEventListener("change", () => { prefs.set("presetPreviewLight", on.value); renderPresetsTab(); });
+  const ol = document.createElement("label");
+  ol.append("Preview on", on);
+  previewRow.append(strip, ol);
+
+  const group = (title) => {
+    const g = document.createElement("fieldset");
+    g.className = "insp-group";
+    const legend = document.createElement("legend");
+    legend.className = "section-label";
+    legend.textContent = title;
+    g.append(legend);
+    return g;
+  };
+  const groups = { colours: group("Colours"), settings: group("Effect settings"), brightness: group("Brightness") };
+
+  // Colours are part of the preset only when ticked; otherwise clips keep their own.
+  if (hasColours(preset.effect)) {
+    const include = document.createElement("input");
+    include.type = "checkbox";
+    include.checked = keepsColours(preset);
+    include.addEventListener("change", () => {
+      for (const q of fx.params) {
+        if (q.type !== "color") continue;
+        if (include.checked) preset.params[q.key] ??= q.default;
+        else delete preset.params[q.key];
+      }
+      changed();
+      renderPresetsTab();
+    });
+    const il = document.createElement("label");
+    il.append(include, "Include colours");
+    il.title = "Untick to keep whatever colours a clip already has when this preset is picked";
+    groups.colours.append(il);
+  }
+  const colourKeys = [];
+  for (const q of fx.params) {
+    if (q.type === "scene") continue;
+    if (q.type === "color" && !(q.key in preset.params)) continue;
+    if (q.type === "color") colourKeys.push(q.key);
+    const target = q.type === "color" ? groups.colours : q.type === "range" ? groups.brightness : groups.settings;
+    let input;
+    if (q.type === "select") {
+      input = document.createElement("select");
+      for (const o of q.options) input.add(new Option(o, o, false, o === (preset.params[q.key] ?? q.default)));
+    } else {
+      input = document.createElement("input");
+      input.type = q.type;
+      if (q.type === "number" || q.type === "range") Object.assign(input, { min: q.min, max: q.max, step: q.step });
+      input.value = preset.params[q.key] ?? q.default;
+    }
+    input.dataset.key = q.key;
+    const numeric = q.type === "number" || q.type === "range";
+    const shown = document.createElement("span");
+    shown.className = "range-value";
+    const show = () => { shown.textContent = q.type === "range" ? `${input.value}%` : ""; };
+    input.addEventListener("input", () => {
+      const v = numeric ? Number(input.value) : input.value;
+      if (numeric && !Number.isFinite(v)) return;
+      preset.params[q.key] = v;
+      show();
+      changed();
+    });
+    if (q.type === "color") input.addEventListener("focus", () => { app.lastColourKey = q.key; });
+    show();
+    const l = document.createElement("label");
+    if (q.type === "range") l.append(input, shown);
+    else l.append(q.label, input);
+    target.append(l);
+  }
+  if (colourKeys.length) {
+    const setColours = () => {
+      for (const k of colourKeys) {
+        const input = groups.colours.querySelector(`input[data-key="${k}"]`);
+        if (input) input.value = preset.params[k];
+      }
+      changed();
+    };
+    groups.colours.append(paletteRow((c) => {
+      preset.params[colourKeys.includes(app.lastColourKey) ? app.lastColourKey : colourKeys[0]] = c;
+      setColours();
+    }, button("Apply palette", () => {
+      const tmp = { effect: preset.effect, ...preset.params };
+      applyPalette(tmp, currentPalette().colors);
+      for (const k of colourKeys) preset.params[k] = tmp[k];
+      setColours();
+    }, "ghost")));
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "insp-actions";
+  actions.append(
+    button("Duplicate", () => {
+      const copy = asPreset({ name: freePresetName(preset.effect, `${preset.name} copy`), effect: preset.effect,
+        params: { ...preset.params } });
+      app.myPresets.splice(app.myPresets.indexOf(preset) + 1, 0, copy);
+      presetEditing = copy;
+      savePresets();
+      renderPresetsTab();
+    }, "ghost"),
+    button("Delete preset", () => {
+      if (!confirm(`Delete the preset ${preset.name}? Clips using its settings keep them.`)) return;
+      app.myPresets.splice(app.myPresets.indexOf(preset), 1);
+      presetEditing = null;
+      savePresets();
+      renderPresetsTab();
+    }, "ghost danger"),
+  );
+  box.append(head, previewRow, ...Object.values(groups).filter((g) => g.children.length > 1), actions);
 }
 
 // colour palettes ---------------------------------------------------------------
@@ -2247,6 +2379,7 @@ function wire() {
   $("btn-zoom-out").addEventListener("click", () => timeline.zoom(1 / 1.5));
 
   $("btn-scan").addEventListener("click", scan);
+  $("btn-new-preset").addEventListener("click", newPreset);
   $("btn-new-palette").addEventListener("click", () => {
     app.palettes.push({ name: uniqueName("My palette"), colors: ["#ff0000", "#00ff00", "#0000ff"] });
     savePalettes();
