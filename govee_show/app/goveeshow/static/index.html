@@ -76,6 +76,15 @@
         <label title="Snap clips and selections to beats and other clips"><input id="snap" type="checkbox" checked> Snap</label>
       </div>
     </section>
+    <section class="panel" data-panel="ai">
+      <div class="panel-head"><span class="section-label">Describe it</span></div>
+      <form id="ai-form" class="group ai-form">
+        <input id="ai-request" maxlength="2000" autocomplete="off"
+          placeholder="e.g. red and green chase on the roof in the chorus, twinkle everywhere else">
+        <button id="btn-ai" class="primary" type="submit" title="Ask the AI to make these effects (on the selection, if there is one)">✨ Create</button>
+      </form>
+      <p id="ai-hint" class="hint"></p>
+    </section>
     <section class="panel" data-panel="preview">
       <div class="panel-head"><span class="section-label">Preview</span></div>
       <div class="preview-panel"><canvas id="preview"></canvas></div>
@@ -324,6 +333,15 @@
     <div id="layout-frames"></div>
     <div id="layout-rows" class="layout-rows"></div>
     <p><button id="btn-reset-layout" class="ghost">Reset layout</button></p>
+  </section>
+  <section class="card">
+    <h2>AI</h2>
+    <p class="hint" id="ai-status">Checking…</p>
+    <p class="hint">The <b>Describe it</b> panel turns a request in words into effects, using either Claude with
+      your own API key (set it on the add-on's <b>Configuration</b> tab in Home Assistant), or else Home
+      Assistant's <b>AI Task</b>, which uses whichever AI integration you have set up there, including a local
+      one such as Ollama. It sends the AI your lights' names, the effect list, the song's beats and sections,
+      and the selection; never the song itself.</p>
   </section>
   <section class="card">
     <h2>Experimental</h2>

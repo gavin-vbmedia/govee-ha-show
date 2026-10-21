@@ -1,5 +1,6 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
+import { buildContext, checkClips, placeClips } from "./aiclips.js";
 import { analyse, toMono } from "./analysis.js";
 import { STYLES, applyGenerated, generateShow } from "./autogen.js";
 import {
@@ -2368,6 +2369,71 @@ async function generate({ colors, style, house }) {
   status(`Generated effects for ${lights.length} light${lights.length === 1 ? "" : "s"}. Ctrl+Z to undo`);
 }
 
+// Describe it: effects from a request in words, made by the AI the add-on is set up with.
+async function loadAiStatus() {
+  let st = { via: null };
+  try { st = await api("api/ai"); } catch { /* older add-on or offline */ }
+  const text = st.via === "claude" ? `Using Claude (${st.model}) with the API key from the add-on's Configuration tab.`
+    : st.via === "ha" ? `Using Home Assistant's AI Task${st.entity ? ` (${st.entity})` : ""}.`
+      : "Not set up yet: add a Claude API key on the add-on's Configuration tab, or set up an AI integration with an AI Task entity in Home Assistant.";
+  $("ai-status").textContent = text;
+  $("ai-hint").textContent = st.via ? "" : "Set up an AI on the Settings tab to use this.";
+  $("ai-hint").hidden = !!st.via;
+}
+
+// The lights as the AI knows them: unique names, with the House lane when the house photo is traced.
+function aiLights() {
+  const seen = new Set(), traced = Object.keys(housePositionsAll()).length > 0;
+  const lights = [];
+  app.show.tracks.forEach((tr, i) => {
+    if (tr.device === HOUSE) {
+      if (traced) lights.push({ name: "House", trackIndex: i, segments: 0, house: true });
+      return;
+    }
+    const dev = app.devices[tr.device];
+    if (!dev) return;
+    let name = dev.name || tr.device;
+    for (let k = 2; seen.has(name.toLowerCase()); k++) name = `${dev.name || tr.device} (${k})`;
+    seen.add(name.toLowerCase());
+    lights.push({ name, trackIndex: i, segments: dev.segments });
+  });
+  return lights;
+}
+
+async function describeIt(e) {
+  e.preventDefault();
+  const request = $("ai-request").value.trim();
+  if (!request) { $("ai-request").focus(); return; }
+  const lights = aiLights();
+  if (!lights.some((l) => !l.house)) { status("Add your lights on the Devices tab first", true); return; }
+  const sel = app.selected;
+  const names = (ts) => lights.filter((l) => ts.includes(l.trackIndex)).map((l) => l.name);
+  const selection = sel?.range ? { start: sel.range.start, end: sel.range.end, lights: names(rangeTracks(sel.range)) }
+    : sel?.clip ? { start: sel.clip.start, end: sel.clip.end, lights: names([sel.track]) } : null;
+  const show = app.show, duration = app.duration();
+  const context = buildContext({ show, lights, duration, selection, palettes: allPalettes() });
+  $("btn-ai").disabled = true;
+  status("Asking the AI…");
+  let reply;
+  try {
+    reply = await api("api/ai/clips", { method: "POST", json: { request, context } });
+  } catch (err) {
+    status(err.message, true);
+    return;
+  } finally {
+    $("btn-ai").disabled = false;
+  }
+  if (show !== app.show) return; // another show was opened meanwhile
+  const { placed, skipped } = checkClips(reply, lights, duration);
+  if (placed.length) {
+    placeClips(show, placed);
+    app.select(null);
+    app.changed();
+  }
+  const extra = skipped.length ? ` (left out ${skipped.length}: ${[...new Set(skipped)].slice(0, 2).join("; ")})` : "";
+  status(`${reply.summary || `Added ${placed.length} effects`}${extra}`, !placed.length);
+}
+
 function analyseInWorker(samples, rate) {
   let worker;
   try {
@@ -2480,6 +2546,7 @@ function wire() {
   $("btn-fill-beats").addEventListener("click", fillBeats);
   $("btn-detect").addEventListener("click", detectBeats);
   $("btn-generate").addEventListener("click", generateDialog);
+  $("ai-form").addEventListener("submit", describeIt);
   $("btn-clear-beats").addEventListener("click", () => {
     if ((app.show.beats.length || app.show.sections?.length) && confirm("Remove all beat markers and sections?")) {
       Object.assign(app.show, { beats: [], bars: [], sections: [] });
@@ -2583,6 +2650,7 @@ async function init() {
     loadModels();
     loadPalettes();
     loadPresets();
+    loadAiStatus();
     house.load().then(renderHouseLights);
     const shows = await api("api/shows");
     const last = prefs.get("lastShow", null);

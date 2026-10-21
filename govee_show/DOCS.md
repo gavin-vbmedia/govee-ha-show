@@ -7,7 +7,7 @@ play them from Home Assistant. Open **Light Shows** from the Home Assistant side
 [Devices](#1-devices) · [Speakers](#2-speakers) · [Your house](#3-your-house) ·
 [Build a show](#4-build-a-show) · [Effects](#effects) · [Play it](#5-play-it) ·
 [Automations](#6-automations) · [Arrange the editor](#arrange-the-editor) ·
-[Settings](#settings) · [Govee scenes](#experimental-govee-scenes) ·
+[Settings](#settings) · [Setting up the AI](#setting-up-the-ai) · [Govee scenes](#experimental-govee-scenes) ·
 [Troubleshooting](#troubleshooting) · [Where things are stored](#where-things-are-stored)
 
 ## Requirements
@@ -152,6 +152,14 @@ may come out at double time; type the BPM you want and press **Fill** if so. You
 from the playhead, or click the beat lane to add or remove one. **Clear** removes the beats and
 sections. With **Snap** ticked, clips and selections snap to beats and to each other; hold Shift to
 place freely.
+
+**Describe it.** Type what you'd like in the **Describe it** panel and press **✨ Create**, for example
+"red and green chase on the roof in every chorus, gentle white twinkle on the tree the rest of the time"
+or "strobe everything on the last four bars". An AI turns it into effects on the lights you name, lined
+up with the beats and sections, and they replace what those lights had at those times. If you select a
+stretch first and the request doesn't say where or when, it works on the selection. Anything the AI gets
+wrong (a light or effect that doesn't exist) is left out and listed in the status bar, and Ctrl+Z undoes
+the lot. It needs an AI to be set up first; see [Setting up the AI](#setting-up-the-ai).
 
 **Generate.** **✨ Generate** in the Show panel makes a first draft of the whole show from the song.
 Pick the **Colours** (any palette) and a **Style** (Calm, Balanced or Lively), and it fills every light
@@ -351,7 +359,7 @@ Send `input: {action: stop}` to stop. The **Settings** tab shows the exact input
 
 ## Arrange the editor
 
-Drag any editor panel (Show, Song, Playback, Beats, Preview, House, Timeline and Selection) by its
+Drag any editor panel (Show, Song, Playback, Beats, Describe it, Preview, House, Timeline and Selection) by its
 title to move it to the top, left, middle, right or bottom, or to change its order there; a blue
 bar shows where it will land. The **⋯** button in its corner does the same from a menu: it shows a
 small picture of the page, so click the area you want the panel in. **Earlier** and **Later**
@@ -377,8 +385,26 @@ browser, so each computer or phone keeps its own.
 | --- | --- |
 | Timing | **Light offset** for playing in the browser (positive values delay the lights), or the picked speaker's delay. |
 | Automations | The exact `hassio.addon_stdin` input for the open show. |
+| AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
 | Experimental | **Govee scenes** (below). |
+
+## Setting up the AI
+
+**Describe it** needs one of these:
+
+- **Claude, with your own API key.** Create a key at console.anthropic.com, then in Home Assistant open
+  **Settings → Add-ons → Govee Light Show → Configuration**, paste it into **Claude API key** and save.
+  Each request costs a few US cents on your Anthropic account (it uses Claude Opus 5.5 at low effort).
+- **Home Assistant's AI Task.** With no key, the add-on asks Home Assistant, which uses whichever AI
+  integration you've set up there with an AI Task entity: Anthropic, OpenAI, Google Gemini, or a local
+  model through Ollama, which keeps everything on your network. If you have several, set **AI Task
+  entity** on the Configuration tab, or Home Assistant's preferred one is used. Smaller local models
+  may follow the instructions less well.
+
+The **Settings** tab shows which one is in use. The AI is sent your lights' names and segment counts,
+the effect list, the song's tempo, beats and sections, your palettes, the selection and the effects
+already on the lights. It's never sent the song itself.
 
 ## Experimental: Govee scenes
 

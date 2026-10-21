@@ -1,2 +1,3 @@
 aiohttp==3.14.5
+anthropic==1.17.0
 aiomqtt==2.5.1
