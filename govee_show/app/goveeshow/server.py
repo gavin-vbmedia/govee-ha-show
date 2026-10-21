@@ -669,6 +669,15 @@ async def ai_status(request):
 
 async def ai_clips(request):
     """Clips for a request in words. The editor sends the show's context and checks the result."""
+    return await _ai_request(request, ai.create_clips)
+
+
+async def ai_presets(request):
+    """Effect presets for a description in words. The editor sends the effects and checks the result."""
+    return await _ai_request(request, ai.create_presets)
+
+
+async def _ai_request(request, create):
     try:
         body = await request.json()
     except ValueError:
@@ -676,7 +685,7 @@ async def ai_clips(request):
     if not isinstance(body, dict) or not isinstance(body.get("context"), dict):
         raise web.HTTPBadRequest(text="expected a request and its context")
     try:
-        return web.json_response(await ai.create_clips(request.app[HA], str(body.get("request", "")), body["context"]))
+        return web.json_response(await create(request.app[HA], str(body.get("request", "")), body["context"]))
     except ai.AIError as e:
         raise web.HTTPBadRequest(text=str(e)[:1].upper() + str(e)[1:])
 
@@ -796,6 +805,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_post("/api/command", run_command)
     r.add_get("/api/ai", ai_status)
     r.add_post("/api/ai/clips", ai_clips)
+    r.add_post("/api/ai/presets", ai_presets)
     r.add_get("/api/player", player_status)
     r.add_post("/api/player/play", player_play)
     r.add_post("/api/player/sync", player_sync)

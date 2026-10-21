@@ -72,3 +72,21 @@ test("copes with a reply that has no clips", () => {
   assert.deepEqual(checkClips({ summary: "Can't" }, lights, 30), { placed: [], skipped: [] });
   assert.deepEqual(checkClips(null, lights, 30), { placed: [], skipped: [] });
 });
+
+test("presets from the AI keep valid settings only, clamped, and skip unknown effects", async () => {
+  const { checkPresets } = await import("../../govee_show/app/goveeshow/static/js/aiclips.js");
+  const { presets, skipped } = checkPresets({ presets: [
+    { name: "Icy shimmer", effect: "twinkle", settings: [
+      { key: "density", value: "500" }, { key: "color", value: "88ccff" }, { key: "nope", value: "1" }] },
+    { name: "", effect: "chase", settings: [] },
+    { name: "Bad", effect: "bogus", settings: [] },
+  ] });
+  assert.equal(presets.length, 2);
+  assert.equal(presets[0].name, "Icy shimmer");
+  assert.equal(presets[0].params.color, "#88ccff");
+  assert.ok(presets[0].params.density <= 100);
+  assert.ok(!("nope" in presets[0].params));
+  assert.equal(presets[1].name, "AI chase");
+  assert.deepEqual(presets[1].params, {});
+  assert.equal(skipped.length, 1);
+});

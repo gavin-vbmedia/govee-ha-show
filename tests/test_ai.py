@@ -122,3 +122,22 @@ async def test_ai_endpoints(aiohttp_client, tmp_path, monkeypatch):
     resp = await client.post("/api/ai/clips", json={"request": "", "context": {}})
     assert resp.status == 400 and (await resp.text()).startswith("Type what")
     assert (await client.post("/api/ai/clips", json={"request": "x"})).status == 400
+
+
+async def test_presets_use_their_own_instructions_and_schema():
+    reply = {"summary": "Two icy looks", "presets": [
+        {"name": "Icy shimmer", "effect": "twinkle", "settings": [{"key": "color", "value": "#88ccff"}]}]}
+    ha = FakeHA(reply=json.dumps(reply))
+    out = await ai.create_presets(ha, "slow icy shimmer", {"effects": []})
+    assert out["via"] == "ha" and out["presets"] == reply["presets"]
+    instructions = ha.calls[0][2]["instructions"]
+    assert "effect presets" in instructions and '"presets"' in instructions and "slow icy shimmer" in instructions
+
+
+async def test_ai_presets_endpoint(aiohttp_client, tmp_path, monkeypatch):
+    reply = {"summary": "x", "presets": [{"name": "Fire", "effect": "twinkle", "settings": []}]}
+    monkeypatch.setattr(server, "HomeAssistant", lambda: FakeHA(reply=json.dumps(reply)))
+    app = server.make_app(tmp_path / "config", tmp_path / "media", allow_all=True)
+    client = await aiohttp_client(app)
+    resp = await client.post("/api/ai/presets", json={"request": "fire", "context": {}})
+    assert resp.status == 200 and (await resp.json())["presets"] == reply["presets"]

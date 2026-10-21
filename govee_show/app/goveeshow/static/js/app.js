@@ -1,6 +1,6 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
-import { buildContext, checkClips, placeClips } from "./aiclips.js";
+import { buildContext, checkClips, checkPresets, effectsForAI, placeClips } from "./aiclips.js";
 import { analyseInWorker, toMono } from "./analysis.js";
 import { STYLES, applyGenerated, generateShow, suggestLooks } from "./autogen.js";
 import {
@@ -1367,6 +1367,7 @@ function renderPresetsTab() {
   presetTabPreview.items = [];
   presetTabPreview.started = performance.now();
   if (!app.myPresets.includes(presetEditing)) presetEditing = app.myPresets[0] || null;
+  renderAiPresetIdeas();
   list.replaceChildren();
   if (!app.myPresets.length) {
     list.innerHTML = `<p class="hint">None yet. Press <b>New preset</b>, or select a clip in the editor and press
@@ -2433,6 +2434,67 @@ async function generate({ colors, style, house }) {
   status(`Generated effects for ${lights.length} light${lights.length === 1 ? "" : "s"}. Ctrl+Z to undo`);
 }
 
+// Presets from a description in words: the AI suggests a few, shown with live previews on the Presets
+// tab until you keep the ones you like.
+let aiPresetIdeas = [];
+
+async function describePresets(e) {
+  e.preventDefault();
+  const request = $("ai-preset-request").value.trim();
+  if (!request) { $("ai-preset-request").focus(); return; }
+  const context = { effects: effectsForAI(), palettes: allPalettes().map((p) => ({ name: p.name, colors: p.colors })) };
+  const done = aiWorking($("btn-ai-preset"), $("ai-preset-request"), $("ai-preset-hint"), "presets");
+  let reply;
+  try {
+    reply = await api("api/ai/presets", { method: "POST", json: { request, context } });
+  } catch (err) {
+    done(err.message, true);
+    return;
+  }
+  const { presets, skipped } = checkPresets(reply);
+  aiPresetIdeas = presets;
+  const extra = skipped.length ? ` (left out ${skipped.length}: ${[...new Set(skipped)].slice(0, 2).join("; ")})` : "";
+  const message = `${reply.summary || `Made ${presets.length} presets`}${extra}`;
+  done(presets.length ? `✓ ${message} Keep the ones you like.` : message, !presets.length);
+  renderPresetsTab();
+}
+
+function renderAiPresetIdeas() {
+  const box = $("ai-preset-ideas");
+  box.replaceChildren();
+  const dev = presetPreviewDev();
+  for (const idea of aiPresetIdeas) {
+    const card = document.createElement("div");
+    card.className = "ai-preset-idea";
+    const strip = document.createElement("canvas");
+    strip.className = "fx-strip";
+    const name = document.createElement("span");
+    name.className = "ai-preset-idea-name";
+    name.textContent = idea.name;
+    const fx = document.createElement("span");
+    fx.className = "hint";
+    fx.textContent = EFFECTS[idea.effect].label;
+    const actions = document.createElement("div");
+    actions.className = "insp-actions";
+    const drop = () => { aiPresetIdeas = aiPresetIdeas.filter((x) => x !== idea); };
+    actions.append(
+      button("Keep", () => {
+        const kept = asPreset({ ...idea, name: freePresetName(idea.effect, idea.name) });
+        app.myPresets.push(kept);
+        presetEditing = kept;
+        drop();
+        savePresets();
+        renderPresetsTab();
+        status(`Kept ★ ${kept.name} as a ${EFFECTS[idea.effect].label} preset`);
+      }, "primary"),
+      button("Dismiss", () => { drop(); renderPresetsTab(); }, "ghost"),
+    );
+    card.append(strip, name, fx, actions);
+    presetTabPreview.items.push({ canvas: strip, clip: presetClip(idea), dev });
+    box.append(card);
+  }
+}
+
 // Describe it: effects from a request in words, made by the AI the add-on is set up with.
 async function loadAiStatus() {
   let st = { via: null };
@@ -2443,6 +2505,8 @@ async function loadAiStatus() {
   $("ai-status").textContent = text;
   $("ai-hint").textContent = st.via ? "" : "Set up an AI on the Settings tab to use this.";
   $("ai-hint").hidden = !!st.via;
+  $("ai-preset-hint").textContent = st.via ? "" : $("ai-hint").textContent;
+  $("ai-preset-hint").hidden = !!st.via;
 }
 
 // The lights as the AI knows them: unique names, with the House lane when the house photo is traced.
@@ -2500,8 +2564,7 @@ async function describeIt(e) {
 
 // Shows that the AI is working (a spinner and a running count of seconds in the panel) until the
 // returned function is called with the outcome to leave there.
-function aiWorking() {
-  const btn = $("btn-ai"), input = $("ai-request"), hint = $("ai-hint");
+function aiWorking(btn = $("btn-ai"), input = $("ai-request"), hint = $("ai-hint"), what = "your effects") {
   const label = btn.innerHTML;
   btn.disabled = input.disabled = true;
   btn.innerHTML = `<span class="spinner"></span> Working…`;
@@ -2510,7 +2573,7 @@ function aiWorking() {
   const started = performance.now();
   const tick = () => {
     const secs = Math.round((performance.now() - started) / 1000);
-    hint.textContent = `Asking the AI to make your effects… ${secs} s (usually 10 to 60 seconds)`;
+    hint.textContent = `Asking the AI to make ${what}… ${secs} s (usually 10 to 60 seconds)`;
   };
   tick();
   const timer = setInterval(tick, 1000);
@@ -2617,6 +2680,7 @@ function wire() {
   $("btn-song-beats").addEventListener("click", () => importSongInfo({ quiet: false }));
   $("btn-generate").addEventListener("click", generateDialog);
   $("ai-form").addEventListener("submit", describeIt);
+  $("ai-preset-form").addEventListener("submit", describePresets);
   $("btn-clear-beats").addEventListener("click", () => {
     if ((app.show.beats.length || app.show.sections?.length) && confirm("Remove all beat markers and sections?")) {
       Object.assign(app.show, { beats: [], bars: [], sections: [] });
