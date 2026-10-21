@@ -120,6 +120,7 @@ const app = {
     if (!live) {
       commit();
       renderInspector();
+      renderSongSummary();
       scheduleAutoSave();
     }
   },
@@ -2427,12 +2428,12 @@ async function loadAudio(ref) {
   app.peaks = null;
   songBuffer = null;
   app.audioDuration = 0;
-  $("duration-wrap").hidden = !!ref;
   await refreshAudio();
   if (!ref) {
     audio.removeAttribute("src");
     audio.load();
     timeline.layout();
+    renderSongSummary();
     return;
   }
   const url = audioUrl(ref);
@@ -2450,6 +2451,56 @@ async function loadAudio(ref) {
     status(`Couldn't load the song: ${e.message}`, true);
   }
   timeline.layout();
+  renderSongSummary();
+}
+
+const songLabel = (ref) => ref.path.split("/").pop().replace(/\.[^.]+$/, "");
+
+// The Song panel's one line: the song's name, then its length, tempo and sections when known.
+function renderSongSummary() {
+  const ref = app.show?.audio;
+  $("song-title").textContent = ref ? songLabel(ref) : "No song";
+  const n = app.show?.sections?.length || 0;
+  const meta = ref
+    ? [app.audioDuration ? fmtTime(app.audioDuration, false) : "",
+      app.show.tempo ? `${Math.round(app.show.tempo)} BPM` : "",
+      n ? `${n} section${n === 1 ? "" : "s"}` : ""]
+    : ["Lights only", `${Math.round(app.show?.duration || 60)} s`];
+  $("song-meta").textContent = meta.filter(Boolean).join(" · ");
+  $("song-title").title = ref ? `${ref.source === "media" ? "Media" : "Uploaded"}: ${ref.path}` : "";
+}
+
+// Choose a song: a row per song (the hidden select stays the source of truth), applied on Use.
+let songPick = "";
+function renderSongList() {
+  const box = $("song-list");
+  box.replaceChildren(...[...$("audio-select").options].map((o) => {
+    const ref = o.value ? JSON.parse(o.value) : null;
+    const row = document.createElement("label");
+    row.className = `song-row${o.value === songPick ? " picked" : ""}`;
+    const radio = document.createElement("input");
+    radio.type = "radio";
+    radio.name = "song-pick";
+    radio.checked = o.value === songPick;
+    radio.addEventListener("change", () => { songPick = o.value; renderSongList(); });
+    const text = document.createElement("span");
+    const name = document.createElement("b");
+    name.textContent = ref ? songLabel(ref) : "No song, lights only";
+    const where = document.createElement("span");
+    where.className = "hint";
+    where.textContent = ref ? `${ref.source === "media" ? "Media" : "Uploaded"}: ${ref.path}` : "Set how long the show runs";
+    text.append(name, where);
+    row.append(radio, text);
+    return row;
+  }));
+  $("duration-wrap").hidden = songPick !== "";
+}
+
+function openSongDialog() {
+  songPick = $("audio-select").value;
+  renderSongList();
+  $("song-dialog").returnValue = ""; // Escape keeps the last value, so a cancel must not look like Use
+  $("song-dialog").showModal();
 }
 
 function computePeaks(buffer, rate = 100) {
@@ -3149,8 +3200,21 @@ function wire() {
     clearTimeout(autoSaveTimer);
     await api(`api/shows/${app.showId}`, { method: "DELETE" });
     app.dirty = false;
+    $("show-dialog").close();
     await openShow(null);
   });
+  $("btn-show-settings").addEventListener("click", () => {
+    $("btn-delete").disabled = !app.showId;
+    $("show-dialog").showModal();
+  });
+  $("btn-song").addEventListener("click", () => refreshAudio().catch(() => {}).then(openSongDialog));
+  $("song-dialog").addEventListener("close", () => {
+    const sel = $("audio-select");
+    if ($("song-dialog").returnValue !== "use" || songPick === sel.value) return;
+    sel.value = songPick;
+    sel.dispatchEvent(new Event("change"));
+  });
+  $("btn-song-music").addEventListener("click", () => { $("song-dialog").close(""); showView("music"); });
 
   $("audio-select").addEventListener("change", async (e) => {
     app.show.audio = e.target.value ? JSON.parse(e.target.value) : null;
@@ -3159,7 +3223,11 @@ function wire() {
     await loadAudio(app.show.audio);
     await importSongInfo();
   });
-  $("audio-upload").addEventListener("change", (e) => e.target.files[0] && upload(e.target.files[0]));
+  $("audio-upload").addEventListener("change", (e) => {
+    if (!e.target.files[0]) return;
+    $("song-dialog").close("");
+    upload(e.target.files[0]);
+  });
   $("duration").addEventListener("change", (e) => {
     app.show.duration = Math.max(1, Number(e.target.value) || 60);
     app.changed();

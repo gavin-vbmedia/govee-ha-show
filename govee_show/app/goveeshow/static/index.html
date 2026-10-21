@@ -30,22 +30,17 @@
       <div class="panel-head"><span class="section-label">Show</span></div>
       <div class="group">
         <select id="show-select" title="Open a show"></select>
-        <input id="show-name" placeholder="Show name" size="12">
         <button id="btn-save" class="primary" title="Save and bake (Ctrl+S)">Save</button>
-        <button id="btn-delete" class="ghost danger" title="Delete this show">Delete</button>
+        <button id="btn-show-settings" title="Name, show speaker, auto save, delete">⚙ Settings…</button>
         <button id="btn-generate" title="Fill every light with effects that follow the song">✨ Generate</button>
-        <label title="Save a couple of seconds after each change"><input id="autosave" type="checkbox" checked> Auto save</label>
         <span id="save-state" class="save-state"></span>
       </div>
     </section>
     <section class="panel" data-panel="song">
       <div class="panel-head"><span class="section-label">Song</span></div>
-      <div class="group">
-        <select id="audio-select" title="Song"></select>
-        <label class="button ghost" title="Upload a song to the add-on">Upload<input id="audio-upload" type="file" accept="audio/*" hidden></label>
-        <label id="duration-wrap" title="Show length when there is no song">Length <input id="duration" type="number" min="1" step="1" value="60"> s</label>
-        <label title="Where the song plays when this show is started from an automation or the MQTT Play button">Show speaker
-          <select id="show-speaker"></select></label>
+      <div class="song-summary">
+        <div class="song-summary-text"><b id="song-title"></b><span id="song-meta" class="hint"></span></div>
+        <button id="btn-song" title="Pick, upload or remove the song">Change…</button>
       </div>
     </section>
     <section class="panel" data-panel="playback">
@@ -54,7 +49,7 @@
         <button id="btn-home" title="Back to start (Home)">⏮</button>
         <button id="btn-play" class="primary" title="Play / pause (Space)">▶ Play</button>
         <span id="clock" class="clock">0:00.00</span>
-        <select id="output-select" title="Where the song plays while you edit, in this browser. Automations use the show speaker in the Song panel instead.">
+        <select id="output-select" title="Where the song plays while you edit, in this browser. Automations use the show speaker in Show settings instead.">
           <option value="">Song in this browser</option>
         </select>
         <label id="lights-wrap" title="Send to the lights while playing in the browser"><input id="lights" type="checkbox" checked> Lights</label>
@@ -125,6 +120,45 @@
     </section>
   </div>
 
+
+  <!-- The Show and Song panels keep to one line; their settings open in these. -->
+  <dialog id="show-dialog" class="effect-dialog form-dialog" aria-labelledby="show-dialog-title">
+    <form method="dialog">
+      <div class="effect-dialog-head"><h3 id="show-dialog-title">Show settings</h3>
+        <button class="ghost" value="close" aria-label="Close">✕</button></div>
+      <div class="form-dialog-body">
+        <label class="field">Name <input id="show-name" placeholder="Show name" maxlength="80"></label>
+        <label class="field">Show speaker <select id="show-speaker"></select>
+          <span class="hint">Where the song plays when an automation or the MQTT Play button starts this show.
+            Editing uses the speaker in the Playback panel.</span></label>
+        <label><input id="autosave" type="checkbox" checked> Save automatically a couple of seconds after each change</label>
+      </div>
+      <div class="form-dialog-foot">
+        <button id="btn-delete" type="button" class="ghost danger" title="Delete this show">Delete show…</button>
+        <span class="spacer"></span>
+        <button class="primary" value="close">Done</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="song-dialog" class="effect-dialog form-dialog" aria-labelledby="song-dialog-title">
+    <form method="dialog">
+      <div class="effect-dialog-head"><h3 id="song-dialog-title">Choose a song</h3>
+        <button class="ghost" value="close" aria-label="Close">✕</button></div>
+      <div class="form-dialog-body">
+        <select id="audio-select" title="Song" hidden></select>
+        <div id="song-list" class="song-list" role="radiogroup" aria-label="Songs"></div>
+        <label id="duration-wrap" title="Show length when there is no song">Length with no song
+          <input id="duration" type="number" min="1" step="1" value="60"> s</label>
+      </div>
+      <div class="form-dialog-foot">
+        <label class="button ghost" title="Upload a song to the add-on">Upload a song…<input id="audio-upload" type="file" accept="audio/*" hidden></label>
+        <button id="btn-song-music" type="button" class="ghost" title="Cut, shorten or join songs">Edit on Music</button>
+        <span class="spacer"></span>
+        <button value="close">Cancel</button>
+        <button id="btn-song-use" class="primary" value="use">Use this song</button>
+      </div>
+    </form>
+  </dialog>
   <audio id="audio" preload="auto"></audio>
 </main>
 
@@ -318,7 +352,7 @@
   <p id="speakers-ha" class="hint"></p>
   <section class="toolbar">
     <h2>Your speakers</h2>
-    <label title="Where shows play when started from an automation, unless a show picks its own in the Song panel">Default
+    <label title="Where shows play when started from an automation, unless a show picks its own in its Show settings">Default
       show speaker <select id="default-speaker"></select></label>
   </section>
   <table class="devices">
@@ -350,7 +384,7 @@
     <p class="hint">To play <b id="automation-show">this show</b> from an automation, use the <b>Govee Light Show</b> MQTT
       entities (pick the show, then press Play), or the <code>hassio.addon_stdin</code> action with input
       <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the show's
-      <b>Show speaker</b> (in the editor's Song panel), or on the <b>Default show speaker</b> above when a show
+      <b>Show speaker</b> (in the editor's <b>⚙ Settings…</b> for the show), or on the <b>Default show speaker</b> above when a show
       doesn't pick one. The
       speaker in the Playback panel is only for editing, so you can design on a speaker indoors without changing
       where the real show plays.</p>

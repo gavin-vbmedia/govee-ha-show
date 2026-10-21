@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.64
+
+- Editor: the **Show** panel is one line, with the show, **Save**, **⚙ Settings…** and **Generate**.
+  **Settings…** opens the show's settings: its name, its show speaker (moved from the Song panel),
+  auto save, and **Delete show…**, which is now well away from Save.
+- Editor: the **Song** panel shows the song's name, length, tempo and sections, with **Change…** to
+  pick another, upload one, or choose no song and set the show's length.
+- Toolbar panels along the top or bottom of the editor are slim one-row bars that stretch to fill
+  the row. They can still be dragged by their title or moved with ⋯.
+
 ## 0.2.63
 
 - Four tabs instead of eight: **Editor**, **Music**, **Library** (Palettes and Presets) and **Setup**

@@ -232,6 +232,12 @@ button.swatch:hover { border-color: var(--text); }
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px;
 }
 .panel[hidden] { display: none; }
+/* Toolbar panels along the top or bottom are one-row bars: the title (still the drag handle) sits
+   at the start of the row, and the bars stretch to fill it. */
+.dock:is([data-dock="top"], [data-dock="bottom"]) > .panel:not(:is([data-panel="preview"], [data-panel="house"], [data-panel="inspector"], [data-panel="timeline"])) {
+  flex-direction: row; align-items: center; gap: 10px; padding: 6px 10px; flex-grow: 1; }
+.dock:is([data-dock="top"], [data-dock="bottom"]) > .panel:not(:is([data-panel="preview"], [data-panel="house"], [data-panel="inspector"], [data-panel="timeline"])) > .panel-head {
+  flex: none; gap: 2px; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 20px; }
 .panel-move { padding: 0 6px; line-height: 1.2; border-color: transparent; color: var(--muted); }
 .panel-move:hover { color: var(--text); }
@@ -337,6 +343,26 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
 .ai-preset-idea-name { font-weight: 600; }
 .ai-preset-idea .insp-actions { display: flex; gap: 6px; }
 .save-preset-dialog { width: min(420px, calc(100vw - 32px)); }
+/* Show settings and Choose a song: a form with a footer of actions. */
+.form-dialog { width: min(520px, calc(100vw - 32px)); }
+.form-dialog-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.form-dialog-body { text-align: left; }
+.form-dialog-body .field { display: flex; flex-direction: column; align-items: stretch; gap: 4px; font-weight: 600; }
+.form-dialog-body .field > :is(input, select) { font-weight: 400; width: 100%; }
+.form-dialog-body .field .hint { font-weight: 400; }
+.form-dialog-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px;
+  border-top: 1px solid var(--line); }
+.form-dialog-foot .spacer { flex: 1; }
+.song-list { display: flex; flex-direction: column; gap: 6px; max-height: min(50vh, 420px); overflow-y: auto; }
+.song-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line);
+  border-radius: 8px; cursor: pointer; }
+.song-row > span { display: flex; flex-direction: column; min-width: 0; }
+.song-row .hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song-row.picked { border-color: var(--accent); background: var(--track); }
+/* The Song panel's one line. */
+.song-summary { display: flex; align-items: center; gap: 8px; }
+.song-summary-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.song-summary-text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .save-preset-dialog form { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
 .save-preset-dialog h3 { margin: 0; }
 .save-preset-dialog label { display: flex; align-items: center; gap: 8px; }
