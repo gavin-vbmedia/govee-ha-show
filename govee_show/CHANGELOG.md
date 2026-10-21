@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.62
+
+- Editor: a new default layout puts the timeline first. Show and Playback run across the top, Song,
+  Preview, House and Beats sit down the left, and Selection and Describe it down the right, so the
+  timeline and the selected clip fit on screen together. A layout you arranged yourself is kept;
+  **Reset layout** switches to the new one.
+- Editor: the top area stays in view while you scroll, as long as it's short enough not to crowd out
+  the timeline.
+- Selection: **＋ Add effect…** comes first and stands out; **Delete effects here** moves to the end.
+- A slightly darker blue for buttons and tabs, so their white text is easier to read.
+
 ## 0.2.61
 
 - **House** tab: pin segments where they really are. Drag a picked light's segment number along its line

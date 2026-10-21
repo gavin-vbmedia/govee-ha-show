@@ -21,7 +21,16 @@ export const FRAMES = {
     areas: ["top top right", "left middle right", "bottom bottom right"] },
 };
 export const DEFAULT_FRAME = "classic";
+// Timeline first: only the show and transport run across the top, so the timeline and the
+// selection fit on screen together; the rest sits in the side columns.
 export const DEFAULT_LAYOUT = {
+  show: "top", playback: "top", song: "left", preview: "left", house: "left", beats: "left",
+  timeline: "middle", inspector: "right", ai: "right",
+};
+const DEFAULT_ORDER = ["show", "playback", "song", "preview", "house", "beats", "timeline", "inspector", "ai"];
+// The layout every panel had before 0.2.62. A browser still on it never chose a layout, so it moves
+// to the new default; any layout someone arranged themselves is kept.
+const OLD_DEFAULT = {
   show: "top", song: "top", playback: "top", beats: "top", ai: "top",
   preview: "top", house: "top", timeline: "middle", inspector: "bottom",
 };
@@ -32,11 +41,14 @@ const KEY = "goveeshow.layout";
 export function loadLayout() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { /* private mode or bad data */ }
-  const placed = saved.place || saved;
+  let placed = saved.place || saved;
+  const untouched = Object.entries(OLD_DEFAULT).every(([k, v]) => (placed[k] ?? v) === v)
+    && (saved.frame ?? DEFAULT_FRAME) === DEFAULT_FRAME;
+  if (untouched) { placed = {}; saved = {}; }
   const place = { ...DEFAULT_LAYOUT };
   for (const [k, v] of Object.entries(placed)) if (k in PANELS && v in placesFor(k)) place[k] = v;
   const order = (Array.isArray(saved.order) ? saved.order : []).filter((k, i, a) => k in PANELS && a.indexOf(k) === i);
-  for (const k of Object.keys(PANELS)) if (!order.includes(k)) order.push(k);
+  for (const k of DEFAULT_ORDER) if (!order.includes(k)) order.push(k);
   const frame = saved.frame in FRAMES ? saved.frame : DEFAULT_FRAME;
   return { place, order, frame };
 }
@@ -84,6 +96,9 @@ export class Layout {
     }
     for (const [name, dock] of Object.entries(this.docks)) this.makeDropZone(name, dock);
     document.addEventListener("click", () => this.closeMenu());
+    window.addEventListener("resize", () => this.updateSticky());
+    // Also when the editor tab opens or a panel in the top dock grows.
+    if (this.docks.top) new ResizeObserver(() => this.updateSticky()).observe(this.docks.top);
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") this.closeMenu(); });
     this.apply();
   }
@@ -115,7 +130,7 @@ export class Layout {
   }
 
   reset() {
-    this.layout = { place: { ...DEFAULT_LAYOUT }, order: Object.keys(PANELS), frame: DEFAULT_FRAME };
+    this.layout = { place: { ...DEFAULT_LAYOUT }, order: [...DEFAULT_ORDER], frame: DEFAULT_FRAME };
     saveLayout(this.layout);
     this.apply();
   }
@@ -134,8 +149,18 @@ export class Layout {
       if (!el.hidden) this.docks[place[key]].append(el);
     }
     for (const d of Object.values(this.docks)) d.classList.toggle("empty", !d.querySelector(".panel:not([hidden])"));
+    this.updateSticky();
     this.renderSettings();
     this.onChange?.();
+  }
+
+  // The top dock stays in view while scrolling, so Play is always to hand, but only while it is
+  // short enough not to crowd out the timeline.
+  updateSticky() {
+    const top = this.docks.top;
+    if (!top) return;
+    if (top.closest(".view")?.hidden) return;
+    top.classList.toggle("sticky", !top.classList.contains("empty") && top.offsetHeight <= window.innerHeight * 0.3);
   }
 
   // Drag a panel by its title bar. While dragging, empty docks open up so they can be dropped into.
