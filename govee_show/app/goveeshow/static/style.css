@@ -99,6 +99,9 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .house-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .house-card-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .house-eye { padding: 0 6px; line-height: 18px; }
+.house-light-head { font-size: 12px; font-weight: 600; color: var(--muted); margin: 6px 0 -2px; }
+.house-part { margin-left: 12px; }
+.house-part .house-card-head { align-items: center; }
 .house-eye.off { opacity: 0.6; }
 .house-card .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .house-card input[type="number"] { width: 5em; }
