@@ -163,7 +163,16 @@ still, alternate, or run as a slow or fast marquee). Tick **Show presets** in th
 each effect becomes its own boxed group: **Default** first, then its presets, each previewed. Picking
 a preset sets just the settings it names. When adding an effect it uses the effect's default colours;
 when changing a clip your colours stay. The Effect button shows the preset a clip matches, such as
-**Three colours · Wide marquee**. The chooser remembers whether presets were showing. Tick **Show on the light** to loop it on the real light too while the show is
+**Three colours · Wide marquee**. The chooser remembers whether presets were showing.
+
+**Your own presets.** Get a clip looking right, then press **Save as preset…** under its settings.
+Name it and choose whether to **Include colours** (ticked by default; untick it to save just the
+movement and other settings, so the preset takes on whatever colours a clip already has). Your
+presets appear in the effect chooser after the built-in ones, marked with a ★, and **★ My presets
+only** narrows the chooser to them. The **Presets** tab lists them by effect with a preview each,
+where you can rename them, open **Settings** to change them, **Duplicate** or **Delete** them.
+Deleting a preset doesn't change clips that used it. They're saved in the add-on, so every browser
+sees the same ones. Tick **Show on the light** to loop it on the real light too while the show is
 stopped; the light goes back to normal when you click away. Every effect has a **Brightness %**
 slider, so one section can glow softly and the next hit full brightness.
 
@@ -368,7 +377,7 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 
 ## Where things are stored
 
-Shows, devices, palettes, the house photo and settings live in the add-on's config folder
+Shows, devices, palettes, your presets, the house photo and settings live in the add-on's config folder
 (`/addon_configs/<slug>_govee_show/`), so they are included in Home Assistant backups. Uploaded songs
 go to `/media/govee_show/` so media players can play them. The editor layout, the editing speaker
 and the experimental switch are kept in each browser.

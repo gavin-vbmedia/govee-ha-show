@@ -317,3 +317,17 @@ async def test_speakers_are_tested_before_the_editor_offers_them(client, monkeyp
     assert (await client.post("/api/speakers/remove", json={"entity_id": "media_player.garden"})).status == 200
     assert (await (await client.get("/api/speakers")).json())["speakers"] == []
     assert (await client.post("/api/speakers/test", json={"entity_id": "light.x"})).status == 400
+
+
+async def test_custom_presets_round_trip_and_validation(client):
+    assert await (await client.get("/api/presets")).json() == []
+    mine = [{"name": "Candy cane crawl", "effect": "duo",
+             "params": {"color": "#ff0000", "color2": "#ffffff", "layout": "alternate", "size": 2, "speed": 1.5}}]
+    resp = await client.put("/api/presets", json=mine)
+    assert resp.status == 200
+    assert await (await client.get("/api/presets")).json() == mine
+    for bad in ({"name": "x"}, [{"name": "", "effect": "duo", "params": {}}],
+                [{"name": "x", "effect": "Bad Effect", "params": {}}], [{"name": "x", "effect": "duo", "params": []}],
+                [{"name": "x", "effect": "duo", "params": {"speed": [1]}}],
+                [{"name": "x", "effect": "duo", "params": {}}] * 201):
+        assert (await client.put("/api/presets", json=bad)).status == 400

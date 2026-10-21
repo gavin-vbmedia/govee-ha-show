@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.37
+
+- Your own effect presets. **Save as preset…** on a clip saves its settings under a name, with its
+  colours included unless you untick **Include colours**. They show in the effect chooser after the
+  built-in presets with a ★, and **★ My presets only** shows just yours. A new **Presets** tab lists
+  them by effect with previews, to rename, change settings, duplicate or delete. Stored in the
+  add-on, so they're the same in every browser.
+
 ## 0.2.36
 
 - One **effect chooser** for adding an effect and for changing a clip's: a window with a previewing

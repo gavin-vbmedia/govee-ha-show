@@ -7,6 +7,7 @@ import asyncio
 import contextlib
 import ipaddress
 import logging
+import math
 import os
 import re
 from pathlib import Path
@@ -445,6 +446,52 @@ async def put_palettes(request):
     return web.json_response(palettes)
 
 
+# effect presets -------------------------------------------------------------
+# Built-in presets ship in effects.js; only the user's own are stored here. Each is a named set of
+# settings for one effect, so values are short strings, numbers or booleans.
+_EFFECT_KEY = re.compile(r"^[a-z0-9_]{1,32}$")
+MAX_PRESETS = 200
+
+
+def _clean_preset(p):
+    if not isinstance(p, dict):
+        return None
+    name = str(p.get("name", "")).strip()[:60]
+    effect = p.get("effect")
+    params = p.get("params")
+    if not name or not isinstance(effect, str) or not _EFFECT_KEY.match(effect) \
+            or not isinstance(params, dict) or len(params) > 40:
+        return None
+    clean = {}
+    for k, v in params.items():
+        if not isinstance(k, str) or not _EFFECT_KEY.match(k):
+            return None
+        if isinstance(v, str):
+            v = v[:200]
+        elif not isinstance(v, (bool, int, float)) or (isinstance(v, float) and not math.isfinite(v)):
+            return None
+        clean[k] = v
+    return {"name": name, "effect": effect, "params": clean}
+
+
+async def get_presets(request):
+    return web.json_response(request.app[STORAGE].load_settings().get("presets", []))
+
+
+async def put_presets(request):
+    body = await request.json()
+    if not isinstance(body, list) or len(body) > MAX_PRESETS:
+        raise web.HTTPBadRequest(text=f"expected a list of up to {MAX_PRESETS} presets")
+    presets = [_clean_preset(p) for p in body]
+    if not all(presets):
+        raise web.HTTPBadRequest(text="each preset needs a name, an effect and its settings")
+    storage = request.app[STORAGE]
+    settings = storage.load_settings()
+    settings["presets"] = presets
+    storage.save_settings(settings)
+    return web.json_response(presets)
+
+
 # house view --------------------------------------------------------------
 MAX_PHOTO = 20 * 1024 * 1024
 MAX_POINTS = 200
@@ -663,6 +710,8 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/palettes", get_palettes)
     r.add_get("/api/scenes", get_scenes)
     r.add_put("/api/palettes", put_palettes)
+    r.add_get("/api/presets", get_presets)
+    r.add_put("/api/presets", put_presets)
     r.add_get("/api/house", get_house)
     r.add_put("/api/house", put_house)
     r.add_get("/api/house/photo", get_house_photo)
