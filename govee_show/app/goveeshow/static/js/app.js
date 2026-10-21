@@ -2395,6 +2395,22 @@ function generateDialog() {
   for (const [key, st] of Object.entries(STYLES)) style.add(new Option(st.label, key, false, key === prefs.get("genStyle", "balanced")));
   const sl = document.createElement("label");
   sl.append("Style", style);
+  // Made by the rules (instant, the same looks every time) or by the AI, which also reads your section notes.
+  const maker = document.createElement("select");
+  maker.add(new Option("Rules (instant)", "rules"));
+  maker.add(new Option("AI (follows your section notes)", "ai"));
+  maker.value = aiVia && prefs.get("genMaker", "rules") === "ai" ? "ai" : "rules";
+  const ml = document.createElement("label");
+  ml.append("Made by", maker);
+  ml.hidden = !aiVia;
+  const noted = (app.show.sections || []).filter((x) => x.notes).length;
+  const notesHint = document.createElement("p");
+  notesHint.className = "hint";
+  notesHint.textContent = noted ? `${noted} section${noted === 1 ? " has" : "s have"} notes from the Music tab; the AI follows them.`
+    : "Add notes to the song's sections on the Music tab to tell the AI what happens in each part.";
+  const showNotes = () => { notesHint.hidden = maker.value !== "ai"; };
+  maker.addEventListener("change", showNotes);
+  showNotes();
   const house = document.createElement("input");
   house.type = "checkbox";
   house.checked = true;
@@ -2408,12 +2424,15 @@ function generateDialog() {
   const cancel = button("Cancel", () => dlg.close(), "ghost");
   cancel.type = "button";
   actions.append(go, cancel);
-  form.append(h, hint, pl, sl, hl, actions);
+  form.append(h, hint, ml, notesHint, pl, sl, hl, actions);
   dlg.append(form);
   form.addEventListener("submit", () => {
     prefs.set("genStyle", style.value);
-    const colors = allPalettes().find((p) => p.name === palette.value)?.colors || currentPalette().colors;
-    generate({ colors, style: style.value, house: !hl.hidden && house.checked });
+    if (!ml.hidden) prefs.set("genMaker", maker.value);
+    const chosen = allPalettes().find((p) => p.name === palette.value) || currentPalette();
+    const opts = { colors: chosen.colors, style: style.value, house: !hl.hidden && house.checked };
+    if (maker.value === "ai") generateWithAI({ ...opts, paletteName: chosen.name });
+    else generate(opts);
   });
   dlg.addEventListener("close", () => dlg.remove());
   document.body.append(dlg);
@@ -2432,6 +2451,18 @@ async function generate({ colors, style, house }) {
   app.select(null);
   app.changed();
   status(`Generated effects for ${lights.length} light${lights.length === 1 ? "" : "s"}. Ctrl+Z to undo`);
+}
+
+// Generate with the AI: the whole show from the song, its sections and their notes, in one request.
+async function generateWithAI({ colors, paletteName, style, house }) {
+  if (songBuffer && !app.show.beats.length && !app.show.sections?.length && !(await analyseSong())) return;
+  const feel = { calm: "calm and gentle, with slow movement", balanced: "balanced, building with the music",
+    lively: "lively, with lots of movement on the beat" }[style] || "balanced";
+  const request = `Make a complete light show for the whole song on every light. Use the "${paletteName}" colours `
+    + `(${colors.join(", ")}). Keep it ${feel}: quiet sections soft, loud sections bright and on the beat, and the `
+    + "same looks each time a section comes back. Change looks on bar lines. Follow each section's notes."
+    + (house ? " Add sweeps across the house as the music lifts into louder sections." : "");
+  await describe(request, null, { replaceAll: true, what: "the show" });
 }
 
 // Presets from a description in words: the AI suggests a few, shown with live previews on the Presets
@@ -2496,9 +2527,12 @@ function renderAiPresetIdeas() {
 }
 
 // Describe it: effects from a request in words, made by the AI the add-on is set up with.
+let aiVia = null; // how AI requests go ("claude" or "ha"), or null when no AI is set up
+
 async function loadAiStatus() {
   let st = { via: null };
   try { st = await api("api/ai"); } catch { /* older add-on or offline */ }
+  aiVia = st.via;
   const text = st.via === "claude" ? `Using Claude (${st.model}) with the API key from the add-on's Configuration tab.`
     : st.via === "ha" ? `Using Home Assistant's AI Task${st.entity ? ` (${st.entity})` : ""}.`
       : "Not set up yet: add a Claude API key on the add-on's Configuration tab, or set up an AI integration with an AI Task entity in Home Assistant.";
@@ -2532,15 +2566,24 @@ async function describeIt(e) {
   e.preventDefault();
   const request = $("ai-request").value.trim();
   if (!request) { $("ai-request").focus(); return; }
+  const sel = app.selected;
+  await describe(request, (lights) => {
+    const names = (ts) => lights.filter((l) => ts.includes(l.trackIndex)).map((l) => l.name);
+    return sel?.range ? { start: sel.range.start, end: sel.range.end, lights: names(rangeTracks(sel.range)) }
+      : sel?.clip ? { start: sel.clip.start, end: sel.clip.end, lights: names([sel.track]) } : null;
+  });
+}
+
+// Sends a request to the AI with the show's context and puts the clips it makes on the show.
+// selectionFor(lights) gives the selection to send; replaceAll clears the lights first, as Generate does.
+async function describe(request, selectionFor, { replaceAll = false, what = "your effects" } = {}) {
   const lights = aiLights();
   if (!lights.some((l) => !l.house)) { status("Add your lights on the Devices tab first", true); return; }
-  const sel = app.selected;
-  const names = (ts) => lights.filter((l) => ts.includes(l.trackIndex)).map((l) => l.name);
-  const selection = sel?.range ? { start: sel.range.start, end: sel.range.end, lights: names(rangeTracks(sel.range)) }
-    : sel?.clip ? { start: sel.clip.start, end: sel.clip.end, lights: names([sel.track]) } : null;
+  const selection = selectionFor ? selectionFor(lights) : null;
   const show = app.show, duration = app.duration();
   const context = buildContext({ show, lights, duration, selection, palettes: allPalettes() });
-  const done = aiWorking();
+  const done = aiWorking(undefined, undefined, undefined, what);
+  status(`Asking the AI to make ${what}…`);
   let reply;
   try {
     reply = await api("api/ai/clips", { method: "POST", json: { request, context } });
@@ -2552,6 +2595,7 @@ async function describeIt(e) {
   if (show !== app.show) { done(""); return; } // another show was opened meanwhile
   const { placed, skipped } = checkClips(reply, lights, duration);
   if (placed.length) {
+    if (replaceAll) for (const l of lights) show.tracks[l.trackIndex].clips = [];
     placeClips(show, placed);
     app.select(null);
     app.changed();

@@ -188,6 +188,11 @@ hasn't been analysed. It replaces the lights' effects, so Ctrl+Z brings them bac
 different take, then edit whatever you like. The colours start on the palette for the time of year
 (Halloween in October, Christmas in December…) when there is one.
 
+With an AI set up (see [Setting up the AI](#setting-up-the-ai)), **Made by** picks who makes it:
+**Rules** is instant, as above; **AI** sends the whole song to the AI with the same colours and style,
+and it follows the **notes** you've written on the song's sections on the **Music** tab ("the guitar
+solo, make it flash", "keep this bit dark"). It takes 10 to 60 seconds, shown in the Describe it panel.
+
 **The timeline.** Each light has a track, with the **House** lane at the top. Scroll with the mouse
 wheel; zoom with the **−** and **+** buttons in the Timeline panel, the + and − keys, or
 Ctrl+wheel (or a trackpad pinch) around the pointer. Click the ruler to move the playhead.
@@ -412,7 +417,7 @@ browser, so each computer or phone keeps its own.
 
 ## Setting up the AI
 
-**Describe it** and **✨ Make presets** need one of these:
+**Describe it**, **✨ Make presets** and Generate's **AI** option need one of these:
 
 - **Claude, with your own API key.** Create a key at console.anthropic.com, then in Home Assistant open
   **Settings → Add-ons → Govee Light Show → Configuration**, paste it into **Claude API key** and save.
