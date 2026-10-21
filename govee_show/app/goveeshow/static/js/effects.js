@@ -465,8 +465,8 @@ export function showDuration(show) {
 
 // A whole physical light's colours at `time`. `trackOf(id)` finds a track by device id. A light
 // split into parts plays its own track across the parts joined end to end (as if the unused
-// segments weren't there), and each part's track wins on that part while one of its clips is
-// running. Segments outside every part stay off.
+// segments weren't there), unless `whole` is false, and each part's track wins on that part while
+// one of its clips is running. Segments outside every part stay off.
 export function composeLight(light, trackOf, time, positions = {}, houseClips = [], out = new Uint8Array(light.segments * 3)) {
   out.fill(0);
   if (!light.parts?.length) {
@@ -476,7 +476,7 @@ export function composeLight(light, trackOf, time, positions = {}, houseClips = 
     return out;
   }
   const joined = light.parts.reduce((n, p) => n + p.to - p.from + 1, 0);
-  const whole = trackOf(light.id);
+  const whole = light.whole === false ? null : trackOf(light.id);
   const all = whole?.clips.length ? renderTrack(whole.clips, time, joined) : null;
   let k = 0;
   for (const p of light.parts) {

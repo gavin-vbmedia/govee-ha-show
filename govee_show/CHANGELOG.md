@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.57
+
+- A split light's tracks are grouped on the timeline: a coloured bar, a tint, the parts indented under the
+  light, and heavier lines around the group.
+- **Also play as one** under a light's parts: untick it for a light you only use in parts, and its own
+  track goes away.
+- The tabs are in a more natural order: Editor, Music, Presets, Palettes, then Devices, House, Speakers,
+  then Settings. On a phone they sit on their own row and scroll sideways, and wide tables scroll inside
+  the page instead of widening it.
+
 ## 0.2.56
 
 - A light split into parts can still be played as one: its own track (marked *All parts*) runs effects

@@ -172,8 +172,11 @@ function allPartsDevice(d) {
   const segments = d.parts.reduce((n, p) => n + p.to - p.from + 1, 0);
   return { ...d, segments, light: d, bulbs: d.bulbs ? Math.max(1, Math.round(d.bulbs * segments / d.segments)) : null };
 }
-// The device a track plays on, or null for a missing light.
-const playingDev = (tr) => app.devices[tr.device] || null;
+// The device a track plays on, or null for a missing light or a split light played as parts only.
+const playingDev = (tr) => {
+  const d = app.devices[tr.device];
+  return d && d.light?.whole !== false ? d : null;
+};
 
 function indexDevices() {
   app.devices = {};
@@ -204,7 +207,11 @@ function ensureTracks() {
       if (!has(d.id)) tracks.splice(at < 0 ? tracks.length : at, 0, { device: d.id, clips: [] });
       continue;
     }
-    if (!has(d.id)) {
+    const own = tracks.findIndex((t) => t.device === d.id);
+    if (d.whole === false) {
+      // Parts only: the light's own track goes, unless it still has effects on it.
+      if (own >= 0 && !tracks[own].clips.length) tracks.splice(own, 1);
+    } else if (own < 0) {
       const first = tracks.findIndex((t) => t.device.startsWith(`${d.id}#`));
       tracks.splice(first < 0 ? tracks.length : first, 0, { device: d.id, clips: [] });
     }
@@ -485,7 +492,15 @@ function partsRow(d) {
   }
   const more = button("+ Add part", add, "ghost small");
   more.disabled = !unusedRuns(d).length;
-  td.append(more);
+  const asOne = document.createElement("label");
+  asOne.className = "part-whole";
+  asOne.title = "Give the light its own track too, playing across all its parts as one strip. Turn off if you only use the parts.";
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.checked = d.whole !== false;
+  box.addEventListener("change", () => { d.whole = box.checked; saveDevices(); });
+  asOne.append(box, " Also play as one");
+  td.append(more, asOne);
   const unused = unusedRuns(d);
   const note = document.createElement("span");
   note.className = "hint";
@@ -2961,6 +2976,7 @@ function wire() {
   for (const tab of document.querySelectorAll(".tab")) {
     tab.addEventListener("click", () => {
       for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t === tab);
+      tab.scrollIntoView({ block: "nearest", inline: "nearest" }); // on a phone the tab row scrolls
       $("view-editor").hidden = tab.dataset.view !== "editor";
       $("view-devices").hidden = tab.dataset.view !== "devices";
       $("view-music").hidden = tab.dataset.view !== "music";

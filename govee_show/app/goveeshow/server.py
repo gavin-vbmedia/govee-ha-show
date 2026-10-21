@@ -153,7 +153,9 @@ def _clean_device(d: dict) -> dict:
             "ip": ip, "sku": str(d.get("sku", "")), "segments": segments,
             "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient")),
             "protocol": protocol, "brightness": brightness, "bulbs": bulbs,
-            "parts": _clean_parts(d.get("parts"), segments)}
+            "parts": _clean_parts(d.get("parts"), segments),
+            # A split light's own track plays across all its parts unless this is off.
+            "whole": d.get("whole", True) is not False}
 
 
 async def put_devices(request):

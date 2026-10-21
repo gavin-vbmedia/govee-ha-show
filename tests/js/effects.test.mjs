@@ -220,3 +220,10 @@ test("the whole of a split light runs across its parts joined together", () => {
   assert.deepEqual(rgb(0).slice(0, 1), [255]); // starts red
   assert.equal(rgb(5)[2] > rgb(5)[0], true); // ends blue, with no gap where 3 and 4 are skipped
 });
+
+test("a split light played as parts only ignores its own track", () => {
+  const roof = { id: "roof", segments: 4, whole: false, parts: [{ id: "a", from: 1, to: 2 }] };
+  const white = { ...newClip("solid", 0, 1), color: "#ffffff" };
+  const out = composeLight(roof, (id) => (id === "roof" ? { clips: [white] } : undefined), 0);
+  assert.deepEqual([...out], Array(12).fill(0));
+});

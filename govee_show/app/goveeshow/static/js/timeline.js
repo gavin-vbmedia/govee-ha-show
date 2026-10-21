@@ -136,7 +136,25 @@ export class Timeline {
     ctx.font = "12px system-ui, sans-serif";
     ctx.fillText("Song", 10, RULER_H + WAVE_H / 2 + 4);
     ctx.fillText("Beats", 10, RULER_H + WAVE_H + 12);
-    this.app.show.tracks.forEach((tr, i) => {
+    // A split light's tracks (its own, then its parts) are drawn as one group: a bar down the
+    // left, a tint behind them and a heavier line around them, with the parts indented.
+    const tracks = this.app.show.tracks;
+    const groupOf = (k) => {
+      const d = this.app.devices[tracks[k]?.device];
+      return d?.light?.id || d?.parent || null;
+    };
+    tracks.forEach((tr, i) => {
+      const g = groupOf(i);
+      if (!g) return;
+      const y = TOP + i * TRACK_H;
+      ctx.fillStyle = col("--accent");
+      ctx.globalAlpha = 0.07;
+      ctx.fillRect(0, y, HEADER_W, TRACK_H);
+      ctx.globalAlpha = 0.8;
+      ctx.fillRect(0, y + (groupOf(i - 1) === g ? 0 : 4), 4, TRACK_H - (groupOf(i - 1) === g ? 0 : 4) - (groupOf(i + 1) === g ? 0 : 4));
+      ctx.globalAlpha = 1;
+    });
+    tracks.forEach((tr, i) => {
       const y = TOP + i * TRACK_H;
       const dev = this.app.devices[tr.device];
       if (this.app.selected?.track === i && !this.app.selected.clip && !this.app.selected.range) {
@@ -146,25 +164,40 @@ export class Timeline {
         ctx.globalAlpha = 1;
       }
       const house = tr.device === HOUSE;
+      // A part under its light's own track (or another part) shows just its own name, indented.
+      const nested = dev?.parent && groupOf(i - 1) === dev.parent;
+      const x = nested ? 26 : 10;
+      if (nested) {
+        ctx.strokeStyle = col("--muted");
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath(); ctx.moveTo(14.5, y); ctx.lineTo(14.5, y + 16); ctx.lineTo(21, y + 16); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       ctx.fillStyle = col(house ? "--accent" : "--text");
-      ctx.font = "600 13px system-ui, sans-serif";
-      ctx.fillText(clipText(ctx, house ? "House" : dev ? dev.name : "Missing device", HEADER_W - 16), 10, y + 20);
+      ctx.font = `${nested ? 500 : 600} 13px system-ui, sans-serif`;
+      const name = house ? "House" : !dev ? "Missing device" : nested ? dev.partName : dev.name;
+      ctx.fillText(clipText(ctx, name, HEADER_W - x - 6), x, y + 20);
       ctx.fillStyle = col("--muted");
       ctx.font = "12px system-ui, sans-serif";
       const sub = house ? "Across all lights"
         : !dev ? tr.device
-        : dev.light ? `All parts · ${dev.segments} segments`
+        : dev.light ? (dev.light.whole === false ? "Not played: parts only" : `All parts · ${dev.segments} segments`)
         : dev.parent ? `Segments ${dev.from}–${dev.to}`
         : `${dev.segments} segments${dev.ip ? "" : " · planned"}`;
-      ctx.fillText(clipText(ctx, sub, HEADER_W - 16), 10, y + 36);
+      ctx.fillText(clipText(ctx, sub, HEADER_W - x - 6), x, y + 36);
     });
     this.drawRange(col);
     ctx.strokeStyle = col("--line");
     ctx.beginPath(); ctx.moveTo(HEADER_W + 0.5, 0); ctx.lineTo(HEADER_W + 0.5, h); ctx.stroke();
     for (let i = 0; i <= this.app.show.tracks.length; i++) {
       const y = TOP + i * TRACK_H + 0.5;
+      // A heavier line where a group of a split light's tracks starts or ends.
+      const edge = groupOf(i) !== groupOf(i - 1) && (groupOf(i) || groupOf(i - 1));
+      ctx.lineWidth = edge ? 2 : 1;
+      ctx.strokeStyle = col(edge ? "--muted" : "--line");
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
     }
+    ctx.lineWidth = 1;
     this.drawPlayhead();
   }
 
