@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.43
+
+- **Suggestions**: once the song has been analysed, **＋ Add effect…** on a selection starts with looks
+  suggested for that part of the song (quiet, steady or loud), timed to the tempo and in your palette's
+  colours.
+- **Generate** starts on the palette for the time of year (Halloween, Bonfire Night, Christmas and more)
+  when one is in season.
+
 ## 0.2.42
 
 - **Describe it**: a new editor panel where you type what you'd like ("red and green chase on the roof

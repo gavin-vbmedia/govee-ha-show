@@ -28,6 +28,7 @@ editor inside Home Assistant, with no external sequencing software or separate h
 
 - Describe effects in words ("red and green chase on the roof in the chorus") and an AI adds them,
   using Claude with your API key or any AI set up in Home Assistant, including local ones
+- Effect suggestions for the selected part of the song, timed to its tempo
 - Generate a first draft of a whole show from the song in one click, in a palette and style you pick
 - Detect the song's tempo, beats, bars and sections (intro, verse, chorus…) automatically, in the
   browser

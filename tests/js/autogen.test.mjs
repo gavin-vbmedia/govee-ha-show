@@ -87,3 +87,23 @@ test("works without any analysis", () => {
   assert.equal(r.clips.a[r.clips.a.length - 1].end, 30);
   assert.deepEqual(barGrid({ duration: 5 }), [0, 2, 4, 5]);
 });
+
+test("suggests looks for the section a stretch falls in, at the song's tempo", async () => {
+  const { suggestLooks } = await import("../../govee_show/app/goveeshow/static/js/autogen.js");
+  const chorus = suggestLooks(analysis, 33, 40);
+  assert.equal(chorus.section.label, "Chorus");
+  assert.equal(chorus.tier, "high");
+  const flash = chorus.looks.find((l) => l.effect === "cycle");
+  assert.equal(flash.params.rate, 2); // one change a beat at 120 BPM
+  assert.ok(chorus.looks.every((l) => l.label && EFFECTS[l.effect]));
+  assert.equal(suggestLooks(analysis, 1, 3).tier, "low");
+  assert.equal(suggestLooks({ duration: 10 }, 1, 3).section, null);
+});
+
+test("picks a palette for the time of year", async () => {
+  const { seasonalPalette } = await import("../../govee_show/app/goveeshow/static/js/palettes.js");
+  assert.equal(seasonalPalette(new Date(2026, 9, 21)).name, "Halloween");
+  assert.equal(seasonalPalette(new Date(2026, 11, 1)).name, "Christmas");
+  assert.equal(seasonalPalette(new Date(2026, 10, 5)).name, "Bonfire Night");
+  assert.equal(seasonalPalette(new Date(2026, 5, 1)), null);
+});

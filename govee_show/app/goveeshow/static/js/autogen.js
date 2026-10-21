@@ -17,27 +17,27 @@ export const STYLES = {
 // so movement lands on the beat: one step a beat, one lap or sweep a bar.
 const LOOKS = {
   low: [
-    { effect: "gradient", params: () => ({ count: "3", speed: 0.1 }) },
-    { effect: "pulse", params: (bps) => ({ rate: bps / 4, background: "#000000" }) },
-    { effect: "twinkle", params: () => ({ density: 20, rate: 2, background: "#000000" }) },
-    { effect: "duo", params: () => ({ layout: "split", speed: 0 }) },
-    { effect: "cycle", params: (bps) => ({ rate: bps / 8, blend: "fade" }) },
+    { effect: "gradient", label: "Slow drift", params: () => ({ count: "3", speed: 0.1 }) },
+    { effect: "pulse", label: "Breathe each bar", params: (bps) => ({ rate: bps / 4, background: "#000000" }) },
+    { effect: "twinkle", label: "Gentle twinkle", params: () => ({ density: 20, rate: 2, background: "#000000" }) },
+    { effect: "duo", label: "Still blocks", params: () => ({ layout: "split", speed: 0 }) },
+    { effect: "cycle", label: "Slow colour fade", params: (bps) => ({ rate: bps / 8, blend: "fade" }) },
   ],
   mid: [
-    { effect: "trio", params: (bps) => ({ layout: "alternate", size: 1, speed: bps }) },
-    { effect: "chase", params: (bps, n) => ({ width: Math.max(1, Math.round(n / 5)), speed: bps / 4 }) },
-    { effect: "comet", params: (bps, n) => ({ length: Math.max(2, Math.round(n / 3)), speed: bps / 4 }) },
-    { effect: "scanner", params: (bps, n) => ({ width: Math.max(1, n / 8), speed: bps / 4 }) },
-    { effect: "cycle", params: (bps) => ({ rate: bps, blend: "step" }) },
-    { effect: "gradient", params: () => ({ count: "3", speed: 0.5 }) },
+    { effect: "trio", label: "Marquee on the beat", params: (bps) => ({ layout: "alternate", size: 1, speed: bps }) },
+    { effect: "chase", label: "Chase, a lap a bar", params: (bps, n) => ({ width: Math.max(1, Math.round(n / 5)), speed: bps / 4 }) },
+    { effect: "comet", label: "Comet, a lap a bar", params: (bps, n) => ({ length: Math.max(2, Math.round(n / 3)), speed: bps / 4 }) },
+    { effect: "scanner", label: "Scanner, a sweep a bar", params: (bps, n) => ({ width: Math.max(1, n / 8), speed: bps / 4 }) },
+    { effect: "cycle", label: "Colour change each beat", params: (bps) => ({ rate: bps, blend: "step" }) },
+    { effect: "gradient", label: "Flowing gradient", params: () => ({ count: "3", speed: 0.5 }) },
   ],
   high: [
-    { effect: "cycle", params: (bps) => ({ rate: bps, blend: "step" }) },
-    { effect: "duo", params: (bps) => ({ layout: "alternate", size: 1, speed: bps * 2 }) },
-    { effect: "chase", params: (bps) => ({ width: 2, speed: bps / 2 }) },
-    { effect: "twinkle", params: () => ({ density: 60, rate: 10, background: "#000000" }) },
-    { effect: "pulse", params: (bps) => ({ rate: bps, background: "#000000" }) },
-    { effect: "trio", params: (bps) => ({ layout: "alternate", size: 2, speed: bps * 2 }) },
+    { effect: "cycle", label: "Colour flash each beat", params: (bps) => ({ rate: bps, blend: "step" }) },
+    { effect: "duo", label: "Fast marquee", params: (bps) => ({ layout: "alternate", size: 1, speed: bps * 2 }) },
+    { effect: "chase", label: "Fast chase", params: (bps) => ({ width: 2, speed: bps / 2 }) },
+    { effect: "twinkle", label: "Sparkle storm", params: () => ({ density: 60, rate: 10, background: "#000000" }) },
+    { effect: "pulse", label: "Pulse each beat", params: (bps) => ({ rate: bps, background: "#000000" }) },
+    { effect: "trio", label: "Wide fast marquee", params: (bps) => ({ layout: "alternate", size: 2, speed: bps * 2 }) },
   ],
 };
 
@@ -144,6 +144,17 @@ export function generateShow(analysis, lights, colors, { style = "balanced", see
     clips[light.id] = list;
   }
   return { clips, house: houseClips };
+}
+
+// Looks that suit a stretch of the song, for the effect chooser: the ones Generate would pick from
+// for the section it falls in, with speeds set from the tempo. Returns the section (or null) and
+// [{effect, label, params}].
+export function suggestLooks(analysis, start, end, segments = 15, style = "balanced") {
+  const overlap = (s) => Math.min(s.end, end) - Math.max(s.start, start);
+  const section = (analysis.sections || []).reduce((best, s) => (overlap(s) > 0 && (!best || overlap(s) > overlap(best)) ? s : best), null);
+  const t = tier(section?.energy ?? 0.5, style);
+  const bps = beatsPerSecond(analysis);
+  return { section, tier: t, looks: LOOKS[t].map((look) => ({ effect: look.effect, label: look.label, params: tidy(look.params(bps, segments)) })) };
 }
 
 // Puts generated clips on the show's tracks, replacing what the lights (and, with house clips,
