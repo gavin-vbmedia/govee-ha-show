@@ -673,9 +673,9 @@ function realtimeBadge(sku) {
   const m = app.models[skuOf(sku)];
   const span = document.createElement("span");
   if (!m) return span;
-  span.className = `badge ${m.realtime ? "ok" : "warn"}`;
-  span.textContent = m.realtime ? "✓ realtime" : "⚠ unverified";
-  span.title = m.realtime
+  span.className = `badge ${m.realtime && !m.note ? "ok" : "warn"}`;
+  span.textContent = m.note ? "⚠ limited" : m.realtime ? "✓ realtime" : "⚠ unverified";
+  span.title = m.note ? `${m.name}: ${m.note}` : m.realtime
     ? `${m.name}: Govee lists this model as supporting realtime segment control.`
     : `${m.name}: not on Govee's realtime list. Some unlisted models still work, but test it before relying on it.`;
   return span;
@@ -691,6 +691,7 @@ function planModelChanged() {
   info.append(realtimeBadge(m.sku), m.segments
     ? ` ${m.segments} segments (known)`
     : " Segment count unknown: 15 is a guess, check it with Test when it arrives.");
+  if (m.note) info.append(` ${m.note}`);
 }
 
 function button(label, onclick, cls = "") {

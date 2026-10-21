@@ -105,7 +105,8 @@ Pick the model (for example `H7093`), give it a name and press **Add
 planned light**, then build shows with it straight away. The model list comes from Govee's product
 data: **✓ realtime** means Govee lists the model as supporting per-segment realtime control, which
 this add-on needs, and **⚠ unverified** means it isn't on that list (some still work, but test one
-before buying more). Segment counts aren't published, so 15 is a guess until you test the real
+before buying more). **⚠ limited** marks a model that has been tested and only partly works; point
+at the badge to see what it can do. Segment counts aren't published, so 15 is a guess until you test the real
 light. Planned lights appear in the previews but nothing is sent to them. When the light arrives,
 press **Scan network** and choose **Link to** next to it, or type its IP into the planned light's
 row. Its shows carry over, and if the real segment count differs, just change it: effects scale
@@ -649,6 +650,7 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 | --- | --- |
 | Scan finds nothing | Check **LAN Control** is on for each light in the Govee Home app, and that Home Assistant and the lights are on the same network with multicast allowed. Add the light by IP instead. |
 | Test only turns the light on | Change **Protocol** on the Devices tab and test again. |
+| Only the first part of a light lights up | Some lights only accept a few segments in realtime mode, one bulb each. The 30 m Christmas String Lights 2 (H70C5) stops at 44 bulbs. Set **Protocol** to **Whole light only** to light the whole string, one colour at a time. |
 | Effects run from the wrong end | Tick **Reverse** on the Devices tab. |
 | Lights run ahead of or behind the music | In the browser, adjust **Light offset** under **Setup → Speakers**. On a speaker, adjust its **Delay ms** in the same place. |
 | A speaker can't be added | The test shows Home Assistant's reason. Some integrations can't play files from the media folder; use another media player for the song. |
