@@ -98,7 +98,7 @@ Lights accept different forms of the realtime command. Change
 | Realtime (Razer) | The fixed-size packet Razer Chroma sends. Try it next. |
 | Realtime v2 | The newer DreamView form some recent lights use. |
 | Whole light only | For lights with no realtime mode. The whole light shows the average colour of its segments, at up to 10 changes a second, and each change fades a little. |
-| App segments (experimental) | For lights whose realtime mode doesn't reach every bulb. Colours the light the way the Govee Home app does, in the app's own segments, so set **Segments** to the number the app shows. Up to 10 changes a second, so slow looks suit it better than fast chases. **Find** doesn't work with it. |
+| App segments (experimental) | For lights whose realtime mode doesn't reach every bulb. Colours the light the way the Govee Home app does, in the app's own segments, so set **Segments** to the number the app shows. It sends a few segments at a time, the biggest changes first, so the light keeps up rather than lagging behind; slow looks suit it better than fast chases. **Find** doesn't work with it. |
 
 ### Lights not delivered yet?
 

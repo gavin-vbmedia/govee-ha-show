@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.71
+
+- **App segments (experimental)** lags less. It now sends only a few segment changes at a time, the
+  biggest first, and skips changes too small to see. Before, it could send more than a light like the
+  H70C5 could keep up with, so the light fell further and further behind.
+
 ## 0.2.70
 
 - New, experimental **Protocol** on **Setup → Devices**: **App segments (experimental)**. It colours a

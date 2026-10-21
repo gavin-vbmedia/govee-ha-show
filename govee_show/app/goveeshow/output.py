@@ -11,7 +11,7 @@ import socket
 import time
 
 from .protocol import (CMD_PORT, average, colorwc_msg, ptreal_msg, razer_colors, razer_enable, razer_msg,
-                       scene_packets, segment_colour_packets, wrap)
+                       scene_packets, segment_changes, segment_colour_packet, segment_colour_packets, wrap)
 
 log = logging.getLogger(__name__)
 
@@ -27,9 +27,13 @@ STARTUP_S = 5
 STARTUP_REENABLE_S = 0.5
 MAX_FPS = 40
 WHOLE_FPS = 10  # colorwc fades each change, so faster than this just blurs
-# The app's segment command isn't made for streaming: only changed segments are sent, at most this
-# often, and the whole frame is repeated now and then in case a packet was lost.
+# The app's segment command isn't made for streaming. A light sent more than it can take queues them
+# up and falls behind (the H70C5 lagged at ~100 a second), so each send carries at most a few
+# commands, biggest change first, and changes too small to see wait until they add up. The rest
+# follow on the next sends. Once the picture settles, it is repeated in case a packet was lost.
 SEGMENTS_FPS = 10
+SEGMENTS_PER_SEND = 3
+SEGMENTS_CLOSE = 12  # out of 255, per channel
 SEGMENTS_RESEND_S = 1.0
 
 
@@ -44,6 +48,7 @@ class OutputDevice:
         if not self.realtime:
             max_fps = min(max_fps, SEGMENTS_FPS if protocol == "segments" else WHOLE_FPS)
         self.keepalive = SEGMENTS_RESEND_S if protocol == "segments" else KEEPALIVE_S
+        self.shown: bytearray | None = None  # app segments: what the light should be showing now
         self.segments = segments
         self.reverse = reverse
         self.gradient = gradient
@@ -76,7 +81,7 @@ class OutputDevice:
             self._send(razer_msg(razer_enable(False)))
         self.enabled = False
         self.scene = None
-        self.pending = self.last_frame = None
+        self.pending = self.last_frame = self.shown = None
 
     def play_scene(self, code: int, param: str):
         """Experimental: hand the light to one of Govee's built-in scenes until end_scene()."""
@@ -116,6 +121,8 @@ class OutputDevice:
     def tick(self, now: float):
         if not self.enabled or self.scene is not None:
             return
+        if self.protocol == "segments":
+            return self._tick_segments(now)
         starting = now - self.enabled_at < STARTUP_S
         if self.realtime and starting and now - self.last_enable > STARTUP_REENABLE_S:
             self._send(razer_msg(razer_enable(True)))
@@ -128,6 +135,27 @@ class OutputDevice:
             self._send(self.packet(frame, self.last_frame if frame != self.last_frame else None))
             self.last_frame, self.last_sent = frame, now
         self.pending = None
+
+    def _tick_segments(self, now: float):
+        if self.pending is not None:
+            self.last_frame, self.pending = self.pending, None
+        frame = self.last_frame
+        if frame is None or now - self.last_sent < self.min_interval:
+            return
+        settled = self.shown is not None and now - self.last_sent > self.keepalive
+        if self.shown is None or len(self.shown) != len(frame) or settled:
+            # Not known, or settled and due a repeat in case a packet was lost: count every segment
+            # as far from its colour, so all of them get sent over the next few sends.
+            self.shown = bytearray(255 - v for v in frame)
+        changes = segment_changes(frame, self.shown, SEGMENTS_CLOSE)
+        if not changes:
+            return
+        changes = changes[:SEGMENTS_PER_SEND]
+        self._send(ptreal_msg([segment_colour_packet(c, segs) for c, segs in changes]))
+        for c, segs in changes:
+            for i in segs:
+                self.shown[i * 3: i * 3 + 3] = c
+        self.last_sent = now
 
 
 class Output:
