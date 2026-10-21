@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.48
+
+- On the **Music** tab the beat lane is now above the waveform, and each beat's orange line runs down
+  through it (stronger at the start of a bar), as in the editor.
+
 ## 0.2.47
 
 - The **Music** tab's waveform now looks like the editor's: sections as the same coloured, named bands
