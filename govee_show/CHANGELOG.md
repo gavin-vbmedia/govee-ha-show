@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.56
+
+- A light split into parts can still be played as one: its own track (marked *All parts*) runs effects
+  across all the parts joined end to end, skipping unused segments. A clip on a part's own track takes
+  over on that part while it plays, so you can run one effect up, across and down your pillars and still
+  give one pillar its own moment.
+- **House** tab: hide a light on the photo with 👁 to get at a light traced underneath it. It only hides it
+  there, not in the House panel or the show.
+
 ## 0.2.55
 
 - Reorder lights on the **Devices** tab: drag a light by its ⠿ handle or use ↑ and ↓. Every show's

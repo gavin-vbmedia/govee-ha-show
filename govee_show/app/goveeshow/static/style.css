@@ -86,7 +86,9 @@ label { display: inline-flex; align-items: center; gap: 4px; }
   flex-direction: column; gap: 6px; cursor: pointer; }
 .house-card.selected { border-color: var(--accent); cursor: default; }
 .house-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.house-card-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.house-card-head b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.house-eye { padding: 0 6px; line-height: 18px; }
+.house-eye.off { opacity: 0.6; }
 .house-card .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .house-card input[type="number"] { width: 5em; }
 .house-card input[type="range"] { flex: 1; min-width: 80px; }

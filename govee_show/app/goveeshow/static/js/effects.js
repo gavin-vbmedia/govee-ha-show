@@ -463,41 +463,64 @@ export function showDuration(show) {
   return end;
 }
 
-// Bake every frame into the layout the Python player reads (see baked.py).
-// devices maps device id -> {segments}. Tracks without a known device are skipped. positions maps
+// A whole physical light's colours at `time`. `trackOf(id)` finds a track by device id. A light
+// split into parts plays its own track across the parts joined end to end (as if the unused
+// segments weren't there), and each part's track wins on that part while one of its clips is
+// running. Segments outside every part stay off.
+export function composeLight(light, trackOf, time, positions = {}, houseClips = [], out = new Uint8Array(light.segments * 3)) {
+  out.fill(0);
+  if (!light.parts?.length) {
+    const tr = trackOf(light.id);
+    if (tr) renderTrack(tr.clips, time, light.segments, out);
+    if (houseClips.length && positions[light.id]) applyHouse(houseClips, time, positions[light.id], out);
+    return out;
+  }
+  const joined = light.parts.reduce((n, p) => n + p.to - p.from + 1, 0);
+  const whole = trackOf(light.id);
+  const all = whole?.clips.length ? renderTrack(whole.clips, time, joined) : null;
+  let k = 0;
+  for (const p of light.parts) {
+    const n = p.to - p.from + 1, id = `${light.id}#${p.id}`;
+    const slice = out.subarray((p.from - 1) * 3, p.to * 3);
+    const tr = trackOf(id);
+    if (tr?.clips.some((c) => time >= c.start && time < c.end)) renderTrack(tr.clips, time, n, slice);
+    else if (all) slice.set(all.subarray(k * 3, (k + n) * 3));
+    if (houseClips.length && positions[id]) applyHouse(houseClips, time, positions[id], slice);
+    k += n;
+  }
+  return out;
+}
+
+// Bake every frame into the layout the Python player reads (see baked.py): one track per physical
+// light, in the order lights first appear in the show. devices maps a track's device id to its
+// light {segments, parts?}, or to a part of one ("lightId#partId", with parent, from and to,
+// 1-based and inclusive); `light` on an entry points at the physical light when the entry stands
+// for all of a split light's parts. Tracks without a known device are skipped. positions maps
 // device id -> each segment's [u, v] on the house (or null), for the House lane's clips.
-// A light split into parts (devices[id].parts) has a track per part instead of one for the whole
-// light: devices holds each part too, keyed "lightId#partId" with parent, from and to (1-based,
-// inclusive). The bake puts the parts back together into the light's own frame, and its segments
-// outside every part stay off. A split light's own track is not played.
 export function bake(show, devices, fps = FPS, positions = {}) {
-  const houseClips = (show.tracks || []).find((tr) => tr.device === HOUSE)?.clips || [];
-  const lights = []; // [{device, segments, members: [{track, offset, segments}]}] in track order
-  const byLight = {};
-  for (const tr of show.tracks || []) {
+  const tracks = show.tracks || [];
+  const houseClips = tracks.find((tr) => tr.device === HOUSE)?.clips || [];
+  const byId = new Map(tracks.map((tr) => [tr.device, tr]));
+  const trackOf = (id) => byId.get(id);
+  const lights = [], seen = new Set();
+  for (const tr of tracks) {
     const dev = devices[tr.device];
-    if (!dev || dev.parts?.length) continue;
-    const light = dev.parent ? devices[dev.parent] : dev;
-    if (!light) continue;
-    const id = dev.parent || tr.device;
-    let entry = byLight[id];
-    if (!entry) {
-      entry = byLight[id] = { device: id, segments: light.segments, members: [] };
-      lights.push(entry);
-    }
-    entry.members.push({ track: tr, device: tr.device, offset: dev.parent ? dev.from - 1 : 0, segments: dev.segments });
+    const id = dev?.parent || tr.device, entry = devices[id];
+    if (!entry || seen.has(id)) continue;
+    seen.add(id);
+    lights.push({ ...(entry.light || entry), id });
   }
   const header = {
     fps,
     frames: Math.ceil(showDuration(show) * fps),
-    tracks: lights.map((l) => ({ device: l.device, segments: l.segments })),
+    tracks: lights.map((l) => ({ device: l.id, segments: l.segments })),
   };
   // Govee scene clips: the player hands those lights (the whole light, for a part) to the scene
   // between these frames.
   const scenes = [];
   lights.forEach((l, k) => {
-    for (const m of l.members) {
-      for (const c of m.track.clips) {
+    for (const id of [l.id, ...(l.parts || []).map((p) => `${l.id}#${p.id}`)]) {
+      for (const c of trackOf(id)?.clips || []) {
         if (c.effect === "scene" && c.code) {
           scenes.push({ track: k, start: Math.max(0, Math.round(c.start * fps)), end: Math.round(c.end * fps),
             code: c.code, param: c.param || "" });
@@ -516,11 +539,7 @@ export function bake(show, devices, fps = FPS, positions = {}) {
   for (let f = 0; f < header.frames; f++) {
     const time = f / fps;
     for (const l of lights) {
-      for (const m of l.members) {
-        const at = off + m.offset * 3;
-        const frame = renderTrack(m.track.clips, time, m.segments, out.subarray(at, at + m.segments * 3));
-        if (houseClips.length && positions[m.device]) applyHouse(houseClips, time, positions[m.device], frame);
-      }
+      composeLight(l, trackOf, time, positions, houseClips, out.subarray(off, off + l.segments * 3));
       off += l.segments * 3;
     }
   }

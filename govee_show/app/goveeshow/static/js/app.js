@@ -4,8 +4,8 @@ import { buildContext, checkClips, checkPresets, effectsForAI, placeClips } from
 import { analyseInWorker, toMono } from "./analysis.js";
 import { STYLES, applyGenerated, generateShow, suggestLooks } from "./autogen.js";
 import {
-  EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, presetParams, renderTrack,
-  showDuration,
+  EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, composeLight, defaultParams, matchesPreset, presetParams,
+  renderTrack, showDuration,
 } from "./effects.js";
 import { House } from "./house.js";
 import { Layout } from "./layout.js";
@@ -157,8 +157,9 @@ async function loadDevices() {
   indexDevices();
 }
 
-// A light split into parts plays as one pseudo-light per part, keyed "light#part". Segments
-// outside every part stay off. The whole light's own track isn't played.
+// A light split into parts plays as one pseudo-light per part, keyed "light#part", and its own
+// track plays across all the parts joined together (see composeLight). Segments outside every part
+// stay off. app.devices holds what each track plays on; app.lights holds the physical lights.
 const partId = (d, p) => `${d.id}#${p.id}`;
 function partDevice(d, p) {
   const segments = p.to - p.from + 1;
@@ -166,13 +167,20 @@ function partDevice(d, p) {
     from: p.from, to: p.to, segments, parts: undefined,
     bulbs: d.bulbs ? Math.max(1, Math.round(d.bulbs * segments / d.segments)) : null };
 }
-// The device a track plays on, or null when it doesn't play (a missing or split light).
-const playingDev = (tr) => { const d = app.devices[tr.device]; return d && !d.parts?.length ? d : null; };
+// What a split light's own track plays on: its parts end to end, as one strip.
+function allPartsDevice(d) {
+  const segments = d.parts.reduce((n, p) => n + p.to - p.from + 1, 0);
+  return { ...d, segments, light: d, bulbs: d.bulbs ? Math.max(1, Math.round(d.bulbs * segments / d.segments)) : null };
+}
+// The device a track plays on, or null for a missing light.
+const playingDev = (tr) => app.devices[tr.device] || null;
 
 function indexDevices() {
   app.devices = {};
+  app.lights = {};
   for (const d of app.deviceList) {
-    app.devices[d.id] = d;
+    app.lights[d.id] = d;
+    app.devices[d.id] = d.parts?.length ? allPartsDevice(d) : d;
     for (const p of d.parts || []) app.devices[partId(d, p)] = partDevice(d, p);
   }
   ensureTracks();
@@ -196,7 +204,11 @@ function ensureTracks() {
       if (!has(d.id)) tracks.splice(at < 0 ? tracks.length : at, 0, { device: d.id, clips: [] });
       continue;
     }
-    // Part tracks go where the whole light's track sits (just under it while it has clips), in order.
+    if (!has(d.id)) {
+      const first = tracks.findIndex((t) => t.device.startsWith(`${d.id}#`));
+      tracks.splice(first < 0 ? tracks.length : first, 0, { device: d.id, clips: [] });
+    }
+    // Part tracks go just under the whole light's track, in order.
     let at = tracks.findIndex((t) => t.device === d.id || app.devices[t.device]?.parent === d.id);
     if (at < 0) at = tracks.length;
     else if (tracks[at].device === d.id) at++;
@@ -207,9 +219,6 @@ function ensureTracks() {
       tracks.splice(at, 0, { device: id, clips: [] });
       at++;
     }
-    // The whole light's track goes once it has nothing on it.
-    const whole = tracks.findIndex((t) => t.device === d.id);
-    if (whole >= 0 && !tracks[whole].clips.length) tracks.splice(whole, 1);
   }
   // Empty tracks for parts that no longer exist.
   app.show.tracks = tracks.filter((t) => !t.device.includes("#") || app.devices[t.device] || t.clips.length);
@@ -221,7 +230,7 @@ function ensureTracks() {
     const dev = app.devices[t.device];
     if (!dev) return Infinity;
     if (!dev.parent) return order.get(dev.id) * 1000;
-    const light = app.devices[dev.parent];
+    const light = app.lights[dev.parent];
     return order.get(light.id) * 1000 + 1 + light.parts.findIndex((p) => partId(light, p) === t.device);
   };
   app.show.tracks.sort((a, b) => rank(a) - rank(b) || 0);
@@ -632,7 +641,7 @@ async function scan() {
         const sel = document.createElement("select");
         for (const p of planned) sel.add(new Option(p.name, p.id));
         row.append(" or ", button("Link to", () => {
-          const p = app.devices[sel.value];
+          const p = app.lights[sel.value];
           Object.assign(p, { ip: f.ip, sku: f.sku || p.sku });
           saveDevices();
           row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (${p.name})`);
@@ -672,10 +681,10 @@ function drawPreview() {
     pctx.fillText("Add devices on the Devices tab to see a preview here.", 4, 17);
     return;
   }
-  const pos = housePositions();
+  const pos = housePositions(), composed = {};
   tracks.forEach((tr, row) => {
     const dev = app.devices[tr.device];
-    const rgb = lightFrame(tr, dev, app.time, pos);
+    const rgb = previewFrame(tr, dev, pos, composed);
     const n = dev.segments;
     const cap = (dev.brightness ?? 100) / 100;
     if (cap < 1) for (let i = 0; i < rgb.length; i++) rgb[i] = Math.round(rgb[i] * cap);
@@ -699,6 +708,7 @@ const house = new House({
     return physicalFrame(dev, app.time, housePositions());
   },
 });
+house.hiddenLights = new Set(prefs.get("house.hiddenLights", []));
 
 // The House lane: its clips, and where each light's segments sit for them.
 const houseClips = () => app.show.tracks.find((t) => t.device === HOUSE)?.clips || [];
@@ -733,14 +743,40 @@ function lightFrame(tr, dev, time, pos) {
   return rgb;
 }
 
-// A whole physical light's colours: from its own track, or from its parts' tracks with the
-// segments outside every part left off.
-function physicalFrame(dev, time, pos) {
-  const out = new Uint8Array(dev.segments * 3);
-  const members = dev.parts?.length ? dev.parts.map((p) => app.devices[partId(dev, p)]) : [dev];
-  for (const m of members) {
-    const tr = m && app.show.tracks.find((t) => t.device === m.id);
-    if (tr) out.set(lightFrame(tr, m, time, pos), m.parent ? (m.from - 1) * 3 : 0);
+// A whole physical light's colours, as the show plays it.
+function physicalFrame(light, time, pos) {
+  return composeLight(light, (id) => app.show.tracks.find((t) => t.device === id), time, pos, houseClips());
+}
+
+// What a preview row shows: for a split light and its parts, their share of what the light
+// actually plays (so a part's clip shows over the whole light's). `composed` caches per light.
+function previewFrame(tr, dev, pos, composed) {
+  const light = dev.light || app.lights[dev.parent];
+  if (!light) return lightFrame(tr, dev, app.time, pos);
+  const full = composed[light.id] ??= physicalFrame(light, app.time, pos);
+  if (dev.parent) return full.slice((dev.from - 1) * 3, dev.to * 3);
+  return joinParts(light, full);
+}
+
+// A split light's parts end to end, from a frame of the whole physical light.
+function joinParts(light, full) {
+  const out = new Uint8Array(light.parts.reduce((n, p) => n + p.to - p.from + 1, 0) * 3);
+  let k = 0;
+  for (const p of light.parts) {
+    out.set(full.subarray((p.from - 1) * 3, p.to * 3), k);
+    k += (p.to - p.from + 1) * 3;
+  }
+  return out;
+}
+
+// The reverse: a strip played across a split light's parts, spread back onto the whole light.
+function spreadParts(light, rgb) {
+  const out = new Uint8Array(light.segments * 3);
+  let k = 0;
+  for (const p of light.parts) {
+    const n = (p.to - p.from + 1) * 3;
+    out.set(rgb.subarray(k, k + n), (p.from - 1) * 3);
+    k += n;
   }
   return out;
 }
@@ -884,9 +920,21 @@ function renderHouseLights() {
     name.textContent = d.name;
     const state = document.createElement("span");
     state.className = "hint";
-    state.textContent = house.active === d.id ? "Tracing…"
-      : !pts ? "Not traced" : { icicle: "Icicle", spots: `${pts} spots` }[house.styles[d.id]?.style] || "Traced";
-    head.append(name, state);
+    const hidden = house.hiddenLights.has(d.id);
+    state.textContent = house.active === d.id ? "Tracing…" : !pts ? "Not traced" : hidden ? "Hidden"
+      : { icicle: "Icicle", spots: `${pts} spots` }[house.styles[d.id]?.style] || "Traced";
+    // Hiding a light on the photo gets at one traced underneath it. Only the House tab's photo
+    // hides it; the House panel and the show are unchanged.
+    const eye = button(hidden ? "🙈" : "👁", (e) => {
+      e.stopPropagation();
+      if (hidden) house.hiddenLights.delete(d.id); else house.hiddenLights.add(d.id);
+      prefs.set("house.hiddenLights", [...house.hiddenLights]);
+      if (!hidden && house.stretch?.id === d.id) house.stretch = null;
+      renderHouseLights();
+    }, `ghost small house-eye${hidden ? " off" : ""}`);
+    eye.title = hidden ? `Show ${d.name} on the photo` : `Hide ${d.name} on the photo, to get at a light under it`;
+    eye.disabled = !pts;
+    head.append(name, state, eye);
     card.append(head);
     if (!open) {
       card.title = "Select this light";
@@ -1020,7 +1068,7 @@ function drawClipPreview() {
   if (!dev) { if (clipPreview.dev) stopLightPreview(); return; }
   const rgb = renderTrack([clip], t, dev.segments);
   drawStrip(c, rgb, dev.segments, (dev.brightness ?? 100) / 100);
-  const onLight = previewOnLight() && dev.ip && !dev.parts?.length && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
+  const onLight = previewOnLight() && dev.ip && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
   if (onLight) sendPreview(dev, rgb);
   else if (clipPreview.dev) stopLightPreview();
 }
@@ -1047,9 +1095,11 @@ function drawStrip(c, rgb, n, cap = 1) {
 // lights its own slice of the light, with the rest off.
 function sendPreview(dev, rgb) {
   if (dev.parent) {
-    const light = app.devices[dev.parent], full = new Uint8Array(light.segments * 3);
+    const light = app.lights[dev.parent], full = new Uint8Array(light.segments * 3);
     full.set(rgb.subarray(0, dev.segments * 3), (dev.from - 1) * 3);
     [dev, rgb] = [light, full];
+  } else if (dev.light) {
+    [dev, rgb] = [dev.light, spreadParts(dev.light, rgb)];
   }
   const now = performance.now();
   if (clipPreview.pending || now - clipPreview.sent < PREVIEW_SEND_MS || now - clipPreview.failedAt < 5000) return;
@@ -1066,7 +1116,7 @@ function sendPreview(dev, rgb) {
 
 // Lets the light go back to what it was doing. Resolves once any frame still on its way has landed.
 async function stopLightPreview() {
-  const dev = app.devices[clipPreview.dev];
+  const dev = app.lights[clipPreview.dev];
   clipPreview.dev = null;
   await clipPreview.pending;
   if (dev?.ip) await api("api/devices/preview", { method: "POST", json: { ...dev, stop: true } }).catch(() => {});
@@ -2687,7 +2737,8 @@ function generateDialog() {
 }
 
 async function generate({ colors, style, house }) {
-  const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && playingDev(tr))
+  // A split light gets effects on its parts; its own track (all the parts at once) is left for you.
+  const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && playingDev(tr) && !playingDev(tr).light)
     .map((tr) => ({ id: tr.device, segments: app.devices[tr.device].segments }));
   if (!lights.length) { status("Add your lights on the Devices tab first", true); return; }
   // Listen to the song first if that hasn't been done yet.

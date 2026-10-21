@@ -153,7 +153,7 @@ export class Timeline {
       ctx.font = "12px system-ui, sans-serif";
       const sub = house ? "Across all lights"
         : !dev ? tr.device
-        : dev.parts?.length ? "Split, not played"
+        : dev.light ? `All parts · ${dev.segments} segments`
         : dev.parent ? `Segments ${dev.from}–${dev.to}`
         : `${dev.segments} segments${dev.ip ? "" : " · planned"}`;
       ctx.fillText(clipText(ctx, sub, HEADER_W - 16), 10, y + 36);

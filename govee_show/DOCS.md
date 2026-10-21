@@ -86,12 +86,17 @@ just after the last part). For example, a 60-segment Permanent Outdoor Pro could
 **Reverse** ticked segment 1 is the far end.
 
 Each part gets its own track in the editor (named like *Roof · Front roof*), its own preview row,
-and works with Copy, Recolour and Generate like any other light. **Segments in no part stay off
-during a show**: the row lists them as *Unused, off in shows*. Parts can't overlap, and making the
-light shorter trims them. The light itself is still one device, so the show is sent to it as a
-whole. Its own track is removed once the light is split if it was empty; if it had effects it's
-kept (marked *Split, not played*) so you can copy them onto the parts. Remove a part with ✕; its
-effects stay in your shows, and removing the last part puts the whole light's track back.
+and works with Copy and Recolour like any other light. **Segments in no part stay off during a
+show**: the row lists them as *Unused, off in shows*. Parts can't overlap, and making the light
+shorter trims them. Remove a part with ✕; its effects stay in your shows.
+
+**The whole light as one.** The light keeps its own track too, marked *All parts*. Effects on it
+run across all its parts joined end to end, as if the unused segments weren't there. A 30 m string
+that goes up the left pillar, across the top and down the right pillar could be split into *Left*,
+*Top* and *Right*: a chase on the light's own track then runs up, across and down in one go. While
+a clip is playing on a part's own track, that part shows its clip instead, so you can run one
+effect over the whole string and drop a different one on just the left pillar. **Generate** puts
+effects on the parts and leaves the light's own track for you.
 
 ## 2. Speakers
 
@@ -128,6 +133,11 @@ check it runs the same way as the real light. If it's backwards, retrace it from
 tick **Reverse** on the Devices tab if the effects themselves run the wrong way. Each light's
 **Brightness %** applies here as well. Click a light in the list, or its line on the photo, to pick
 it; Esc lets go.
+
+**Lights on top of each other.** When two traced lights overlap, press 👁 on the one in front to
+hide it on the photo, so you can click and drag the one underneath. It stays hidden (🙈) on this
+browser until you press it again. Hiding only affects the House tab's photo: the light still shows
+in the editor's House panel and plays in shows.
 
 **Parts you can't see.** If eaves carry on round the back of the house, or an extension lead runs
 from the plug to the first bulb, trace past that part anyway (a short line is fine). Then click

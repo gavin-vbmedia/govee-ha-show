@@ -167,6 +167,7 @@ export class House {
     this.drag = null; // {id, i} while a point is dragged
     this.stretch = null; // {id, i}: the stretch from point i - 1 to point i, picked on the House tab
     this.hover = null; // pointer position on the House tab, for the line to the next point
+    this.hiddenLights = new Set(); // ids hidden on the House tab, to get at a light traced under another
     this.saveTimer = null;
     this.cache = new Map(); // id -> {key, bulbs}
   }
@@ -274,9 +275,14 @@ export class House {
     this.save();
   }
 
+  // Whether a light is drawn and clickable on the House tab. The one being traced always is.
+  shown(id) {
+    return !this.hiddenLights.has(id) || id === this.active;
+  }
+
   // The photo, darkened like dusk, with every placed light on it. `colours(dev)` gives each
-  // light's segment colours.
-  paint(canvas, maxH, colours) {
+  // light's segment colours; `skip(dev)` leaves a light out.
+  paint(canvas, maxH, colours, skip) {
     const { ctx, w, h } = this.fit(canvas, maxH);
     ctx.globalCompositeOperation = "source-over";
     ctx.drawImage(this.photo, 0, 0, w, h);
@@ -296,6 +302,7 @@ export class House {
       ctx.beginPath(); ctx.arc(x, y, r * size, 0, Math.PI * 2); ctx.fill();
     };
     for (const dev of this.devices) {
+      if (skip?.(dev)) continue;
       const style = this.styles[dev.id];
       if (style?.style === "spots") {
         const pts = this.paths[dev.id];
@@ -375,11 +382,11 @@ export class House {
         out.set(hueRgb((i / dev.segments) * 0.8), s * 3);
       }
       return out;
-    });
+    }, (dev) => !this.shown(dev.id));
     this.size = { w, h };
     for (const dev of this.devices) {
       const pts = this.paths[dev.id];
-      if (!pts?.length) continue;
+      if (!pts?.length || !this.shown(dev.id)) continue;
       const active = dev.id === (this.active || this.selected);
       const style = this.styles[dev.id];
       if (style?.style === "spots") {
@@ -479,7 +486,7 @@ export class House {
     const hit = (p) => {
       const { w, h } = this.size || { w: 1, h: 1 };
       let best = null, bestD = HIT_PX;
-      const ids = [this.active, ...Object.keys(this.paths)].filter(Boolean);
+      const ids = [this.active, ...Object.keys(this.paths)].filter((id) => id && this.shown(id));
       const picked = this.active || this.selected;
       for (const id of ids) {
         const style = this.styles[id];
@@ -499,7 +506,7 @@ export class House {
       const { w, h } = this.size || { w: 1, h: 1 };
       let best = null, bestD = HIT_PX;
       for (const [id, pts] of Object.entries(this.paths)) {
-        if (this.styles[id]?.style === "spots") continue; // spots have no stretches
+        if (this.styles[id]?.style === "spots" || !this.shown(id)) continue; // spots have no stretches
         for (let i = 1; i < pts.length; i++) {
           const [ax, ay, bx, by] = [pts[i - 1][0] * w, pts[i - 1][1] * h, pts[i][0] * w, pts[i][1] * h];
           const [px, py] = [p[0] * w, p[1] * h];

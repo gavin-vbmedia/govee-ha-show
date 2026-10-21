@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EFFECTS, HOUSE, applyHouse, bake, newClip, renderTrack } from "../../govee_show/app/goveeshow/static/js/effects.js";
+import { EFFECTS, HOUSE, applyHouse, bake, composeLight, newClip, renderTrack } from "../../govee_show/app/goveeshow/static/js/effects.js";
 
 const px = (buf, i) => [...buf.subarray(i * 3, i * 3 + 3)];
 
@@ -190,21 +190,33 @@ test("a light split into parts bakes as one light, with unused segments off", ()
     "roof#a": { id: "roof#a", parent: "roof", from: 2, to: 4, segments: 3 },
     "roof#b": { id: "roof#b", parent: "roof", from: 7, to: 8, segments: 2 },
   };
-  const solid = (color) => ({ ...newClip("solid", 0, 1), color });
+  const solid = (color, start = 0, end = 1) => ({ ...newClip("solid", start, end), color });
   const show = { duration: 1, tracks: [
-    { device: "roof", clips: [solid("#ffffff")] }, // the whole light's track isn't played once split
-    { device: "roof#a", clips: [solid("#ff0000")] },
+    { device: "roof", clips: [solid("#ffffff")] }, // all parts at once
+    { device: "roof#a", clips: [solid("#ff0000", 0.5, 1)] }, // wins on its part from 0.5 s
     { device: "roof#b", clips: [solid("#0000ff")] },
   ] };
   const blob = bake(show, devices, 10);
   const hlen = new DataView(blob.buffer).getUint32(5);
   const header = JSON.parse(new TextDecoder().decode(blob.subarray(9, 9 + hlen)));
   assert.deepEqual(header.tracks, [{ device: "roof", segments: 10 }]);
-  const frame = [...blob.subarray(9 + hlen, 9 + hlen + 30)];
-  const seg = (i) => frame.slice(i * 3, i * 3 + 3);
-  assert.deepEqual(seg(0), [0, 0, 0]);
-  assert.deepEqual([seg(1), seg(2), seg(3)], [[255, 0, 0], [255, 0, 0], [255, 0, 0]]);
-  assert.deepEqual([seg(4), seg(5)], [[0, 0, 0], [0, 0, 0]]);
-  assert.deepEqual([seg(6), seg(7)], [[0, 0, 255], [0, 0, 255]]);
-  assert.deepEqual(seg(9), [0, 0, 0]);
+  const frameAt = (f) => {
+    const frame = [...blob.subarray(9 + hlen + f * 30, 9 + hlen + (f + 1) * 30)];
+    return (i) => frame.slice(i * 3, i * 3 + 3);
+  };
+  const white = [255, 255, 255], red = [255, 0, 0], blue = [0, 0, 255], off = [0, 0, 0];
+  let seg = frameAt(0);
+  assert.deepEqual([seg(0), seg(1), seg(3), seg(4), seg(5), seg(6), seg(7), seg(9)], [off, white, white, off, off, blue, blue, off]);
+  seg = frameAt(6);
+  assert.deepEqual([seg(0), seg(1), seg(2), seg(3), seg(4), seg(6), seg(9)], [off, red, red, red, off, blue, off]);
+});
+
+test("the whole of a split light runs across its parts joined together", () => {
+  const roof = { id: "roof", segments: 6, parts: [{ id: "a", from: 1, to: 2 }, { id: "b", from: 5, to: 6 }] };
+  const ramp = { ...newClip("gradient", 0, 1), color: "#ff0000", color2: "#0000ff", count: "2" };
+  const out = composeLight(roof, (id) => (id === "roof" ? { clips: [ramp] } : undefined), 0);
+  const rgb = (i) => [...out.slice(i * 3, i * 3 + 3)];
+  assert.deepEqual([rgb(2), rgb(3)], [[0, 0, 0], [0, 0, 0]]);
+  assert.deepEqual(rgb(0).slice(0, 1), [255]); // starts red
+  assert.equal(rgb(5)[2] > rgb(5)[0], true); // ends blue, with no gap where 3 and 4 are skipped
 });
