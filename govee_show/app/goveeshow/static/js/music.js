@@ -409,6 +409,7 @@ export class MusicEditor {
     if (!s) return;
     const names = [...new Set(secs.map((x) => x.label))];
     $("music-sec-name").value = s.label;
+    $("music-sec-notes").value = s.notes || "";
     $("music-sec-colour").value = s.color || hueHex(sectionHue(names, s.label));
     $("music-sec-time").textContent = `${fmtTime(s.start)} to ${fmtTime(s.end)}`;
     $("music-sec-merge").disabled = this.secSel + 1 >= secs.length;
@@ -422,6 +423,14 @@ export class MusicEditor {
       const name = e.target.value.trim().slice(0, 40);
       if (!name) { this.renderSection(); return; }
       this.editSections(this.sections.map((x, i) => (i === this.secSel ? { ...x, label: name } : x)));
+    });
+    $("music-sec-notes").addEventListener("change", (e) => {
+      const notes = e.target.value.trim().slice(0, 300);
+      this.editSections(this.sections.map((x, i) => {
+        if (i !== this.secSel) return x;
+        const { notes: _, ...rest } = x;
+        return notes ? { ...rest, notes } : rest;
+      }));
     });
     $("music-sec-colour").addEventListener("input", (e) => {
       const label = this.sections[this.secSel].label, color = e.target.value;

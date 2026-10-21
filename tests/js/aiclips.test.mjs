@@ -28,6 +28,7 @@ test("the context lists lights, effects with their settings, the song and the se
   assert.ok(ctx.effects.find((e) => e.key === "sweep").house);
   assert.ok(!ctx.effects.some((e) => e.key === "scene"));
   assert.equal(ctx.song.tempo, 120);
+  assert.deepEqual(ctx.song.sections, [{ start: 0, end: 30, label: "Song", energy: 0.5 }]);
   assert.deepEqual(ctx.selection, { start: 2, end: 4, lights: ["Roof"] });
   assert.deepEqual(ctx.clips.Roof, [{ start: 0, end: 10, effect: "solid" }]);
 });
@@ -89,4 +90,11 @@ test("presets from the AI keep valid settings only, clamped, and skip unknown ef
   assert.equal(presets[1].name, "AI chase");
   assert.deepEqual(presets[1].params, {});
   assert.equal(skipped.length, 1);
+});
+
+test("section notes go to the AI; section colours don't", () => {
+  const sh = show();
+  sh.sections = [{ start: 0, end: 30, label: "Chorus", energy: 0.9, color: "#ff00aa", notes: "big drop, everything flashes" }];
+  const ctx = buildContext({ show: sh, lights, duration: 30 });
+  assert.deepEqual(ctx.song.sections, [{ start: 0, end: 30, label: "Chorus", energy: 0.9, notes: "big drop, everything flashes" }]);
 });

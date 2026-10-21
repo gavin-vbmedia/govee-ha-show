@@ -129,6 +129,8 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .music-stage canvas { display: block; touch-action: none; cursor: text; }
 .music .toolbar + .toolbar { margin-top: 8px; }
 .music-section { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.music-sec-notes { flex-basis: 100%; }
+.music-sec-notes input { flex: 1; }
 .music .card > .hint { margin-top: 6px; }
 
 .settings { max-width: 860px; }

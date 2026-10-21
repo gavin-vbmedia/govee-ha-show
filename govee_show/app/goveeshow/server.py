@@ -322,6 +322,7 @@ async def upload_audio(request):
 
 MAX_MARKS = 50000
 MAX_SECTIONS = 500
+MAX_NOTES = 300  # a section's notes, for the AI
 
 
 def _times(v) -> list[float] | None:
@@ -357,6 +358,12 @@ def _clean_song_info(body) -> dict | None:
             return None
         item = {"start": span[0], "end": span[1], "label": str(sec.get("label", ""))[:40],
                 "energy": round(float(energy), 4)}
+        notes = sec.get("notes")
+        if notes is not None:
+            if not isinstance(notes, str):
+                return None
+            if notes.strip():
+                item["notes"] = notes.strip()[:MAX_NOTES]
         color = sec.get("color")
         if color is not None:
             if not isinstance(color, str) or not _HEX.match(color):

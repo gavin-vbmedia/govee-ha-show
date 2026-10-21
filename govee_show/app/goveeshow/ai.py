@@ -51,7 +51,8 @@ the default suits. Colours are "#rrggbb"; LEDs wash out pastels and dark shades,
 "#000000" for off.
 - "song": its length, tempo, beat and bar times, and sections (Intro, Verse, Chorus...) with their energy \
 from 0 (quiet) to 1 (loud). Start and end clips on bar or beat times so changes land with the music, and \
-set speeds from the tempo (for example one step or flash per beat).
+set speeds from the tempo (for example one step or flash per beat). A section's "notes" are the user's own \
+words about that part of the song (what happens in the music, or how they want it lit): follow them.
 - "selection": the stretch of time and lights the user has selected, if any. When the request doesn't say \
 where or when, use the selection, else the whole song.
 - "palettes": named colour sets, for requests like "in Christmas colours".

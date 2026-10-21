@@ -31,7 +31,9 @@ export function buildContext({ show, lights, duration, selection = null, palette
       // Long songs send bars only, to keep the request small.
       ...(beats.length <= 600 ? { beats: beats.map(r2) } : {}),
       bars: (show.bars || []).map(r2),
-      sections: (show.sections || []).map((s) => ({ ...s, start: r2(s.start), end: r2(s.end) })),
+      sections: (show.sections || []).map((s) => ({
+        start: r2(s.start), end: r2(s.end), label: s.label, energy: s.energy, ...(s.notes ? { notes: s.notes } : {}),
+      })),
     },
     lights: lights.map((l) => ({ name: l.name, segments: l.segments, ...(l.house ? { house: true } : {}) })),
     effects,
