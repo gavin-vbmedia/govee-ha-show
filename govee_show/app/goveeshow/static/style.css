@@ -60,6 +60,29 @@ body {
 .hint.error { color: var(--danger); }
 
 .view { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+/* Library and Setup: a side menu of pages beside the open page. On a phone the menu becomes a row
+   that scrolls sideways, like the tabs. */
+.section { display: flex; align-items: flex-start; }
+.section[hidden] { display: none; }
+.subnav { flex: none; width: 210px; display: flex; flex-direction: column; gap: 2px; padding: 12px 0 12px 16px;
+  position: sticky; top: 0; }
+.subtab { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left;
+  border: none; background: none; padding: 8px 12px; border-radius: 6px; }
+.subtab b { font-weight: 600; }
+.subtab span { font-size: 12px; color: var(--muted); }
+.subtab:hover { background: var(--track); }
+.subtab.active { background: var(--track-alt); box-shadow: inset 3px 0 var(--accent); }
+.section-body { flex: 1; min-width: 0; }
+.table-scroll { overflow-x: auto; }
+details.help summary { cursor: pointer; }
+@media (max-width: 720px) {
+  .section { flex-direction: column; align-items: stretch; }
+  .subnav { position: static; width: auto; flex-direction: row; overflow-x: auto; scrollbar-width: none;
+    padding: 8px 12px 0; }
+  .subnav::-webkit-scrollbar { display: none; }
+  .subtab { flex: none; }
+  .subtab span { display: none; }
+}
 
 button, .button, select, input {
   font: inherit; color: inherit;
@@ -178,6 +201,14 @@ button.swatch:hover { border-color: var(--text); }
 .palette-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel);
   border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 .palette-name { min-width: 11em; }
+#preset-palettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.palette-card { display: flex; flex-direction: column; gap: 8px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.palette-bar { display: flex; height: 28px; border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
+.palette-bar span { flex: 1; }
+.palette-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.palette-card .palette-name { min-width: 0; }
+.palette-foot button { padding: 2px 10px; }
 .region-wrap { display: inline-flex; align-items: center; gap: 4px; color: var(--region); font-size: 13px; font-weight: 600; }
 .region-wrap button { padding: 1px 7px; }
 .save-state { color: var(--muted); font-size: 12px; min-width: 9em; }

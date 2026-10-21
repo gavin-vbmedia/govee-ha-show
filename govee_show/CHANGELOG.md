@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.63
+
+- Four tabs instead of eight: **Editor**, **Music**, **Library** (Palettes and Presets) and **Setup**
+  (Devices, Speakers, House and Settings). Library and Setup list their pages down the side, or along
+  the top on a phone, and each remembers the page you last had open.
+- **Setup → Speakers** now holds everything about where the song plays and when: your speakers, the
+  default show speaker, **Light offset** and the automation input, which used to be on Settings. The
+  long note about speakers that can't play shows is tucked into a **Why can't some speakers play
+  shows?** link.
+- **Library → Palettes**: built-in palettes are shown as a compact grid of cards, under **Built in**
+  rather than "Presets", so they don't get mixed up with effect presets.
+- The Devices table scrolls sideways in its own box when the page is narrow.
+
 ## 0.2.62
 
 - Editor: a new default layout puts the timeline first. Show and Playback run across the top, Song,

@@ -451,10 +451,10 @@ export class House {
     hint.hidden = !!this.photo && placed;
     canvas.hidden = !this.photo;
     if (!this.photo) {
-      hint.textContent = "Add a photo of your house on the House tab to see the show on it.";
+      hint.textContent = "Add a photo of your house under Setup → House to see the show on it.";
       return;
     }
-    if (!placed) hint.textContent = "Trace your lights on the photo on the House tab.";
+    if (!placed) hint.textContent = "Trace your lights on the photo under Setup → House.";
     this.paint(canvas, Math.max(window.innerHeight * 0.45, 200), (dev) => this.frameFor(dev));
   }
 
