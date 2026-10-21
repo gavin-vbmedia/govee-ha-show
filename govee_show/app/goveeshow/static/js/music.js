@@ -10,7 +10,7 @@ import { SECTION_ALPHA, fmtTime, sectionTint } from "./timeline.js";
 
 const EPS = 1e-6;
 const RULER_H = 22;
-const BEAT_H = 16; // the beat lane under the waveform, as in the editor
+const BEAT_H = 16; // the beat lane above the waveform, as in the editor
 const EDGE_PX = 6;
 const BLOCK = 256; // samples per waveform peak
 
@@ -502,7 +502,7 @@ export class MusicEditor {
     }
     const rate = this.audio.sampleRate;
 
-    const waveB = h - BEAT_H; // bottom of the waveform
+    const waveT = RULER_H + BEAT_H, waveB = h; // the waveform sits under the beat lane
     const info = !this.dirty && this.info;
     const names = info ? [...new Set(info.sections.map((x) => x.label))] : [];
 
@@ -514,10 +514,10 @@ export class MusicEditor {
         if (x1 <= x0) continue;
         ctx.fillStyle = sectionTint(names, sec.label);
         ctx.globalAlpha = SECTION_ALPHA;
-        ctx.fillRect(x0, RULER_H, x1 - x0, waveB - RULER_H);
+        ctx.fillRect(x0, waveT, x1 - x0, waveB - waveT);
         ctx.globalAlpha = 1;
         const xs = Math.round(this.x(sec.start)) + 0.5;
-        ctx.beginPath(); ctx.moveTo(xs, RULER_H); ctx.lineTo(xs, waveB); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(xs, waveT); ctx.lineTo(xs, waveB); ctx.stroke();
       }
     }
 
@@ -526,14 +526,14 @@ export class MusicEditor {
       ctx.fillStyle = col("--region");
       ctx.globalAlpha = 0.25;
       const x0 = this.x(this.sel.start), x1 = this.x(this.sel.end);
-      ctx.fillRect(x0, RULER_H, x1 - x0, waveB - RULER_H);
+      ctx.fillRect(x0, waveT, x1 - x0, waveB - waveT);
       ctx.globalAlpha = 1;
-      ctx.fillRect(x0 - 1, RULER_H, 2, waveB - RULER_H);
-      ctx.fillRect(x1 - 1, RULER_H, 2, waveB - RULER_H);
+      ctx.fillRect(x0 - 1, waveT, 2, waveB - waveT);
+      ctx.fillRect(x1 - 1, waveT, 2, waveB - waveT);
     }
 
     // waveform: the loudest sample under each pixel
-    const mid = RULER_H + (waveB - RULER_H) / 2, amp = (waveB - RULER_H) / 2 - 4;
+    const mid = waveT + (waveB - waveT) / 2, amp = (waveB - waveT) / 2 - 4;
     ctx.fillStyle = col("--wave");
     const spp = (this.view.span * rate) / w; // samples per pixel
     for (let px = 0; px < w; px++) {
@@ -553,7 +553,7 @@ export class MusicEditor {
     ctx.setLineDash([4, 3]);
     for (const j of joins(this.pieces, this.crossfade)) {
       const x = Math.round(this.x(j)) + 0.5;
-      ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, waveB); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, waveT); ctx.lineTo(x, waveB); ctx.stroke();
     }
     ctx.setLineDash([]);
 
@@ -563,24 +563,25 @@ export class MusicEditor {
       ctx.fillStyle = col("--text");
       for (const sec of info.sections) {
         const x0 = Math.max(0, this.x(sec.start)), x1 = Math.min(w, this.x(sec.end));
-        if (x1 - x0 > 40) ctx.fillText(sec.label, x0 + 4, RULER_H + 12);
+        if (x1 - x0 > 40) ctx.fillText(sec.label, x0 + 4, waveT + 12);
       }
     }
 
-    // beat lane, with the first beat of each bar drawn stronger
+    // beat lane above the waveform, each beat's line running down through it, bar starts stronger
     ctx.fillStyle = col("--panel");
-    ctx.fillRect(0, waveB, w, BEAT_H);
+    ctx.fillRect(0, RULER_H, w, BEAT_H);
     if (info) {
       const bars = new Set(info.bars.map((b) => Math.round(b * 1000)));
-      ctx.fillStyle = col("--beat");
+      ctx.strokeStyle = ctx.fillStyle = col("--beat");
       for (const b of info.beats) {
         const x = this.x(b);
         if (x < -4 || x > w + 4) continue;
-        ctx.globalAlpha = bars.has(Math.round(b * 1000)) ? 1 : 0.6;
+        ctx.globalAlpha = bars.has(Math.round(b * 1000)) ? 0.7 : 0.35;
+        ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, waveT); ctx.lineTo(Math.round(x) + 0.5, waveB); ctx.stroke();
+        ctx.globalAlpha = 1;
         ctx.beginPath();
-        ctx.moveTo(x - 4, waveB + 3); ctx.lineTo(x + 4, waveB + 3); ctx.lineTo(x, waveB + BEAT_H - 3); ctx.fill();
+        ctx.moveTo(x - 4, RULER_H + 3); ctx.lineTo(x + 4, RULER_H + 3); ctx.lineTo(x, RULER_H + BEAT_H - 3); ctx.fill();
       }
-      ctx.globalAlpha = 1;
     }
 
     // ruler
