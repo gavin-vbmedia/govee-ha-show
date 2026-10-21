@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.47
+
+- The **Music** tab's waveform now looks like the editor's: sections as the same coloured, named bands
+  (easy to see in dark mode too) and beats in a lane underneath, with each bar's first beat stronger.
+
 ## 0.2.46
 
 - **✨ Make presets** on the Presets tab: describe a look ("slow icy shimmer", "warm fire flicker")

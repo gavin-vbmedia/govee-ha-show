@@ -6,10 +6,11 @@
 // a song's beats and sections and keeps them with the file, for any show that uses it.
 
 import { analyseInWorker, toMono } from "./analysis.js";
-import { fmtTime } from "./timeline.js";
+import { SECTION_ALPHA, fmtTime, sectionTint } from "./timeline.js";
 
 const EPS = 1e-6;
-const RULER_H = 18;
+const RULER_H = 22;
+const BEAT_H = 16; // the beat lane under the waveform, as in the editor
 const EDGE_PX = 6;
 const BLOCK = 256; // samples per waveform peak
 
@@ -448,7 +449,7 @@ export class MusicEditor {
   layout() {
     const wrap = this.canvas.parentElement, dpr = window.devicePixelRatio || 1;
     this.w = wrap.clientWidth;
-    this.h = 170;
+    this.h = 190;
     this.canvas.width = Math.round(this.w * dpr);
     this.canvas.height = Math.round(this.h * dpr);
     this.canvas.style.width = `${this.w}px`;
@@ -501,19 +502,38 @@ export class MusicEditor {
     }
     const rate = this.audio.sampleRate;
 
+    const waveB = h - BEAT_H; // bottom of the waveform
+    const info = !this.dirty && this.info;
+    const names = info ? [...new Set(info.sections.map((x) => x.label))] : [];
+
+    // sections: tinted bands behind the waveform, one tint per name
+    if (info) {
+      ctx.strokeStyle = col("--line");
+      for (const sec of info.sections) {
+        const x0 = Math.max(0, this.x(sec.start)), x1 = Math.min(w, this.x(sec.end));
+        if (x1 <= x0) continue;
+        ctx.fillStyle = sectionTint(names, sec.label);
+        ctx.globalAlpha = SECTION_ALPHA;
+        ctx.fillRect(x0, RULER_H, x1 - x0, waveB - RULER_H);
+        ctx.globalAlpha = 1;
+        const xs = Math.round(this.x(sec.start)) + 0.5;
+        ctx.beginPath(); ctx.moveTo(xs, RULER_H); ctx.lineTo(xs, waveB); ctx.stroke();
+      }
+    }
+
     // selection
     if (this.sel) {
       ctx.fillStyle = col("--region");
       ctx.globalAlpha = 0.25;
       const x0 = this.x(this.sel.start), x1 = this.x(this.sel.end);
-      ctx.fillRect(x0, RULER_H, x1 - x0, h - RULER_H);
+      ctx.fillRect(x0, RULER_H, x1 - x0, waveB - RULER_H);
       ctx.globalAlpha = 1;
-      ctx.fillRect(x0 - 1, RULER_H, 2, h - RULER_H);
-      ctx.fillRect(x1 - 1, RULER_H, 2, h - RULER_H);
+      ctx.fillRect(x0 - 1, RULER_H, 2, waveB - RULER_H);
+      ctx.fillRect(x1 - 1, RULER_H, 2, waveB - RULER_H);
     }
 
     // waveform: the loudest sample under each pixel
-    const mid = RULER_H + (h - RULER_H) / 2, amp = (h - RULER_H) / 2 - 4;
+    const mid = RULER_H + (waveB - RULER_H) / 2, amp = (waveB - RULER_H) / 2 - 4;
     ctx.fillStyle = col("--wave");
     const spp = (this.view.span * rate) / w; // samples per pixel
     for (let px = 0; px < w; px++) {
@@ -528,37 +548,40 @@ export class MusicEditor {
       ctx.fillRect(px, mid - hgt, 1, hgt * 2);
     }
 
-    // the song's beats (bars taller) and sections, while it's unedited
-    if (this.info && !this.dirty) {
-      const { start, span } = this.view, end = start + span;
-      ctx.font = "11px system-ui, sans-serif";
-      this.info.sections.forEach((sec, i) => {
-        if (sec.end < start || sec.start > end) return;
-        const x0 = this.x(sec.start), x1 = this.x(sec.end);
-        ctx.fillStyle = col("--beat");
-        ctx.globalAlpha = i % 2 ? 0.06 : 0.12;
-        ctx.fillRect(x0, RULER_H, x1 - x0, h - RULER_H);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = col("--muted");
-        ctx.fillText(sec.label, Math.max(x0, 0) + 4, h - 6);
-      });
-      ctx.fillStyle = col("--beat");
-      const bars = new Set(this.info.bars.map((b) => b.toFixed(3)));
-      const visible = this.info.beats.filter((b) => b >= start && b <= end);
-      // Too dense to read when zoomed right out, so beats show once there's room.
-      if (visible.length < w / 4) {
-        for (const b of visible) ctx.fillRect(Math.round(this.x(b)), RULER_H, 1, bars.has(b.toFixed(3)) ? 10 : 5);
-      }
-    }
-
     // joins between pieces
     ctx.strokeStyle = col("--beat");
     ctx.setLineDash([4, 3]);
     for (const j of joins(this.pieces, this.crossfade)) {
       const x = Math.round(this.x(j)) + 0.5;
-      ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, waveB); ctx.stroke();
     }
     ctx.setLineDash([]);
+
+    // section names over the waveform
+    if (info) {
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.fillStyle = col("--text");
+      for (const sec of info.sections) {
+        const x0 = Math.max(0, this.x(sec.start)), x1 = Math.min(w, this.x(sec.end));
+        if (x1 - x0 > 40) ctx.fillText(sec.label, x0 + 4, RULER_H + 12);
+      }
+    }
+
+    // beat lane, with the first beat of each bar drawn stronger
+    ctx.fillStyle = col("--panel");
+    ctx.fillRect(0, waveB, w, BEAT_H);
+    if (info) {
+      const bars = new Set(info.bars.map((b) => Math.round(b * 1000)));
+      ctx.fillStyle = col("--beat");
+      for (const b of info.beats) {
+        const x = this.x(b);
+        if (x < -4 || x > w + 4) continue;
+        ctx.globalAlpha = bars.has(Math.round(b * 1000)) ? 1 : 0.6;
+        ctx.beginPath();
+        ctx.moveTo(x - 4, waveB + 3); ctx.lineTo(x + 4, waveB + 3); ctx.lineTo(x, waveB + BEAT_H - 3); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
 
     // ruler
     ctx.fillStyle = col("--panel");
@@ -570,7 +593,7 @@ export class MusicEditor {
     for (let t = Math.ceil(this.view.start / step) * step; t <= this.view.start + this.view.span; t += step) {
       const x = Math.round(this.x(t)) + 0.5;
       ctx.beginPath(); ctx.moveTo(x, RULER_H - 5); ctx.lineTo(x, RULER_H); ctx.stroke();
-      ctx.fillText(fmtTime(t, step < 1), x + 3, 12);
+      ctx.fillText(fmtTime(t, step < 1), x + 3, 14);
     }
 
     // playhead
