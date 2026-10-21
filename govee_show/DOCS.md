@@ -83,7 +83,8 @@ whole house. Press **Split into parts…** under the light's row. The first part
 segment; set its first and last segment, then press **+ Add part** for the next stretch (it starts
 just after the last part). For example, a 60-segment Permanent Outdoor Pro could be **Front roof**
 3–23, **Side** 24–40 and **Back** 41–60. Segments are counted the way effects run, so with
-**Reverse** ticked segment 1 is the far end.
+**Reverse** ticked segment 1 is the far end. Parts are listed one per line, each with its colour,
+and the bar above them maps the light's segments: each part in its colour, unused ones grey.
 
 Each part gets its own track in the editor (named like *Roof · Front roof*), its own preview row,
 and works with Copy and Recolour like any other light. **Segments in no part stay off during a
@@ -101,7 +102,7 @@ effects on the parts and leaves the light's own track for you. Untick **Also pla
 light you only ever use in parts, like a roof line where only the front 30 segments are seen: its
 own track goes away (or, if it has effects on it, is marked *Not played: parts only*).
 
-On the timeline a split light's tracks are grouped: a coloured bar runs down the left of the light
+On the timeline a split light's tracks (when there's more than one) are grouped: a coloured bar runs down the left of the light
 and its parts, the parts are indented under it, and a heavier line marks where the group starts and
 ends.
 

@@ -450,13 +450,32 @@ function partsRow(d) {
     td.append(b);
     return tr;
   }
-  const label = document.createElement("span");
+  // One part per line, with a map of the light's segments: each part in its colour, unused ones grey.
+  const panel = document.createElement("div");
+  panel.className = "parts-panel";
+  const label = document.createElement("div");
   label.className = "section-label";
   label.textContent = "Parts";
-  td.append(label);
-  for (const p of parts) {
-    const chip = document.createElement("span");
+  const map = document.createElement("div");
+  map.className = "parts-map";
+  map.title = "Where each part sits on the light. Grey segments are unused and stay off.";
+  const list = document.createElement("div");
+  list.className = "parts-list";
+  panel.append(label, map, list);
+  td.append(panel);
+  const colourOf = (i) => `hsl(${(i * 137 + 200) % 360} 65% 55%)`;
+  for (let s = 1; s <= d.segments; s++) {
+    const cell = document.createElement("span");
+    const k = parts.findIndex((p) => p.from <= s && s <= p.to);
+    if (k >= 0) cell.style.background = colourOf(k);
+    map.append(cell);
+  }
+  parts.forEach((p, k) => {
+    const chip = document.createElement("div");
     chip.className = "part-chip";
+    const swatch = document.createElement("span");
+    swatch.className = "part-swatch";
+    swatch.style.background = colourOf(k);
     const name = document.createElement("input");
     Object.assign(name, { value: p.name, size: 10, maxLength: 40, title: "The part's name on the timeline" });
     name.addEventListener("change", () => { p.name = name.value.trim() || p.name; saveDevices(); });
@@ -487,9 +506,12 @@ function partsRow(d) {
       saveDevices();
     }, "ghost small");
     del.title = `Remove ${p.name}. Its clips stay in your shows.`;
-    chip.append(name, " segments ", num("from"), "–", num("to"), del);
-    td.append(chip);
-  }
+    const count = document.createElement("span");
+    count.className = "hint";
+    count.textContent = `${p.to - p.from + 1} segments`;
+    chip.append(swatch, name, " segments ", num("from"), "–", num("to"), count, del);
+    list.append(chip);
+  });
   const more = button("+ Add part", add, "ghost small");
   more.disabled = !unusedRuns(d).length;
   const asOne = document.createElement("label");
@@ -500,12 +522,14 @@ function partsRow(d) {
   box.checked = d.whole !== false;
   box.addEventListener("change", () => { d.whole = box.checked; saveDevices(); });
   asOne.append(box, " Also play as one");
-  td.append(more, asOne);
   const unused = unusedRuns(d);
   const note = document.createElement("span");
   note.className = "hint";
   note.textContent = unused.length ? `Unused, off in shows: ${runText(unused)}` : "Every segment is in a part";
-  td.append(note);
+  const foot = document.createElement("div");
+  foot.className = "parts-foot";
+  foot.append(more, asOne, note);
+  panel.append(foot);
   return tr;
 }
 
