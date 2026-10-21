@@ -1,6 +1,7 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
 import { analyse, toMono } from "./analysis.js";
+import { STYLES, applyGenerated, generateShow } from "./autogen.js";
 import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, presetParams, renderTrack,
   showDuration,
@@ -2276,6 +2277,16 @@ async function detectBeats() {
   if (!songBuffer) { status("Choose a song first", true); return; }
   if ((app.show.beats.length || app.show.sections?.length)
       && !confirm("Replace the beat markers and sections with ones found in the song?")) return;
+  const r = await analyseSong();
+  if (!r) return;
+  app.changed();
+  const parts = `${r.sections.length} section${r.sections.length === 1 ? "" : "s"}`;
+  status(r.tempo ? `Found ${r.beats.length} beats at ${r.tempo} BPM, and ${parts}` : `No steady beat found; found ${parts}`);
+}
+
+// Analyses the loaded song and puts its beats, bars, sections and tempo on the show (without
+// committing the change). Returns the result, or null if it failed or the song changed meanwhile.
+async function analyseSong() {
   const song = songBuffer;
   const channels = Array.from({ length: song.numberOfChannels }, (_, c) => song.getChannelData(c));
   const { samples, rate } = toMono(channels, song.sampleRate);
@@ -2286,16 +2297,75 @@ async function detectBeats() {
     r = await analyseInWorker(samples, rate);
   } catch (e) {
     status(`Couldn't analyse the song: ${e.message}`, true);
-    return;
+    return null;
   } finally {
     $("btn-detect").disabled = false;
   }
-  if (song !== songBuffer) return; // the song changed meanwhile
+  if (song !== songBuffer) return null;
   Object.assign(app.show, { beats: r.beats, bars: r.bars, sections: r.sections, tempo: r.tempo || null });
   if (r.tempo) $("bpm").value = r.tempo;
+  return r;
+}
+
+// Generate: a first draft of the whole show from the song, a palette and a style.
+let generateSeed = 0;
+function generateDialog() {
+  const dlg = document.createElement("dialog");
+  dlg.className = "effect-dialog save-preset-dialog";
+  const form = document.createElement("form");
+  form.method = "dialog";
+  const h = document.createElement("h3");
+  h.textContent = "Generate a show";
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "Fills every light with effects that follow the song's beats and sections: soft looks in quiet "
+    + "parts, fast ones on the beat when it gets loud, and the same looks each time a chorus comes back. It replaces "
+    + "the lights' effects; Ctrl+Z brings them back. Generate again for a different take.";
+  const palette = document.createElement("select");
+  for (const p of allPalettes()) palette.add(new Option(p.name, p.name, false, p.name === currentPalette().name));
+  const pl = document.createElement("label");
+  pl.append("Colours", palette);
+  const style = document.createElement("select");
+  for (const [key, st] of Object.entries(STYLES)) style.add(new Option(st.label, key, false, key === prefs.get("genStyle", "balanced")));
+  const sl = document.createElement("label");
+  sl.append("Style", style);
+  const house = document.createElement("input");
+  house.type = "checkbox";
+  house.checked = true;
+  const hl = document.createElement("label");
+  hl.append(house, "Sweep across the house as the music lifts");
+  hl.hidden = !Object.keys(housePositionsAll()).length;
+  const actions = document.createElement("div");
+  actions.className = "insp-actions";
+  const go = button("Generate", () => {}, "primary");
+  go.type = "submit";
+  const cancel = button("Cancel", () => dlg.close(), "ghost");
+  cancel.type = "button";
+  actions.append(go, cancel);
+  form.append(h, hint, pl, sl, hl, actions);
+  dlg.append(form);
+  form.addEventListener("submit", () => {
+    prefs.set("genStyle", style.value);
+    const colors = allPalettes().find((p) => p.name === palette.value)?.colors || currentPalette().colors;
+    generate({ colors, style: style.value, house: !hl.hidden && house.checked });
+  });
+  dlg.addEventListener("close", () => dlg.remove());
+  document.body.append(dlg);
+  dlg.showModal();
+}
+
+async function generate({ colors, style, house }) {
+  const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && app.devices[tr.device])
+    .map((tr) => ({ id: tr.device, segments: app.devices[tr.device].segments }));
+  if (!lights.length) { status("Add your lights on the Devices tab first", true); return; }
+  // Listen to the song first if that hasn't been done yet.
+  if (songBuffer && !app.show.beats.length && !app.show.sections?.length && !(await analyseSong())) return;
+  const show = app.show;
+  const result = generateShow({ ...show, duration: app.duration() }, lights, colors, { style, house, seed: ++generateSeed });
+  applyGenerated(show, result);
+  app.select(null);
   app.changed();
-  const parts = `${r.sections.length} section${r.sections.length === 1 ? "" : "s"}`;
-  status(r.tempo ? `Found ${r.beats.length} beats at ${r.tempo} BPM, and ${parts}` : `No steady beat found; found ${parts}`);
+  status(`Generated effects for ${lights.length} light${lights.length === 1 ? "" : "s"}. Ctrl+Z to undo`);
 }
 
 function analyseInWorker(samples, rate) {
@@ -2409,6 +2479,7 @@ function wire() {
   $("btn-tap").addEventListener("click", tapBeat);
   $("btn-fill-beats").addEventListener("click", fillBeats);
   $("btn-detect").addEventListener("click", detectBeats);
+  $("btn-generate").addEventListener("click", generateDialog);
   $("btn-clear-beats").addEventListener("click", () => {
     if ((app.show.beats.length || app.show.sections?.length) && confirm("Remove all beat markers and sections?")) {
       Object.assign(app.show, { beats: [], bars: [], sections: [] });
