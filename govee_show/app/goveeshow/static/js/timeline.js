@@ -151,8 +151,12 @@ export class Timeline {
       ctx.fillText(clipText(ctx, house ? "House" : dev ? dev.name : "Missing device", HEADER_W - 16), 10, y + 20);
       ctx.fillStyle = col("--muted");
       ctx.font = "12px system-ui, sans-serif";
-      const sub = house ? "Across all lights" : dev ? `${dev.segments} segments${dev.ip ? "" : " · planned"}` : tr.device;
-      ctx.fillText(sub, 10, y + 36);
+      const sub = house ? "Across all lights"
+        : !dev ? tr.device
+        : dev.parts?.length ? "Split, not played"
+        : dev.parent ? `Segments ${dev.from}–${dev.to}`
+        : `${dev.segments} segments${dev.ip ? "" : " · planned"}`;
+      ctx.fillText(clipText(ctx, sub, HEADER_W - 16), 10, y + 36);
     });
     this.drawRange(col);
     ctx.strokeStyle = col("--line");

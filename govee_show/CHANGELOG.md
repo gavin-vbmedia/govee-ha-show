@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.54
+
+- Split a light into parts on the **Devices** tab, like an xLights submodel: **Split into parts…**, then
+  set each part's first and last segment (for example *Front roof* 3–23, *Side* 24–40). Each part gets
+  its own track, preview row and House view stretch, and segments in no part stay off during a show.
+
 ## 0.2.53
 
 - The selection on the **Music** tab is much easier to see: the selected waveform turns green, everything

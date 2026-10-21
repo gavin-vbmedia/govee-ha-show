@@ -73,6 +73,22 @@ press **Scan network** and choose **Link to** next to it, or type its IP into th
 row. Its shows carry over, and if the real segment count differs, just change it: effects scale
 to any number of segments.
 
+**Splitting a light into parts.** A long light can run where you only want part of it in the show,
+or you may want different effects on different stretches, like a roof line that goes round the
+whole house. Press **Split into parts…** under the light's row. The first part covers every
+segment; set its first and last segment, then press **+ Add part** for the next stretch (it starts
+just after the last part). For example, a 60-segment Permanent Outdoor Pro could be **Front roof**
+3–23, **Side** 24–40 and **Back** 41–60. Segments are counted the way effects run, so with
+**Reverse** ticked segment 1 is the far end.
+
+Each part gets its own track in the editor (named like *Roof · Front roof*), its own preview row,
+and works with Copy, Recolour and Generate like any other light. **Segments in no part stay off
+during a show**: the row lists them as *Unused, off in shows*. Parts can't overlap, and making the
+light shorter trims them. The light itself is still one device, so the show is sent to it as a
+whole. Its own track is removed once the light is split if it was empty; if it had effects it's
+kept (marked *Split, not played*) so you can copy them onto the parts. Remove a part with ✕; its
+effects stay in your shows, and removing the last part puts the whole light's track back.
+
 ## 2. Speakers
 
 The song can play on any Home Assistant media player that can play files from the media folder.
@@ -115,6 +131,9 @@ that stretch of the line, choose **Out of view** and enter how many bulbs are on
 extension lead). It's drawn dashed on the House tab and left out of the House panel. Its bulbs still
 take their share of the segments, so the bulbs you can see show the right part of each effect, and
 the real light plays the whole show as usual.
+
+A light split into parts (see **Devices**) is traced once, as the whole light. Each part sits on its
+own stretch of the line, for the House panel and the House lane.
 
 Each light has a **Style**:
 

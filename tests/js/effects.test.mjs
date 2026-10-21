@@ -182,3 +182,29 @@ test("presets only name settings their effect has, and keep the clip's colours",
   Object.assign(fade, presetParams(PRESETS.fade.find((p) => p.label === "Fade out"), fade));
   assert.deepEqual([fade.from, fade.to], ["#ff0000", "#000000"]);
 });
+
+test("a light split into parts bakes as one light, with unused segments off", () => {
+  const roof = { id: "roof", segments: 10, parts: [{ id: "a", from: 2, to: 4 }, { id: "b", from: 7, to: 8 }] };
+  const devices = {
+    roof,
+    "roof#a": { id: "roof#a", parent: "roof", from: 2, to: 4, segments: 3 },
+    "roof#b": { id: "roof#b", parent: "roof", from: 7, to: 8, segments: 2 },
+  };
+  const solid = (color) => ({ ...newClip("solid", 0, 1), color });
+  const show = { duration: 1, tracks: [
+    { device: "roof", clips: [solid("#ffffff")] }, // the whole light's track isn't played once split
+    { device: "roof#a", clips: [solid("#ff0000")] },
+    { device: "roof#b", clips: [solid("#0000ff")] },
+  ] };
+  const blob = bake(show, devices, 10);
+  const hlen = new DataView(blob.buffer).getUint32(5);
+  const header = JSON.parse(new TextDecoder().decode(blob.subarray(9, 9 + hlen)));
+  assert.deepEqual(header.tracks, [{ device: "roof", segments: 10 }]);
+  const frame = [...blob.subarray(9 + hlen, 9 + hlen + 30)];
+  const seg = (i) => frame.slice(i * 3, i * 3 + 3);
+  assert.deepEqual(seg(0), [0, 0, 0]);
+  assert.deepEqual([seg(1), seg(2), seg(3)], [[255, 0, 0], [255, 0, 0], [255, 0, 0]]);
+  assert.deepEqual([seg(4), seg(5)], [[0, 0, 0], [0, 0, 0]]);
+  assert.deepEqual([seg(6), seg(7)], [[0, 0, 255], [0, 0, 255]]);
+  assert.deepEqual(seg(9), [0, 0, 0]);
+});
