@@ -727,20 +727,10 @@ export class MusicEditor {
       }
     }
 
-    // selection
-    if (this.sel) {
-      ctx.fillStyle = col("--region");
-      ctx.globalAlpha = 0.25;
-      const x0 = this.x(this.sel.start), x1 = this.x(this.sel.end);
-      ctx.fillRect(x0, waveT, x1 - x0, waveB - waveT);
-      ctx.globalAlpha = 1;
-      ctx.fillRect(x0 - 1, waveT, 2, waveB - waveT);
-      ctx.fillRect(x1 - 1, waveT, 2, waveB - waveT);
-    }
-
-    // waveform: the loudest sample under each pixel
+    // waveform: the loudest sample under each pixel, in the selection colour where selected
     const mid = waveT + (waveB - waveT) / 2, amp = (waveB - waveT) / 2 - 4;
-    ctx.fillStyle = col("--wave");
+    const sx0 = this.sel ? this.x(this.sel.start) : Infinity, sx1 = this.sel ? this.x(this.sel.end) : -Infinity;
+    const wave = col("--wave"), region = col("--region");
     const spp = (this.view.span * rate) / w; // samples per pixel
     for (let px = 0; px < w; px++) {
       const s0 = Math.floor((this.view.start * rate) + px * spp), s1 = Math.max(s0 + 1, Math.floor(s0 + spp));
@@ -751,6 +741,7 @@ export class MusicEditor {
         for (const ch of this.rendered) for (let s = s0; s < s1 && s < ch.length; s++) m = Math.max(m, Math.abs(ch[s]));
       }
       const hgt = Math.max(1, m * amp);
+      ctx.fillStyle = px >= sx0 && px < sx1 ? region : wave;
       ctx.fillRect(px, mid - hgt, 1, hgt * 2);
     }
 
@@ -821,6 +812,22 @@ export class MusicEditor {
       const x = Math.round(this.x(t)) + 0.5;
       ctx.beginPath(); ctx.moveTo(x, RULER_H - 5); ctx.lineTo(x, RULER_H); ctx.stroke();
       ctx.fillText(fmtTime(t, step < 1), x + 3, 14);
+    }
+
+    // selection on top of everything: dim what's outside it, band the ruler, solid edges with grips
+    if (this.sel) {
+      ctx.fillStyle = "#000";
+      ctx.globalAlpha = 0.4;
+      if (sx0 > 0) ctx.fillRect(0, RULER_H, Math.min(sx0, w), h - RULER_H);
+      if (sx1 < w) ctx.fillRect(Math.max(sx1, 0), RULER_H, w - Math.max(sx1, 0), h - RULER_H);
+      ctx.fillStyle = region;
+      ctx.globalAlpha = 0.35;
+      ctx.fillRect(sx0, 0, sx1 - sx0, RULER_H);
+      ctx.globalAlpha = 1;
+      for (const x of [sx0, sx1]) {
+        ctx.fillRect(Math.round(x) - 1, 0, 2, h);
+        ctx.fillRect(Math.round(x) - 4, 0, 8, 10);
+      }
     }
 
     // playhead
