@@ -279,3 +279,7 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
 .save-preset-dialog h3 { margin: 0; }
 .save-preset-dialog label { display: flex; align-items: center; gap: 8px; }
 .save-preset-dialog input:not([type]) { flex: 1; }
+/* Describe it: a request in words for the AI. */
+.ai-form { flex-wrap: nowrap; }
+.ai-form input { flex: 1; width: 30em; min-width: 200px; }
+[data-panel="ai"] .hint:empty { display: none; }

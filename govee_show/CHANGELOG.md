@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.42
+
+- **Describe it**: a new editor panel where you type what you'd like ("red and green chase on the roof
+  in the chorus") and an AI adds those effects, lined up with the beats and sections. It uses Claude if
+  you add a Claude API key on the add-on's Configuration tab, otherwise Home Assistant's AI Task with
+  whichever AI integration you've set up there (including local ones). Clips are checked before they're
+  placed, and Ctrl+Z undoes them. The Settings tab shows which AI is in use.
+
 ## 0.2.41
 
 - **✨ Generate** in the Show panel makes a first draft of the whole show from the song, in the palette

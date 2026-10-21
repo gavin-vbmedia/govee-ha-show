@@ -1,5 +1,5 @@
 name: Govee Light Show
-version: "0.2.41"
+version: "0.2.42"
 slug: govee_show
 description: Create, preview and play music-synchronised Govee light shows.
 url: https://github.com/gavin-vbmedia/govee-ha-show
@@ -22,6 +22,13 @@ stdin: true
 # Show entities (select, play/stop buttons, status) via MQTT discovery when a broker exists.
 services:
   - mqtt:want
+# Optional AI: a Claude API key, or else Home Assistant's AI Task (pick an entity if there are several).
+options:
+  claude_api_key: ""
+  ai_task_entity: ""
+schema:
+  claude_api_key: password?
+  ai_task_entity: str?
 map:
   - media:rw        # songs; uploads go to /media/govee_show so media players can play them
   - addon_config:rw # shows, devices and settings (included in backups)

@@ -1,0 +1,11 @@
+configuration:
+  claude_api_key:
+    name: Claude API key
+    description: >-
+      Optional. With a key from console.anthropic.com, "Describe it" in the editor asks Claude directly.
+      Leave empty to use Home Assistant's AI Task instead.
+  ai_task_entity:
+    name: AI Task entity
+    description: >-
+      Optional. Which AI Task entity to use when there's no Claude API key, such as ai_task.openai_ai_task.
+      Leave empty to use the only one, or Home Assistant's preferred one.

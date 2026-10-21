@@ -63,11 +63,12 @@ class HomeAssistant:
         if self._session:
             await self._session.close()
 
-    async def _request(self, method: str, url: str, json=None):
+    async def _request(self, method: str, url: str, json=None, timeout: float | None = None):
         if not self.available:
             raise HAError("Home Assistant API is not available")
+        kw = {"timeout": aiohttp.ClientTimeout(total=timeout)} if timeout else {}
         try:
-            async with self.session.request(method, url, json=json) as resp:
+            async with self.session.request(method, url, json=json, **kw) as resp:
                 if resp.status >= 400:
                     raise HAError(f"{resp.status}: {(await resp.text())[:200]}")
                 return await resp.json(content_type=None)
@@ -84,6 +85,11 @@ class HomeAssistant:
     async def call(self, domain: str, service: str, data: dict):
         log.debug("calling %s.%s %s", domain, service, data)
         return await self._request("POST", f"{self.base}/services/{domain}/{service}", json=data)
+
+    async def call_with_response(self, domain: str, service: str, data: dict, timeout: float = 10):
+        """Calls an action that returns data (like ai_task.generate_data): {"service_response": ...}."""
+        return await self._request("POST", f"{self.base}/services/{domain}/{service}?return_response",
+                                   json=data, timeout=timeout)
 
     async def mqtt_service(self) -> dict | None:
         """Broker details from the Supervisor (services: mqtt:want), if a broker is set up."""

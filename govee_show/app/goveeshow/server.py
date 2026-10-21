@@ -14,7 +14,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, commands, discovery, scenes
+from . import __version__, ai, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .mqtt import MqttBridge
@@ -607,6 +607,25 @@ PHOTO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 
 # player ------------------------------------------------------------------
+# AI ---------------------------------------------------------------------------
+async def ai_status(request):
+    return web.json_response(await ai.status(request.app[HA]))
+
+
+async def ai_clips(request):
+    """Clips for a request in words. The editor sends the show's context and checks the result."""
+    try:
+        body = await request.json()
+    except ValueError:
+        raise web.HTTPBadRequest(text="expected JSON")
+    if not isinstance(body, dict) or not isinstance(body.get("context"), dict):
+        raise web.HTTPBadRequest(text="expected a request and its context")
+    try:
+        return web.json_response(await ai.create_clips(request.app[HA], str(body.get("request", "")), body["context"]))
+    except ai.AIError as e:
+        raise web.HTTPBadRequest(text=str(e)[:1].upper() + str(e)[1:])
+
+
 async def player_status(request):
     return web.json_response(request.app[RUNNER].status())
 
@@ -718,6 +737,8 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_put("/api/house/photo", put_house_photo)
     r.add_delete("/api/house/photo", delete_house_photo)
     r.add_post("/api/command", run_command)
+    r.add_get("/api/ai", ai_status)
+    r.add_post("/api/ai/clips", ai_clips)
     r.add_get("/api/player", player_status)
     r.add_post("/api/player/play", player_play)
     r.add_post("/api/player/sync", player_sync)

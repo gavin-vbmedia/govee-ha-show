@@ -7,7 +7,7 @@ export const HIDDEN = "hidden";
 const ALWAYS_SHOWN = new Set(["timeline"]);
 const placesFor = (panel) => (ALWAYS_SHOWN.has(panel) ? DOCKS : { ...DOCKS, [HIDDEN]: "Hidden" });
 export const PANELS = {
-  show: "Show", song: "Song", playback: "Playback", beats: "Beats",
+  show: "Show", song: "Song", playback: "Playback", beats: "Beats", ai: "Describe it",
   preview: "Preview", house: "House", timeline: "Timeline", inspector: "Selection",
 };
 // Frames arrange the five docks on the page, as CSS grid areas over three columns (left, middle,
@@ -22,7 +22,7 @@ export const FRAMES = {
 };
 export const DEFAULT_FRAME = "classic";
 export const DEFAULT_LAYOUT = {
-  show: "top", song: "top", playback: "top", beats: "top",
+  show: "top", song: "top", playback: "top", beats: "top", ai: "top",
   preview: "top", house: "top", timeline: "middle", inspector: "bottom",
 };
 const KEY = "goveeshow.layout";
