@@ -1,7 +1,7 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
 import {
-  EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, newClip, presetParams, renderTrack,
+  EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, presetParams, renderTrack,
   showDuration,
 } from "./effects.js";
 import { House } from "./house.js";
@@ -824,31 +824,106 @@ const experimentalOn = () => prefs.get("experimental.scenes", false);
 const visibleEffects = (keep, house) => Object.entries(EFFECTS).filter(([k, fx]) =>
   (!fx.experimental || experimentalOn() || k === keep) && (house === undefined || !!fx.house === house));
 
-// One button per effect; the last one used is outlined so a run of the same effect is quick to add.
-// A button per effect, each with a strip looping that effect with its default settings, as long
-// as the selection (within reason) and on `dev`'s segments, so you can see them before picking.
+// Previews in the effect chooser: each strip loops its effect for as long as the clip or selection
+// (within reason) on the light's own segments.
 const pickerPreview = { items: [], started: 0 };
-// Which drawer (effect or preset) was open in the clip inspector, and for which clip.
-let openDrawer = null;
+const SHOW_PRESETS_KEY = "goveeshow.showPresets";
 
-function effectPicker(onPick, dev = null, length = 3, house = false, current = app.paletteEffect, keep = undefined) {
-  const box = document.createElement("div");
-  box.className = "effect-picker";
+// What a clip becomes with `effect` and, optionally, one of its presets: the effect's defaults, the
+// colours and brightness carried over from `from` (the clip being changed), then the preset.
+function chosenParams(effect, preset, from = null) {
+  const out = defaultParams(effect);
+  for (const p of EFFECTS[effect].params) {
+    if (from && (p.type === "color" || p.key === "brightness") && from[p.key] !== undefined) out[p.key] = from[p.key];
+  }
+  return preset ? { ...out, ...presetParams(preset, out) } : out;
+}
+
+// The effect chooser, used both to add an effect and to change a clip's. Effects are shown as
+// previewing buttons; with "Show presets" ticked each effect becomes a group of its default and its
+// presets. groups lists [heading, house] sections (heading null for a single unnamed one).
+// onPick(effect, preset) runs with the choice; current/currentPreset are outlined.
+function chooseEffect({ title, groups, dev = null, length = 3, from = null, current = null, currentPreset = null,
+  onPick }) {
+  const dlg = document.createElement("dialog");
+  dlg.className = "effect-dialog";
+  const head = document.createElement("div");
+  head.className = "effect-dialog-head";
+  const h = document.createElement("h3");
+  h.textContent = title;
+  const toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  try { toggle.checked = localStorage.getItem(SHOW_PRESETS_KEY) === "1"; } catch { /* not remembered */ }
+  const tl = document.createElement("label");
+  tl.append(toggle, "Show presets");
+  tl.title = "Presets are ready-made settings for an effect, such as a slow or fast marquee";
+  const close = button("✕", () => dlg.close(), "ghost");
+  close.title = "Close (Esc)";
+  head.append(h, tl, close);
+  const body = document.createElement("div");
+  body.className = "effect-dialog-body";
+  dlg.append(head, body);
   const len = Math.min(Math.max(length, 1), 6);
-  for (const [key, fx] of visibleEffects(keep, house)) {
-    const b = button("", () => {
-      app.paletteEffect = key;
-      onPick(key);
-    }, key === current ? "active" : "");
+
+  const choice = (effect, preset, label, active) => {
+    const b = button("", () => { dlg.close(); app.paletteEffect = effect; onPick(effect, preset); }, active ? "active" : "");
     const strip = document.createElement("canvas");
     strip.className = "fx-strip";
-    const label = document.createElement("span");
-    label.textContent = fx.label;
-    b.append(strip, label);
-    box.append(b);
-    pickerPreview.items.push({ canvas: strip, clip: newClip(key, 0, len), dev });
-  }
-  return box;
+    const span = document.createElement("span");
+    span.textContent = label;
+    b.append(strip, span);
+    pickerPreview.items.push({ canvas: strip, clip: { effect, start: 0, end: len, ...chosenParams(effect, preset, from) }, dev });
+    return b;
+  };
+  const render = () => {
+    pickerPreview.items = [];
+    pickerPreview.started = performance.now();
+    body.replaceChildren();
+    for (const [heading, house] of groups) {
+      if (heading) {
+        const sh = document.createElement("div");
+        sh.className = "section-label effect-dialog-section";
+        sh.textContent = heading;
+        body.append(sh);
+      }
+      const effects = visibleEffects(current ?? undefined, house);
+      if (!toggle.checked) {
+        const row = document.createElement("div");
+        row.className = "effect-picker";
+        for (const [key, fx] of effects) row.append(choice(key, null, fx.label, key === current));
+        body.append(row);
+        continue;
+      }
+      const grid = document.createElement("div");
+      grid.className = "preset-groups";
+      for (const [key, fx] of effects) {
+        const g = document.createElement("fieldset");
+        g.className = `preset-group${key === current ? " current" : ""}`;
+        const legend = document.createElement("legend");
+        legend.textContent = fx.label;
+        const row = document.createElement("div");
+        row.className = "effect-picker";
+        row.append(choice(key, null, "Default", key === current && !currentPreset));
+        for (const preset of PRESETS[key] || []) {
+          row.append(choice(key, preset, preset.label, key === current && preset === currentPreset));
+        }
+        g.append(legend, row);
+        grid.append(g);
+      }
+      body.append(grid);
+    }
+  };
+  toggle.addEventListener("change", () => {
+    try { localStorage.setItem(SHOW_PRESETS_KEY, toggle.checked ? "1" : "0"); } catch { /* not remembered */ }
+    render();
+  });
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); }); // the backdrop
+  dlg.addEventListener("close", () => { pickerPreview.items = []; dlg.remove(); });
+  render();
+  document.body.append(dlg);
+  dlg.showModal();
+  body.querySelector(".preset-group.current, .active")?.scrollIntoView({ block: "nearest" });
+  return dlg;
 }
 
 function drawPickerPreviews() {
@@ -883,7 +958,6 @@ function renderInspector() {
   const h = document.createElement("h3");
   h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${trackName(sel.track)}`;
   box.append(h, clipPreviewRow(clip, dev));
-  pickerPreview.items = [];
 
   // Settings are grouped so a clip with many of them stays readable.
   const group = (title) => {
@@ -906,66 +980,27 @@ function renderInspector() {
     return el;
   };
 
-  // The effect and its presets are picked from previewing buttons in a drawer under the Clip
-  // settings. It stays closed until asked for, so the only thing moving by default is the clip's
-  // own preview, and only one set of previews shows at a time.
-  const picker = document.createElement("div");
-  picker.className = "effect-change-picker";
-  picker.hidden = true;
-  let openWith = null;
-  const drawer = (btn, fill) => {
-    const opening = openWith !== btn;
-    // Remembered so trying one preset after another doesn't close the drawer each time.
-    openDrawer = opening ? { clip, btn: btn.dataset.drawer } : null;
-    openWith?.classList.remove("active");
-    openWith = opening ? btn : null;
-    picker.hidden = !opening;
-    pickerPreview.items = [];
-    pickerPreview.started = performance.now();
-    picker.replaceChildren(...(opening ? [fill()] : []));
-    btn.classList.toggle("active", opening);
-  };
-  const effect = button(`${fxLabel} ▾`, () => drawer(effect, () => effectPicker((key) => {
-    if (key === clip.effect) { drawer(effect); return; }
-    const defaults = defaultParams(key);
-    for (const k of Object.keys(clip)) if (!["effect", "start", "end"].includes(k) && !(k in defaults)) delete clip[k];
-    for (const [k, v] of Object.entries(defaults)) if (!(k in clip)) clip[k] = v;
-    clip.effect = key;
-    app.changed();
-  }, dev, clip.end - clip.start, isHouse(sel.track), clip.effect, clip.effect)), "ghost effect-change");
-  effect.dataset.drawer = "effect";
-  effect.title = "Change this clip's effect";
-  field("Effect", effect);
-
-  // Presets of this effect, each previewed with the clip's own colours.
+  // The effect (and preset) is changed in the same chooser used to add one.
   const presets = PRESETS[clip.effect] || [];
-  if (presets.length) {
-    const current = presets.find((pr) => matchesPreset(pr, clip));
-    const presetBtn = button(`${current ? current.label : "Custom"} ▾`, () => drawer(presetBtn, () => {
-      const row = document.createElement("div");
-      row.className = "effect-picker preset-picker";
-      const len = Math.min(Math.max(clip.end - clip.start, 1), 6);
-      for (const preset of presets) {
-        const b = button("", () => {
-          Object.assign(clip, presetParams(preset, clip));
-          app.changed();
-        }, preset === current ? "active" : "");
-        b.title = `Set this ${fxLabel} clip's settings to ${preset.label}`;
-        const strip = document.createElement("canvas");
-        strip.className = "fx-strip";
-        const label = document.createElement("span");
-        label.textContent = preset.label;
-        b.append(strip, label);
-        row.append(b);
-        pickerPreview.items.push({ canvas: strip, clip: { ...clip, ...presetParams(preset, clip), start: 0, end: len }, dev });
+  const currentPreset = presets.find((pr) => matchesPreset(pr, clip)) || null;
+  const effect = button(`${fxLabel}${currentPreset ? ` · ${currentPreset.label}` : ""} ▾`, () => chooseEffect({
+    title: `Change the effect on ${trackName(sel.track)}`,
+    groups: [[null, isHouse(sel.track)]],
+    dev, length: clip.end - clip.start, from: clip, current: clip.effect, currentPreset,
+    onPick: (key, preset) => {
+      const params = chosenParams(key, preset, clip);
+      if (key === clip.effect) {
+        // Same effect: a preset only changes the settings it names, Default resets the rest.
+        Object.assign(clip, preset ? presetParams(preset, clip) : params);
+      } else {
+        for (const k of Object.keys(clip)) if (!["effect", "start", "end"].includes(k)) delete clip[k];
+        Object.assign(clip, params, { effect: key });
       }
-      return row;
-    }), "ghost effect-change");
-    presetBtn.dataset.drawer = "preset";
-    presetBtn.title = `Presets for ${fxLabel}: ready-made settings that keep your colours`;
-    field("Preset", presetBtn);
-    if (openDrawer?.clip === clip && openDrawer.btn === "preset") presetBtn.click();
-  }
+      app.changed();
+    },
+  }), "ghost effect-change");
+  effect.title = presets.length ? "Change this clip's effect or pick one of its presets" : "Change this clip's effect";
+  field("Effect", effect);
 
   const timeInput = (key) => {
     const el = document.createElement("input");
@@ -1034,7 +1069,6 @@ function renderInspector() {
   }
   // Only groups with something in them (a legend alone) are shown.
   box.append(...Object.values(groups).filter((g) => g.children.length > 1));
-  groups.clip.after(picker);
   const actions = document.createElement("div");
   actions.className = "insp-actions";
   actions.append(button("Copy", copySelection, "ghost"));
@@ -1324,8 +1358,6 @@ const rangeTracks = (r) => r.tracks.filter((t) => app.show.tracks[t]);
 
 function renderRangeInspector(r) {
   const box = $("inspector");
-  pickerPreview.items = [];
-  pickerPreview.started = performance.now();
   box.replaceChildren();
   const tracks = rangeTracks(r);
   const h = document.createElement("h3");
@@ -1356,33 +1388,36 @@ function renderRangeInspector(r) {
   del.disabled = !overlaps;
   box.append(timeInput("start"), timeInput("end"), del,
     button("▶ Play this part", () => { app.setRegion(r); app.seek(r.start); play(); }, "ghost"));
-  const add = document.createElement("p");
-  add.className = "hint";
   // With the House lane in the selection, House effects go there and light effects on the lights.
   const onHouse = tracks.some(isHouse);
-  add.textContent = !onHouse ? "Pick an effect to add it here:" : !lights.length
-    ? "Pick a House effect: it runs across all your lights by where they are on the house photo."
-    : "Pick an effect for the lights:";
-  box.append(add, effectPicker(addToRange, app.devices[app.show.tracks[lights[0] ?? tracks[0]]?.device],
-    r.end - r.start, !lights.length));
-  if (onHouse && lights.length) {
-    const more = document.createElement("p");
-    more.className = "hint";
-    more.textContent = "Or a House effect for the House lane:";
-    box.append(more, effectPicker(addToRange, null, r.end - r.start, true));
+  const groups = !onHouse ? [[null, false]] : !lights.length ? [[null, true]]
+    : [["For the lights", false], ["For the House lane, across all lights by where they are on the house photo", true]];
+  const actions = document.createElement("div");
+  actions.className = "add-actions";
+  const choose = button("＋ Add effect…", () => chooseEffect({
+    title: `Add an effect to ${h.textContent.replace(/^Selected /, "")}`,
+    groups, dev: app.devices[app.show.tracks[lights[0] ?? tracks[0]]?.device], length: r.end - r.start,
+    current: null, onPick: (key, preset) => { app.lastAdd = { key, preset }; addToRange(key, preset); },
+  }));
+  actions.append(choose);
+  const last = app.lastAdd;
+  if (last && tracks.some((t) => fitsTrack(last.key, t))) {
+    actions.append(button(`Add ${EFFECTS[last.key].label}${last.preset ? ` · ${last.preset.label}` : ""} again`,
+      () => addToRange(last.key, last.preset), "ghost"));
   }
+  box.append(actions);
 }
 
-function addToRange(effect) {
+function addToRange(effect, preset = null) {
   const r = app.selected.range, tracks = rangeTracks(r).filter((t) => fitsTrack(effect, t));
   const added = tracks.map((t) => {
-    const clip = newClip(effect, r.start, r.end);
+    const clip = { effect, start: r.start, end: r.end, ...chosenParams(effect, preset) };
     app.show.tracks[t].clips.push(clip);
     return { track: t, clip };
   });
   // One light: edit the new clip straight away. Several: keep the selection to add more.
   if (added.length === 1) app.selected = added[0];
-  status(`Added ${EFFECTS[effect].label} to ${added.length === 1 ? trackName(tracks[0]) : `${added.length} lights`}`);
+  status(`Added ${EFFECTS[effect].label}${preset ? ` (${preset.label})` : ""} to ${added.length === 1 ? trackName(tracks[0]) : `${added.length} lights`}`);
   app.changed();
 }
 
@@ -2033,7 +2068,8 @@ function wire() {
     const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName);
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); saveClicked(); return; }
-    if (typing || $("view-editor").hidden) return;
+    // The effect chooser handles its own keys (Escape closes it).
+    if (typing || $("view-editor").hidden || document.querySelector("dialog[open]")) return;
     if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); restore(e.shiftKey ? 1 : -1); }
     else if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); restore(1); }
     else if (mod && e.key.toLowerCase() === "c") { e.preventDefault(); copySelection(); }

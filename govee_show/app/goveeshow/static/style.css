@@ -236,5 +236,23 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
   .dock[data-dock="left"], .dock[data-dock="right"] { width: auto; }
 }
 .effect-change { min-width: 130px; text-align: left; }
-.effect-change.active { border-color: var(--accent); }
-.effect-change-picker { margin: 4px 0 8px; }
+/* The effect chooser, for adding an effect or changing a clip's. */
+.effect-dialog {
+  width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+.effect-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.effect-dialog-head {
+  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.effect-dialog-head h3 { margin: 0; flex: 1; font-size: 15px; }
+.effect-dialog-body { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.effect-dialog-section { margin-top: 4px; }
+.effect-dialog .effect-picker button { min-width: 110px; }
+.preset-groups { display: flex; flex-direction: column; gap: 10px; }
+.preset-group { margin: 0; padding: 6px 10px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.preset-group legend { padding: 0 6px; font-weight: 600; }
+.preset-group.current { border-color: var(--accent); }
+.add-actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; margin-top: 4px; }
