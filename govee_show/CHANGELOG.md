@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.66
+
+- Docs: a refreshed README with screenshots, a proper intro on the add-on's **Info** tab, and a
+  reorganised user guide with a heading for every topic, so it's easier to scan and find things.
+  Nothing in the add-on itself has changed.
+
 ## 0.2.65
 
 - Editor: every panel except the Timeline can be collapsed to its title with the ▾ arrow before its
