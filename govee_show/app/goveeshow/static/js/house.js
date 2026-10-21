@@ -84,6 +84,84 @@ export function icicleDrops(points, drops, bulbs) {
   });
 }
 
+// How far along a path each of its points is, from the start.
+function pathArcs(points) {
+  const out = [0];
+  for (let i = 1; i < points.length; i++) {
+    out.push(out[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
+  }
+  return out;
+}
+
+// The point `a` along a path (see pathArcs for `arcs`).
+function pointAtArc(points, arcs, a) {
+  let i = 1;
+  while (i < points.length - 1 && arcs[i] < a) i++;
+  const len = arcs[i] - arcs[i - 1];
+  const u = len ? Math.min(Math.max((a - arcs[i - 1]) / len, 0), 1) : 0;
+  return [points[i - 1][0] + (points[i][0] - points[i - 1][0]) * u, points[i - 1][1] + (points[i][1] - points[i - 1][1]) * u];
+}
+
+// How far along a path the nearest place to `p` in view is. `scale` is [w, h], so distances are
+// measured as they look on the photo.
+export function arcNearest(points, p, scale = [1, 1]) {
+  const arcs = pathArcs(points);
+  const [sx, sy] = scale;
+  let best = 0, bestD = Infinity;
+  for (let i = 1; i < points.length; i++) {
+    if (points[i][2] != null) continue; // out of view
+    const [ax, ay, bx, by] = [points[i - 1][0] * sx, points[i - 1][1] * sy, points[i][0] * sx, points[i][1] * sy];
+    const len2 = (bx - ax) ** 2 + (by - ay) ** 2;
+    const u = len2 ? Math.min(Math.max(((p[0] * sx - ax) * (bx - ax) + (p[1] * sy - ay) * (by - ay)) / len2, 0), 1) : 0;
+    const d = Math.hypot(p[0] * sx - (ax + (bx - ax) * u), p[1] * sy - (ay + (by - ay) * u));
+    if (d < bestD) { bestD = d; best = arcs[i - 1] + (arcs[i] - arcs[i - 1]) * u; }
+  }
+  return arcs[arcs.length - 1] ? best / arcs[arcs.length - 1] : 0;
+}
+
+// The first bulb of segment `s` (counted in show order) of `bulbs` bulbs.
+export function segmentBulb(s, bulbs, segments, reverse) {
+  const q = reverse ? segments - 1 - s : s;
+  return Math.min(Math.ceil((q * bulbs) / segments), bulbs - 1);
+}
+
+// Bulbs moved along their path to fit pins. On a photo taken at an angle, bulbs spread evenly along
+// the line don't land where the real ones are; `pins` ({segment: how far along the path, 0 to 1})
+// put a segment's first bulb where it really is, and the bulbs between pins are spread evenly
+// between them. The ends of each stretch in view stay put. `bulbs` are from bulbLayout or
+// icicleDrops.
+export function pinBulbs(points, bulbs, pins, segments, reverse) {
+  const keys = Object.keys(pins || {});
+  if (!keys.length || points.length < 2) return bulbs;
+  const arcs = pathArcs(points), total = arcs[arcs.length - 1];
+  const at = (b) => (b ? b.top || b : null);
+  if (!total) return bulbs;
+  // Anchors: the ends of each run of bulbs in view, where they already are, then the pins.
+  const anchors = new Map();
+  bulbs.forEach((b, j) => {
+    if (at(b) && (!at(bulbs[j - 1]) || !at(bulbs[j + 1]))) anchors.set(j, arcNearest(points, at(b)) * total);
+  });
+  for (const k of keys) {
+    const s = Number(k);
+    if (!(s >= 0 && s < segments) || !at(bulbs[segmentBulb(s, bulbs.length, segments, reverse)])) continue;
+    anchors.set(segmentBulb(s, bulbs.length, segments, reverse), Math.min(Math.max(pins[k], 0), 1) * total);
+  }
+  const list = [...anchors].sort((a, b) => a[0] - b[0]);
+  return bulbs.map((b, j) => {
+    if (!at(b)) return b;
+    const k = list.findIndex(([aj]) => aj >= j);
+    if (k < 0) return b;
+    const [j1, a1] = list[k];
+    let a = a1;
+    if (j1 !== j && k > 0) {
+      const [j0, a0] = list[k - 1];
+      a = a0 + ((a1 - a0) * (j - j0)) / (j1 - j0);
+    }
+    const p = pointAtArc(points, arcs, a);
+    return b.top ? { ...b, top: p } : p;
+  });
+}
+
 // The segments spot i of `spots` shows, counted from the plug: lo up to (not including) hi.
 function spotRange(i, spots, segments) {
   const lo = Math.min(Math.floor((i * segments) / spots), segments - 1);
@@ -162,12 +240,15 @@ export class House {
     this.paths = {};
     // id -> {style: "icicle", drops, length} or {style: "spots", beam, aims}; others are a line
     this.styles = {};
+    this.pins = {}; // id -> {segment: how far along its path, 0 to 1} (see pinBulbs)
     this.dim = 0.5;
     this.photo = null;
     this.devices = [];
     this.active = null; // id of the light being drawn on the House tab
     this.selected = null; // id of the light picked in the House tab's list
-    this.drag = null; // {id, i} while a point is dragged
+    this.drag = null; // {id, i} while a point is dragged, or {id, pin: segment} while a pin is
+    this.pinPick = null; // {id, s}: the segment number last clicked on the House tab
+    this.marks = []; // {id, s, x, y}: segment numbers drawn on the House tab, to click and drag
     this.stretch = null; // {id, i}: the stretch from point i - 1 to point i, picked on the House tab
     this.hover = null; // pointer position on the House tab, for the line to the next point
     this.hoverBulb = null; // {x, y, text}: the bulb under the pointer on the House tab
@@ -181,6 +262,7 @@ export class House {
       const h = await this.api("api/house");
       this.paths = h.paths || {};
       this.styles = h.styles || {};
+      this.pins = h.pins || {};
       this.dim = h.dim ?? 0.5;
       if (h.photo) await this.loadPhoto();
     } catch (e) {
@@ -221,7 +303,7 @@ export class House {
     clearTimeout(this.saveTimer);
     this.saveTimer = setTimeout(async () => {
       try {
-        await this.api("api/house", { method: "PUT", json: { paths: this.paths, styles: this.styles, dim: this.dim } });
+        await this.api("api/house", { method: "PUT", json: { paths: this.paths, styles: this.styles, pins: this.pins, dim: this.dim } });
       } catch (e) {
         this.status(`Couldn't save the house view: ${e.message}`, true);
       }
@@ -252,11 +334,12 @@ export class House {
     if (!points?.length) return null;
     const count = Math.min(dev.bulbs || dev.segments * BULBS_PER_SEGMENT, MAX_BULBS);
     const style = this.styles[dev.id];
-    const key = `${count}:${JSON.stringify(style)}:${JSON.stringify(points)}`;
+    const pins = this.pins[dev.id];
+    const key = `${count}:${dev.segments}:${dev.reverse}:${JSON.stringify(style)}:${JSON.stringify(points)}:${JSON.stringify(pins)}`;
     let c = this.cache.get(dev.id);
     if (c?.key !== key) {
       const bulbs = style?.style === "icicle" ? icicleDrops(points, style.drops, count) : bulbLayout(points, count);
-      this.cache.set(dev.id, c = { key, bulbs });
+      this.cache.set(dev.id, c = { key, bulbs: pinBulbs(points, bulbs, pins, dev.segments, dev.reverse) });
     }
     return c.bulbs;
   }
@@ -398,6 +481,7 @@ export class House {
       return out;
     }, (dev) => !this.shown(dev.id));
     this.size = { w, h };
+    this.marks = [];
     for (const dev of this.devices) {
       const pts = this.paths[dev.id];
       if (!pts?.length || !this.shown(dev.id)) continue;
@@ -524,6 +608,7 @@ export class House {
     }
     delete this.paths[dev.id];
     delete this.styles[dev.id];
+    delete this.pins[dev.id];
     this.save();
   }
 
@@ -551,18 +636,31 @@ export class House {
     ctx.textAlign = "center";
     const placed = [];
     const room = (x, y, d) => placed.every(([px, py]) => Math.hypot(px - x, py - y) >= d);
-    // Part edges first, then 1 and every 5th segment where there's room.
+    // Pins first, then part edges, then 1 and every 5th segment where there's room. Pinned
+    // numbers are amber, with a dot on the bulb they hold.
+    const pins = this.pins[dev.id] || {};
+    const pinned = (s) => pins[s] != null;
     const edges = new Set(dev.parts?.length ? dev.parts.flatMap((p) => [p.from - 1, p.to - 1]) : [0, n - 1]);
-    const order = [...first.keys()].sort((a, b) => (edges.has(b) - edges.has(a)) || a - b)
-      .filter((s) => edges.has(s) || s === 0 || (s + offset + 1) % 5 === 0);
+    const order = [...first.keys()]
+      .sort((a, b) => (pinned(b) - pinned(a)) || (edges.has(b) - edges.has(a)) || a - b)
+      .filter((s) => pinned(s) || edges.has(s) || s === 0 || (s + offset + 1) % 5 === 0
+        || (this.pinPick?.id === dev.id && this.pinPick.s === s));
     for (const s of order) {
       const [x, y] = first.get(s);
-      if (!room(x * w, y * h, 22)) continue;
+      if (!pinned(s) && !room(x * w, y * h, 22)) continue;
       placed.push([x * w, y * h]);
-      ctx.fillStyle = "rgba(0,0,0,0.65)";
-      ctx.fillRect(x * w - 9, y * h + 6, 18, 13);
-      ctx.fillStyle = "#fff";
-      ctx.fillText(String(s + offset + 1), x * w, y * h + 16);
+      const picked = this.pinPick?.id === dev.id && this.pinPick.s === s;
+      ctx.fillStyle = picked ? "#ffb020" : pinned(s) ? "rgba(120,70,0,0.9)" : "rgba(0,0,0,0.65)";
+      ctx.fillRect(x * w - 10, y * h + 6, 20, 14);
+      ctx.fillStyle = picked ? "#000" : pinned(s) ? "#ffd070" : "#fff";
+      ctx.fillText(String(s + offset + 1), x * w, y * h + 17);
+      if (pinned(s)) {
+        ctx.fillStyle = "#ffb020";
+        ctx.beginPath();
+        ctx.arc(x * w, y * h, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (!this.active) this.marks.push({ id: dev.id, s, x, y });
     }
     ctx.textAlign = "start";
     // Part names beside the middle of each part, on a dark tag so they read over the line.
@@ -610,6 +708,15 @@ export class House {
     if (!p) return;
     if (bulbs == null) p.length = 2;
     else p[2] = Math.min(Math.max(Math.round(bulbs) || 0, 0), MAX_BULBS);
+    this.save();
+  }
+
+  unpin(id, s) {
+    if (s == null) delete this.pins[id];
+    else if (this.pins[id]) {
+      delete this.pins[id][s];
+      if (!Object.keys(this.pins[id]).length) delete this.pins[id];
+    }
     this.save();
   }
 
@@ -663,8 +770,22 @@ export class House {
       }
       return best;
     };
+    // A segment number's tag below its bulb on the picked light (the bulb itself may be a point).
+    const hitMark = (p) => {
+      const { w, h } = this.size || { w: 1, h: 1 };
+      return this.marks.find((m) => {
+        const dx = (p[0] - m.x) * w, dy = (p[1] - m.y) * h;
+        return Math.abs(dx) <= 11 && dy >= 6 && dy <= 21;
+      }) || null;
+    };
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+      const mark = hitMark(at(e));
+      if (mark && this.pins[mark.id]?.[mark.s] != null) {
+        this.unpin(mark.id, mark.s);
+        onChange();
+        return;
+      }
       const found = hit(at(e));
       if (!found) return;
       this.paths[found.id].splice(found.i, 1);
@@ -677,8 +798,15 @@ export class House {
     });
     canvas.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
-      const p = at(e), found = hit(p);
-      if (found) {
+      const p = at(e), found = hit(p), mark = !this.active && hitMark(p);
+      if (mark) {
+        // Picks the segment, and dragging it pins it where it's dropped.
+        this.drag = { id: mark.id, pin: mark.s, from: p };
+        this.pinPick = { id: mark.id, s: mark.s };
+        this.stretch = null;
+        canvas.setPointerCapture(e.pointerId);
+        onChange();
+      } else if (found) {
         this.drag = found;
         canvas.setPointerCapture(e.pointerId);
         if (!this.active && this.selected !== found.id) {
@@ -694,6 +822,7 @@ export class House {
         // Clicking a light's line picks that stretch and that light; clicking elsewhere drops both.
         this.stretch = hitStretch(p);
         this.selected = this.stretch?.id ?? null;
+        this.pinPick = null;
         onChange();
       }
     });
@@ -707,6 +836,11 @@ export class House {
         style.aims ||= [];
         for (let k = style.aims.length; k < d.i; k++) style.aims.push([...DEFAULT_AIM]);
         style.aims[d.i] = [+(p[0] - x).toFixed(4), +(p[1] - y).toFixed(4)];
+      } else if (d?.pin != null) {
+        const { w, h } = this.size || { w: 1, h: 1 };
+        if (!d.moved && Math.hypot((p[0] - d.from[0]) * w, (p[1] - d.from[1]) * h) < 4) return;
+        d.moved = true;
+        (this.pins[d.id] ||= {})[d.pin] = +arcNearest(this.paths[d.id], p, [w, h]).toFixed(5);
       } else if (d) {
         this.paths[d.id][d.i].splice(0, 2, ...p);
       }
@@ -714,8 +848,9 @@ export class House {
     canvas.addEventListener("pointerleave", () => { this.hover = null; this.hoverBulb = null; });
     const end = () => {
       if (!this.drag) return;
+      const moved = this.drag.pin == null || this.drag.moved;
       this.drag = null;
-      this.save();
+      if (moved) { this.save(); onChange(); }
     };
     canvas.addEventListener("pointerup", end);
     canvas.addEventListener("pointercancel", end);

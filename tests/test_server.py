@@ -257,7 +257,8 @@ async def test_live_preview_shows_frames_then_lets_go(client, monkeypatch):
 
 
 async def test_house_photo_and_paths(client):
-    assert (await (await client.get("/api/house")).json()) == {"paths": {}, "styles": {}, "dim": 0.5, "photo": False}
+    assert (await (await client.get("/api/house")).json()) == {"paths": {}, "styles": {}, "pins": {}, "dim": 0.5,
+                                                               "photo": False}
     assert (await client.get("/api/house/photo")).status == 404
     resp = await client.put("/api/house/photo", data=b"\xff\xd8fakejpeg", headers={"Content-Type": "image/jpeg"})
     assert resp.status == 200
@@ -270,7 +271,7 @@ async def test_house_photo_and_paths(client):
 
     paths = {"porch": [[0.1, 0.2], [0.5, 0.25]], "empty": []}
     resp = await client.put("/api/house", json={"paths": paths, "dim": 0.7})
-    assert (await resp.json()) == {"paths": {"porch": [[0.1, 0.2], [0.5, 0.25]]}, "styles": {}, "dim": 0.7}
+    assert (await resp.json()) == {"paths": {"porch": [[0.1, 0.2], [0.5, 0.25]]}, "styles": {}, "pins": {}, "dim": 0.7}
     assert (await (await client.get("/api/house")).json())["photo"] is True
     assert (await client.put("/api/house", json={"paths": {"a": [[2, 0]]}})).status == 400
     assert (await client.put("/api/house", json={"paths": {"a": [["x"]]}})).status == 400
@@ -289,6 +290,13 @@ async def test_house_photo_and_paths(client):
     assert (await client.put("/api/house", json={"paths": {}, "styles": bad})).status == 400
     bad = {"gutter": {"style": "icicle", "drops": "lots"}}
     assert (await client.put("/api/house", json={"paths": {}, "styles": bad})).status == 400
+
+    # Pins hold a segment somewhere along its light's path (clamped to 0-1); a light with no path drops its pins.
+    pins = {"porch": {"3": 0.4, 7: 1.5}, "gone": {"1": 0.5}}
+    resp = await client.put("/api/house", json={"paths": paths, "pins": pins})
+    assert (await resp.json())["pins"] == {"porch": {"3": 0.4, "7": 1}}
+    assert (await client.put("/api/house", json={"paths": paths, "pins": {"porch": {"x": 0.1}}})).status == 400
+    assert (await client.put("/api/house", json={"paths": paths, "pins": {"porch": {"-1": 0.1}}})).status == 400
 
     assert (await client.delete("/api/house/photo")).status == 200
     assert (await client.get("/api/house/photo")).status == 404

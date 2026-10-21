@@ -147,6 +147,15 @@ tab) and its unused segments as faint, unlit bulbs. The picked light shows segme
 (1, every 5th, and where each part starts and ends) and each part's name. Hover over any bulb to see
 which light, segment and part it belongs to.
 
+**Photo taken at an angle.** Bulbs are spread evenly along the line, but on a photo taken from the
+side the far end of a light looks squashed, so the bulbs don't sit on the real ones. Pick the light,
+then drag one of its segment numbers along the line to where that segment really is: it's pinned
+there (amber), and the bulbs between pins and the ends are spread evenly between them. Pin a few
+along a long light. Not sure where a segment is? Click its number and press **Light it** to light
+just that segment white on the real light (**Stop** lets it go). Right-click a pinned number, or
+press **Unpin**, to let it go; **Unpin all** clears a light's pins. Pins are used by the House panel
+and the House lane too, and **Retrace** or **Clear** removes them.
+
 **Lights on top of each other.** When two traced lights overlap, press 👁 on the one in front to
 hide it on the photo, so you can click and drag the one underneath. It stays hidden (🙈) on this
 browser until you press it again. Hiding only affects the House tab's photo: the light still shows
