@@ -152,13 +152,14 @@ ones crossing its edges are trimmed.
 its edges to resize it, and change its effect, colours and settings in the Selection panel. While a
 clip is selected it loops on its own in a strip at the top of its settings, so changes show
 straight away. To swap the effect, press the **Effect** button: the same previewing buttons used
-to add one open beneath it, playing on that light for the clip's length.
+to add one open beneath it (only one set of previews is open at a time), playing on that light for the clip's length.
 
 **Presets.** Most effects can look very different depending on their settings (Three colours can sit
-still, alternate, or run as a slow or fast marquee). With a clip selected, its effect's presets sit
-in their own group next to the Clip settings, such as **Three colours presets**, each with a strip
-previewing it in your colours. Click one to set the clip's settings to it; your colours stay. The
-preset matching the clip's current settings is outlined, and you can still fine-tune afterwards. Tick **Show on the light** to loop it on the real light too while the show is
+still, alternate, or run as a slow or fast marquee). Next to **Effect** in the Clip settings, the
+**Preset** button shows which preset the clip matches (or **Custom**). Press it to open that
+effect's presets, each with a strip previewing it in your colours, and click one to use it; your
+colours stay, and the drawer stays open so you can try a few. Press the button again to close it.
+You can still fine-tune the settings afterwards. Tick **Show on the light** to loop it on the real light too while the show is
 stopped; the light goes back to normal when you click away. Every effect has a **Brightness %**
 slider, so one section can glow softly and the next hit full brightness.
 

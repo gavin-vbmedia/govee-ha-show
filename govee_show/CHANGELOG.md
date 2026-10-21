@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.35
+
+- Calmer clip settings: presets moved behind a **Preset** button next to **Effect**, which names the
+  preset the clip matches (or Custom). Their previews only play when you open it, and only one
+  drawer of previews (effects or presets) is open at a time. The preset drawer stays open while you
+  try presets.
+
 ## 0.2.34
 
 - Changing an existing clip's effect now shows previews too: the **Effect** dropdown is a button
