@@ -1,5 +1,6 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
+import { analyse, toMono } from "./analysis.js";
 import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, presetParams, renderTrack,
   showDuration,
@@ -40,7 +41,10 @@ function status(msg, error = false) {
   if (!error && msg) setTimeout(() => { if (el.textContent === msg) el.textContent = ""; }, 4000);
 }
 
-const blankShow = (name = "Untitled show") => ({ name, audio: null, fps: FPS, duration: 60, beats: [], tracks: [] });
+// bars and sections come from Detect: bar start times, and [{start, end, label, energy}].
+const blankShow = (name = "Untitled show") => ({
+  name, audio: null, fps: FPS, duration: 60, beats: [], bars: [], sections: [], tracks: [],
+});
 const audioUrl = (a) => `api/audio/file?source=${encodeURIComponent(a.source)}&path=${encodeURIComponent(a.path)}`;
 
 const app = {
@@ -1861,6 +1865,8 @@ async function openShow(id) {
   if (id) {
     app.show = await api(`api/shows/${encodeURIComponent(id)}`);
     app.show.beats ||= [];
+    app.show.bars ||= [];
+    app.show.sections ||= [];
     app.show.tracks ||= [];
   } else {
     app.show = blankShow();
@@ -1939,8 +1945,10 @@ async function refreshAudio() {
 }
 
 let audioCtx;
+let songBuffer = null; // the decoded song, for Detect
 async function loadAudio(ref) {
   app.peaks = null;
+  songBuffer = null;
   app.audioDuration = 0;
   $("duration-wrap").hidden = !!ref;
   await refreshAudio();
@@ -1958,6 +1966,7 @@ async function loadAudio(ref) {
     audioCtx ||= new AudioContext();
     const decoded = await audioCtx.decodeAudioData(buf);
     app.peaks = computePeaks(decoded);
+    songBuffer = decoded;
     app.audioDuration = decoded.duration;
     status("");
   } catch (e) {
@@ -2262,6 +2271,54 @@ function fillBeats() {
   app.changed();
 }
 
+// Finds the beats, bars and sections in the song, in a worker so the editor stays responsive.
+async function detectBeats() {
+  if (!songBuffer) { status("Choose a song first", true); return; }
+  if ((app.show.beats.length || app.show.sections?.length)
+      && !confirm("Replace the beat markers and sections with ones found in the song?")) return;
+  const song = songBuffer;
+  const channels = Array.from({ length: song.numberOfChannels }, (_, c) => song.getChannelData(c));
+  const { samples, rate } = toMono(channels, song.sampleRate);
+  status("Listening to the song…");
+  $("btn-detect").disabled = true;
+  let r;
+  try {
+    r = await analyseInWorker(samples, rate);
+  } catch (e) {
+    status(`Couldn't analyse the song: ${e.message}`, true);
+    return;
+  } finally {
+    $("btn-detect").disabled = false;
+  }
+  if (song !== songBuffer) return; // the song changed meanwhile
+  Object.assign(app.show, { beats: r.beats, bars: r.bars, sections: r.sections, tempo: r.tempo || null });
+  if (r.tempo) $("bpm").value = r.tempo;
+  app.changed();
+  const parts = `${r.sections.length} section${r.sections.length === 1 ? "" : "s"}`;
+  status(r.tempo ? `Found ${r.beats.length} beats at ${r.tempo} BPM, and ${parts}` : `No steady beat found; found ${parts}`);
+}
+
+function analyseInWorker(samples, rate) {
+  let worker;
+  try {
+    worker = new Worker(new URL("./analysis-worker.js", import.meta.url), { type: "module" });
+  } catch {
+    return Promise.resolve(analyse(samples, rate));
+  }
+  return new Promise((resolve, reject) => {
+    worker.onmessage = (e) => {
+      worker.terminate();
+      if (e.data.error) reject(new Error(e.data.error));
+      else resolve(e.data.result);
+    };
+    worker.onerror = (e) => {
+      worker.terminate();
+      reject(new Error(e.message || "the analysis stopped"));
+    };
+    worker.postMessage({ samples, rate }, [samples.buffer]);
+  });
+}
+
 function frame() {
   if (app.playing) {
     app.time = currentTime();
@@ -2351,8 +2408,12 @@ function wire() {
   $("btn-clear-region").addEventListener("click", () => app.setRegion(null));
   $("btn-tap").addEventListener("click", tapBeat);
   $("btn-fill-beats").addEventListener("click", fillBeats);
+  $("btn-detect").addEventListener("click", detectBeats);
   $("btn-clear-beats").addEventListener("click", () => {
-    if (app.show.beats.length && confirm("Remove all beat markers?")) { app.show.beats = []; app.changed(); }
+    if ((app.show.beats.length || app.show.sections?.length) && confirm("Remove all beat markers and sections?")) {
+      Object.assign(app.show, { beats: [], bars: [], sections: [] });
+      app.changed();
+    }
   });
   $("snap").checked = app.snap;
   $("snap").addEventListener("change", (e) => { app.snap = e.target.checked; prefs.set("snap", app.snap); });

@@ -26,6 +26,8 @@ editor inside Home Assistant, with no external sequencing software or separate h
 
 **Building a show**
 
+- Detect the song's tempo, beats, bars and sections (intro, verse, chorus…) automatically, in the
+  browser
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping, and
   smooth zoom (+/−, Ctrl+wheel or pinch) and scroll
 - Select a stretch of time on one or more lights, then add effects there or clear it, with a live
@@ -105,6 +107,8 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/house.js                         House photo: tracing, bulb layout, icicles, spots
     js/layout.js                        Movable panel layout
     js/palettes.js                      Colour palette presets
+    js/analysis.js                      Song analysis: tempo, beats, bars and sections
+    js/analysis-worker.js               Runs the analysis off the main thread
     models.json                         Govee model names and segment counts
 tools/build_models.py                   Regenerates models.json
 tests/                                  pytest and node tests (tests/js)

@@ -101,14 +101,15 @@ export class Timeline {
       tr.clips.forEach((clip) => this.drawClip(clip, y, dev ? dev.segments : 10, col));
     });
 
-    // beats
+    // beats, with the first beat of each bar drawn stronger
     ctx.fillStyle = col("--panel");
     ctx.fillRect(HEADER_W, RULER_H + WAVE_H, w - HEADER_W, BEAT_H);
+    const bars = new Set((this.app.show.bars || []).map((b) => Math.round(b * 1000)));
     for (const b of this.app.show.beats) {
       const x = this.x(b);
       if (x < HEADER_W || x > w) continue;
       ctx.strokeStyle = col("--beat");
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = bars.has(Math.round(b * 1000)) ? 0.7 : 0.35;
       ctx.beginPath(); ctx.moveTo(x + 0.5, RULER_H + WAVE_H); ctx.lineTo(x + 0.5, h); ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.fillStyle = col("--beat");
@@ -118,6 +119,7 @@ export class Timeline {
     }
 
     this.drawWave(col);
+    this.drawSections(col, true);
     this.drawRuler(col);
     this.drawRegion(col);
 
@@ -234,6 +236,7 @@ export class Timeline {
     const mid = RULER_H + WAVE_H / 2;
     ctx.fillStyle = col("--panel");
     ctx.fillRect(HEADER_W, RULER_H, w - HEADER_W, WAVE_H);
+    this.drawSections(col);
     const peaks = this.app.peaks;
     if (!peaks) return;
     ctx.fillStyle = col("--wave");
@@ -244,6 +247,29 @@ export class Timeline {
       for (let i = a; i <= Math.min(b, peaks.data.length - 1); i++) m = Math.max(m, peaks.data[i]);
       const hh = Math.max(1, m * (WAVE_H / 2 - 3));
       ctx.fillRect(x, mid - hh, 1, hh * 2);
+    }
+  }
+
+  // The song's sections (from Detect) as tinted bands behind the waveform, one tint per name, and
+  // their names over it.
+  drawSections(col, labels = false) {
+    const { ctx, w } = this;
+    const names = [...new Set((this.app.show.sections || []).map((s) => s.label))];
+    ctx.font = "11px system-ui, sans-serif";
+    for (const s of this.app.show.sections || []) {
+      const x0 = Math.max(HEADER_W, this.x(s.start)), x1 = Math.min(w, this.x(s.end));
+      if (x1 <= x0) continue;
+      if (labels) {
+        ctx.fillStyle = col("--text");
+        if (x1 - x0 > 40) ctx.fillText(s.label, x0 + 4, RULER_H + 12);
+        continue;
+      }
+      ctx.fillStyle = `hsl(${(names.indexOf(s.label) * 137) % 360} 70% 50%)`;
+      ctx.globalAlpha = 0.16;
+      ctx.fillRect(x0, RULER_H, x1 - x0, WAVE_H);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = col("--line");
+      ctx.beginPath(); ctx.moveTo(this.x(s.start) + 0.5, RULER_H); ctx.lineTo(this.x(s.start) + 0.5, RULER_H + WAVE_H); ctx.stroke();
     }
   }
 
@@ -334,7 +360,10 @@ export class Timeline {
     if (y < TOP) {
       const beats = app.show.beats;
       const near = beats.findIndex((b) => Math.abs(this.x(b) - x) < 5);
-      if (near >= 0) beats.splice(near, 1);
+      if (near >= 0) {
+        const [gone] = beats.splice(near, 1);
+        if (app.show.bars) app.show.bars = app.show.bars.filter((b) => Math.abs(b - gone) > 0.001);
+      }
       else { beats.push(Math.max(0, this.t(x))); beats.sort((a, b) => a - b); }
       app.changed();
       return;
