@@ -81,7 +81,7 @@ entities in automations, also set up the Mosquitto broker add-on and the MQTT in
 - Put your lights in any order (drag them on the Devices tab) and every show's timeline follows
 - Split a light into parts (say, the front, side and back of a roof line) that each get their own
   track, while the light's own track still plays across all of them as one; segments in no part
-  stay off during the show
+  stay off during the show. **Test** a part to see exactly where it starts and ends on the real light
 
 </details>
 
@@ -216,6 +216,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/effects.js                       Effect definitions, House lane effects and the baker
     js/timeline.js                      Timeline canvas: waveform, clips, selection, zoom
     js/house.js                         House photo: tracing, bulb layout, icicles, spots
+    js/devicetest.js                    Frames for testing a light's parts on the Devices tab
     js/layout.js                        Movable panel layout
     js/palettes.js                      Colour palette presets
     js/music.js                         Music tab: cutting, trimming and splicing songs

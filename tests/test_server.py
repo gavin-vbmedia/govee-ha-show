@@ -232,6 +232,23 @@ async def test_probe_lights_one_segment_then_stops(client):
     assert (await client.post("/api/devices/probe", json={**dev, "segment": 999})).status == 400
 
 
+async def test_device_test_holds_a_frame_then_stops(client):
+    dev = {"ip": "192.0.2.11", "segments": 3, "reverse": True}
+    resp = await client.post("/api/devices/test", json={**dev, "rgb": "ff0000" "00ff00" "0000ff"})
+    assert resp.status == 200
+    await asyncio.sleep(0.01)
+    out = client.app[server.OUTPUT].devices["192.0.2.11"]
+    assert out.pending or out.last_frame == bytes.fromhex("0000ff00ff00ff0000")  # reversed for the light
+    # Changing the light while it's lit sends the new frame without letting go of the light.
+    assert (await client.post("/api/devices/test", json={**dev, "segments": 2, "rgb": "ffffff000000"})).status == 200
+    await asyncio.sleep(0.01)
+    assert client.app[server.OUTPUT].devices["192.0.2.11"] is out and out.segments == 2
+    assert (await client.post("/api/devices/test", json={**dev, "stop": True})).status == 200
+    assert "192.0.2.11" not in client.app[server.OUTPUT].devices
+    for bad in ("ff00", "zz0000ff0000ff0000"):
+        assert (await client.post("/api/devices/test", json={**dev, "rgb": bad})).status == 400
+
+
 async def test_static_files_are_revalidated(client):
     resp = await client.get("/static/js/effects.js")
     assert resp.status == 200

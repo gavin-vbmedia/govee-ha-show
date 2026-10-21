@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.68
+
+- **Setup → Devices**: each part of a split light has a **Test** button that lights just that part on
+  the real light, in its colour with its first segment white, so you can see where it starts and
+  ends. **Test parts** lights them all, and **Stop** lets the light go.
+- While a test is lit, changing the light's **Segments**, **Reverse**, **Protocol** or a part's
+  segments shows on the light straight away, without pressing **Test** again.
+
 ## 0.2.67
 
 - The add-on has its own icon and logo, a string of coloured lights, in the **Add-on Store** and on

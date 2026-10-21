@@ -84,6 +84,9 @@ next to **Segments** instead: it lights one segment and asks whether anything is
 halves the possible range, so after about 7 answers the count is filled in. Set **Reverse** later,
 once the light is hung up.
 
+While the test is running you can change **Segments**, **Reverse** or **Protocol** and the light
+picks up the change straight away, so you don't need to press **Test** again after each one.
+
 ### Test only turns the light on?
 
 Lights accept different forms of the realtime command. Change
@@ -118,6 +121,12 @@ just after the last part). For example, a 60-segment Permanent Outdoor Pro could
 3–23, **Side** 24–40 and **Back** 41–60. Segments are counted the way effects run, so with
 **Reverse** ticked segment 1 is the far end. Parts are listed one per line, each with its colour,
 and the bar above them maps the light's segments: each part in its colour, unused ones grey.
+
+To check where a part really is, press **Test** on its line: the real light shows just that part,
+in its colour, with its first segment white, for a minute. Change its first or last segment while
+it's lit and the light follows, so you can nudge it until it starts and ends in the right place.
+**Test parts** lights every part the same way, with unused segments off, and **Stop** lets the light
+go.
 
 Each part gets its own track in the editor (named like *Roof · Front roof*), its own preview row,
 and works with Copy and Recolour like any other light. **Segments in no part stay off during a
