@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.34
+
+- Changing an existing clip's effect now shows previews too: the **Effect** dropdown is a button
+  that opens the same previewing effect buttons used to add one, on that light's segments and for
+  the clip's length, with the current effect outlined.
+- Effect presets: a selected clip shows presets for its effect (for example **Three colours
+  presets**: Still blocks, Alternating, Wide stripes, Slow, Fast and Wide marquee), each previewed
+  in the clip's own colours. Picking one sets the effect's settings and keeps your colours. Every
+  effect except Solid and Govee scene has some, including the House lane's.
+
 ## 0.2.33
 
 - Page layouts: choose how the editor's top, left, middle, right and bottom areas fit together.

@@ -294,6 +294,118 @@ Object.assign(EFFECTS, {
 const BRIGHTNESS = { key: "brightness", label: "Brightness %", type: "range", default: 100, min: 0, max: 100, step: 1 };
 for (const fx of Object.values(EFFECTS)) if (!fx.experimental) fx.params.push(BRIGHTNESS);
 
+// Presets: named starting points for an effect's settings, since one effect covers many looks
+// (three colours can sit still, alternate, or run as a marquee). A preset sets only the settings it
+// names and keeps the clip's colours unless it names them. A value can be a function of the clip's
+// current settings.
+const nonBlack = (p, keys) => keys.map((k) => p[k]).find((c) => c && c.toLowerCase() !== "#000000") || "#ffffff";
+const MULTI_PRESETS = [
+  { label: "Still blocks", params: { layout: "split", speed: 0 } },
+  { label: "Turning blocks", params: { layout: "split", speed: 3 } },
+  { label: "Alternating", params: { layout: "alternate", size: 1, speed: 0 } },
+  { label: "Wide stripes", params: { layout: "alternate", size: 3, speed: 0 } },
+  { label: "Slow marquee", params: { layout: "alternate", size: 1, speed: 2 } },
+  { label: "Fast marquee", params: { layout: "alternate", size: 1, speed: 8 } },
+  { label: "Wide marquee", params: { layout: "alternate", size: 3, speed: 4 } },
+];
+export const PRESETS = {
+  duo: MULTI_PRESETS,
+  trio: MULTI_PRESETS,
+  pulse: [
+    { label: "Slow breathe", params: { rate: 0.3 } },
+    { label: "Heartbeat", params: { rate: 1.2 } },
+    { label: "Fast pulse", params: { rate: 3 } },
+  ],
+  gradient: [
+    { label: "Still", params: { speed: 0 } },
+    { label: "Drift", params: { speed: 0.1 } },
+    { label: "Flowing", params: { speed: 0.5 } },
+    { label: "Two colours", params: { count: "2", speed: 0 } },
+  ],
+  cycle: [
+    { label: "Slow fade", params: { rate: 0.3, blend: "fade" } },
+    { label: "On the beat", params: { rate: 2, blend: "step" } },
+    { label: "Rapid flash", params: { rate: 8, blend: "step" } },
+  ],
+  fade: [
+    { label: "Fade in", params: { from: "#000000", to: (p) => nonBlack(p, ["to", "from"]) } },
+    { label: "Fade out", params: { from: (p) => nonBlack(p, ["from", "to"]), to: "#000000" } },
+  ],
+  chase: [
+    { label: "Single dot", params: { width: 1, speed: 0.3 } },
+    { label: "Running block", params: { width: 4, speed: 1 } },
+    { label: "Fast chase", params: { width: 2, speed: 3 } },
+  ],
+  rainbow: [
+    { label: "Slow drift", params: { speed: 0.15, spread: 1 } },
+    { label: "Spin", params: { speed: 2, spread: 1 } },
+    { label: "Tight bands", params: { speed: 0.5, spread: 3 } },
+    { label: "Whole light", params: { speed: 0.3, spread: 0 } },
+  ],
+  comet: [
+    { label: "Shooting star", params: { length: 6, speed: 1.5 } },
+    { label: "Long and slow", params: { length: 12, speed: 0.4 } },
+    { label: "Short and fast", params: { length: 3, speed: 2.5 } },
+  ],
+  scanner: [
+    { label: "Slow", params: { width: 2, speed: 0.3 } },
+    { label: "Knight Rider", params: { width: 3, speed: 0.8 } },
+    { label: "Fast and narrow", params: { width: 1, speed: 2 } },
+  ],
+  flicker: [
+    { label: "Embers", params: { rate: 2 } },
+    { label: "Candle", params: { rate: 5 } },
+    { label: "Fire", params: { rate: 12 } },
+  ],
+  lightning: [
+    { label: "Distant storm", params: { rate: 0.2 } },
+    { label: "Storm", params: { rate: 0.7 } },
+    { label: "Overhead", params: { rate: 2 } },
+  ],
+  strobe: [
+    { label: "Slow flash", params: { rate: 2, duty: 30 } },
+    { label: "Party", params: { rate: 8, duty: 30 } },
+    { label: "Rapid", params: { rate: 16, duty: 20 } },
+  ],
+  twinkle: [
+    { label: "Gentle", params: { density: 15, rate: 2 } },
+    { label: "Starry", params: { density: 30, rate: 4 } },
+    { label: "Sparkle storm", params: { density: 60, rate: 10 } },
+  ],
+  wipe: [
+    { label: "Forward", params: { direction: "forward" } },
+    { label: "Reverse", params: { direction: "reverse" } },
+  ],
+  sweep: [
+    { label: "Single sweep", params: { sweeps: 1, width: 0.25 } },
+    { label: "Searchlight", params: { sweeps: 2, width: 0.1 } },
+    { label: "Rolling bands", params: { sweeps: 6, width: 0.3 } },
+    { label: "Rising", params: { direction: "bottom to top", sweeps: 1, width: 0.3 } },
+    { label: "Burst", params: { direction: "out from centre", sweeps: 2, width: 0.2 } },
+  ],
+  housewipe: [
+    { label: "Left to right", params: { direction: "left to right" } },
+    { label: "Fill up", params: { direction: "bottom to top" } },
+    { label: "From the middle", params: { direction: "out from centre" } },
+  ],
+  wave: [
+    { label: "Slow wave", params: { size: 1, speed: 0.2 } },
+    { label: "Fast wave", params: { size: 1, speed: 1.5 } },
+    { label: "Many rainbows", params: { size: 3, speed: 0.5 } },
+    { label: "Rising", params: { direction: "bottom to top", size: 1, speed: 0.5 } },
+  ],
+};
+
+// The settings `preset` gives a clip whose settings are `p`.
+export function presetParams(preset, p) {
+  return Object.fromEntries(Object.entries(preset.params).map(([k, v]) => [k, typeof v === "function" ? v(p) : v]));
+}
+
+// Whether a clip's settings already match a preset.
+export function matchesPreset(preset, p) {
+  return Object.entries(presetParams(preset, p)).every(([k, v]) => String(p[k]) === String(v));
+}
+
 export function defaultParams(effect) {
   return Object.fromEntries(EFFECTS[effect].params.map((p) => [p.key, p.default]));
 }

@@ -32,7 +32,7 @@ editor inside Home Assistant, with no external sequencing software or separate h
   preview of every effect in the picker
 - Effects on each light (solid, two and three colours, pulse, gradient, colour cycle, fade, chase,
   rainbow, comet, scanner, flicker, lightning, strobe, twinkle, wipe) with a live, segment-level
-  preview
+  preview, and previewed presets for each (still blocks, marquees, slow drift, candle, storm…)
 - A **House** lane for effects that run across all your lights by where they are on the house
   photo, like xLights' model effects: sweeps, wipes and rainbow waves left to right, up, down or
   out from the centre
