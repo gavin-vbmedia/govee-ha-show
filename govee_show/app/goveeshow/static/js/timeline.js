@@ -15,6 +15,10 @@ const EDGE_PX = 6;
 const SNAP_PX = 8;
 const MIN_LEN = 0.05;
 
+// One tint per section name, shared with the Music tab so a song looks the same in both.
+export const SECTION_ALPHA = 0.16;
+export const sectionTint = (names, label) => `hsl(${(names.indexOf(label) * 137) % 360} 70% 50%)`;
+
 export class Timeline {
   // app provides: show, devices (by id), pps, time, selected, paletteEffect, snap,
   // peaks, duration(), and callbacks seek(t), select(sel), changed({live}).
@@ -264,8 +268,8 @@ export class Timeline {
         if (x1 - x0 > 40) ctx.fillText(s.label, x0 + 4, RULER_H + 12);
         continue;
       }
-      ctx.fillStyle = `hsl(${(names.indexOf(s.label) * 137) % 360} 70% 50%)`;
-      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = sectionTint(names, s.label);
+      ctx.globalAlpha = SECTION_ALPHA;
       ctx.fillRect(x0, RULER_H, x1 - x0, WAVE_H);
       ctx.globalAlpha = 1;
       ctx.strokeStyle = col("--line");
