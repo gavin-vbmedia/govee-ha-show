@@ -6,10 +6,12 @@ All URLs the editor uses are relative, because ingress serves the panel from
 import asyncio
 import contextlib
 import ipaddress
+import json
 import logging
 import math
 import os
 import re
+import time
 from pathlib import Path
 
 from aiohttp import web
@@ -17,6 +19,7 @@ from aiohttp import web
 from . import __version__, ai, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
+from .listen import Listener
 from .mqtt import MqttBridge
 from .output import PROBE_MAX, LivePreview, Output, run_hold, run_probe, run_test_pattern
 from .player import Player
@@ -41,6 +44,8 @@ RUNNER = web.AppKey("runner", Runner)
 MQTT = web.AppKey("mqtt", MqttBridge)
 BACKGROUND = web.AppKey("background", list)
 ALLOW_ALL = web.AppKey("allow_all", bool)
+# {"listener": the latest Listener or None, "options": Listener options (tests use spare ports)}
+LISTENING = web.AppKey("listening", dict)
 
 
 @web.middleware
@@ -84,6 +89,40 @@ async def no_cache_static(request, response):
 async def info(request):
     return web.json_response({"version": __version__, "ha": request.app[HA].available,
                               "mqtt": request.app[MQTT].client is not None})
+
+
+# diagnostics -------------------------------------------------------------
+async def start_listening(request):
+    """Record other Govee traffic for a while, e.g. a Scene Stage sync centre driving lights."""
+    body = await request.json()
+    try:
+        seconds = float(body.get("seconds", 60))
+    except (TypeError, ValueError, AttributeError):
+        raise web.HTTPBadRequest(text="seconds must be a number")
+    if not 1 <= seconds <= 180:
+        raise web.HTTPBadRequest(text="seconds must be 1-180")
+    app = request.app
+    listening = app[LISTENING]
+    if (old := listening["listener"]) and old.running:
+        old.stop()
+    await app[RUNNER].stop()  # so the add-on's own frames aren't in the recording
+    lights = {d["ip"]: d["name"] for d in app[STORAGE].load_devices() if d.get("ip")}
+    listener = listening["listener"] = Listener(lights, **listening["options"])
+    listener.start(seconds)
+    return web.json_response({"ok": True, "seconds": seconds})
+
+
+async def listening_status(request):
+    listener = request.app[LISTENING]["listener"]
+    if listener is None:
+        return web.json_response({"running": False, "count": 0, "summary": []})
+    if request.query.get("download"):
+        body = json.dumps({"raw": listener.raw, "lights": listener.lights, "packets": listener.records}, indent=1)
+        return web.Response(text=body, content_type="application/json",
+                            headers={"Content-Disposition": 'attachment; filename="govee-traffic.json"'})
+    left = max(0.0, listener.until - time.monotonic()) if listener.running else 0.0
+    return web.json_response({"running": listener.running, "left": round(left), "raw": listener.raw,
+                              "count": len(listener.records), "summary": listener.summary()[:30]})
 
 
 # devices -----------------------------------------------------------------
@@ -823,6 +862,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     app[STORAGE] = Storage(config_dir, media_dir)
     app[TESTS] = {}
     app[PREVIEWS] = {}
+    app[LISTENING] = {"listener": None, "options": {}}
 
     async def lifecycle(app):
         app[OUTPUT] = Output()
@@ -857,6 +897,8 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_post("/api/devices/test", test_device)
     r.add_post("/api/devices/probe", probe_device)
     r.add_post("/api/devices/preview", preview_device)
+    r.add_post("/api/diagnostics/listen", start_listening)
+    r.add_get("/api/diagnostics/listen", listening_status)
     r.add_get("/api/shows", list_shows)
     r.add_post("/api/shows", create_show)
     r.add_get("/api/shows/{id}", get_show)

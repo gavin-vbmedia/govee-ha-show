@@ -394,3 +394,26 @@ async def test_custom_presets_round_trip_and_validation(client):
                 [{"name": "x", "effect": "duo", "params": {"speed": [1]}}],
                 [{"name": "x", "effect": "duo", "params": {}}] * 201):
         assert (await client.put("/api/presets", json=bad)).status == 400
+
+
+async def test_listening_records_govee_packets(client):
+    client.app[server.LISTENING]["options"] = {"ports": (47003,), "allow_raw": False}
+    await client.put("/api/devices", json=[{"ip": "127.0.0.1", "name": "Roof", "segments": 10}])
+    assert (await client.post("/api/diagnostics/listen", json={"seconds": 1})).status == 200
+    await asyncio.sleep(0.1)
+    import base64, socket
+    pt = base64.b64encode(bytes([0x33, 0x05, 0x15, 0x01])).decode()
+    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    tx.sendto(json.dumps({"msg": {"cmd": "ptReal", "data": {"command": [pt]}}}).encode(), ("127.0.0.1", 47003))
+    tx.sendto(b"\x01\x02", ("127.0.0.1", 47003))
+    tx.close()
+    await asyncio.sleep(0.1)
+    status = await (await client.get("/api/diagnostics/listen")).json()
+    assert status["running"] and status["count"] == 2 and not status["raw"]
+    assert {"from": "Roof", "to": "this machine:47003", "cmd": "ptReal", "count": 1} in status["summary"]
+    full = await (await client.get("/api/diagnostics/listen?download=1")).json()
+    assert full["packets"][0]["decoded"] == ["33 05 15 01"] and full["packets"][1]["hex"] == "01 02"
+    await asyncio.sleep(1)
+    assert not (await (await client.get("/api/diagnostics/listen")).json())["running"]
+    for bad in ({"seconds": 0}, {"seconds": 999}, {"seconds": "x"}):
+        assert (await client.post("/api/diagnostics/listen", json=bad)).status == 400

@@ -441,6 +441,19 @@
       and Govee's public scene list, so it may not work on every light. The editor's preview can't show the
       scene itself, and the light may blink as it switches in and out. Saved in this browser.</p>
   </section>
+  <section class="card">
+    <h2>Listen for Govee traffic</h2>
+    <p class="hint">Records the messages your Govee lights send each other that reach Home Assistant, so a way of
+      driving them that the add-on doesn't know yet can be worked out. For example, start <b>Scene Stage</b> in the
+      Govee Home app, then press <b>Listen</b>. Nothing is sent to your lights, and a playing show is stopped
+      first. Afterwards, <b>Download</b> the recording and attach it to a GitHub issue.</p>
+    <p><button id="btn-listen">Listen for 60 seconds</button>
+      <a id="listen-download" class="button ghost" href="api/diagnostics/listen?download=1" hidden>Download</a></p>
+    <p class="hint" id="listen-status"></p>
+    <table class="devices" id="listen-summary" hidden>
+      <thead><tr><th>From</th><th>To</th><th>Message</th><th>Count</th></tr></thead><tbody></tbody>
+    </table>
+  </section>
 </main>
   </div>
 </div>

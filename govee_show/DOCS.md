@@ -613,6 +613,7 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 | AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
 | Experimental | **Govee scenes** (below). |
+| Listen for Govee traffic | Records what your lights say to each other, to help support new ways of driving them (below). |
 
 ## Setting up the AI
 
@@ -630,6 +631,19 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 The **Settings** tab shows which one is in use. The AI is sent your lights' names and segment counts,
 the effect list, the song's tempo, beats and sections, your palettes, the selection and the effects
 already on the lights. It's never sent the song itself.
+
+## Listen for Govee traffic
+
+Some Govee features drive lights in more detail than the add-on can. In **Scene Stage**, for example,
+one light (the sync centre) plays a picture across all the others. **Setup → Settings → Listen for
+Govee traffic** helps work out how, so the add-on can learn to do the same:
+
+1. Start Scene Stage (or whatever you want recorded) in the Govee Home app.
+2. Press **Listen for 60 seconds**. Nothing is sent to your lights, and a playing show is stopped.
+3. When it finishes, the table shows which lights sent what. Press **Download** and attach the file to
+   an issue on the add-on's GitHub page.
+
+If it hears nothing, the lights are talking to each other directly, where Home Assistant can't hear.
 
 ## Experimental: Govee scenes
 
