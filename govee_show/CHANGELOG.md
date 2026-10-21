@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.55
+
+- Reorder lights on the **Devices** tab: drag a light by its ⠿ handle or use ↑ and ↓. Every show's
+  timeline, the preview and the House tab follow the new order, with a split light's parts kept under it.
+
 ## 0.2.54
 
 - Split a light into parts on the **Devices** tab, like an xLights submodel: **Split into parts…**, then
