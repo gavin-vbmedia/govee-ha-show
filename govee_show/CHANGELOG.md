@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.65
+
+- Editor: every panel except the Timeline can be collapsed to its title with the ▾ arrow before its
+  name, and opened again with ▸. Which panels are collapsed is saved in your browser with the rest of
+  the layout.
+
 ## 0.2.64
 
 - Editor: the **Show** panel is one line, with the show, **Save**, **⚙ Settings…** and **Generate**.
