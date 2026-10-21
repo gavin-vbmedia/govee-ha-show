@@ -61,6 +61,7 @@ const app = {
   loop: prefs.get("loop", false),
   paletteEffect: "solid",
   palettes: [], // the user's own colour palettes; presets are in palettes.js
+  myPresets: [], // the user's own effect presets, {name, effect, params}; built-in ones are in effects.js
   colourPalette: prefs.get("colourPalette", PRESET_PALETTES[0].name),
   lastColourKey: null, // colour field a palette swatch fills
   snap: prefs.get("snap", true),
@@ -828,6 +829,11 @@ const visibleEffects = (keep, house) => Object.entries(EFFECTS).filter(([k, fx])
 // (within reason) on the light's own segments.
 const pickerPreview = { items: [], started: 0 };
 const SHOW_PRESETS_KEY = "goveeshow.showPresets";
+const MINE_ONLY_KEY = "goveeshow.myPresetsOnly";
+
+// An effect's presets: the built-in ones, then the user's own (marked mine, shown with a ★).
+const presetsFor = (effect) => [...(PRESETS[effect] || []), ...app.myPresets.filter((p) => p.effect === effect)];
+const presetLabel = (p) => (p.mine ? `★ ${p.label}` : p.label);
 
 // What a clip becomes with `effect` and, optionally, one of its presets: the effect's defaults, the
 // colours and brightness carried over from `from` (the clip being changed), then the preset.
@@ -857,9 +863,15 @@ function chooseEffect({ title, groups, dev = null, length = 3, from = null, curr
   const tl = document.createElement("label");
   tl.append(toggle, "Show presets");
   tl.title = "Presets are ready-made settings for an effect, such as a slow or fast marquee";
+  const mineOnly = document.createElement("input");
+  mineOnly.type = "checkbox";
+  try { mineOnly.checked = localStorage.getItem(MINE_ONLY_KEY) === "1"; } catch { /* not remembered */ }
+  const ml = document.createElement("label");
+  ml.append(mineOnly, "★ My presets only");
+  ml.title = "Only show the presets you've saved";
   const close = button("✕", () => dlg.close(), "ghost");
   close.title = "Close (Esc)";
-  head.append(h, tl, close);
+  head.append(h, tl, ml, close);
   const body = document.createElement("div");
   body.className = "effect-dialog-body";
   dlg.append(head, body);
@@ -879,6 +891,8 @@ function chooseEffect({ title, groups, dev = null, length = 3, from = null, curr
     pickerPreview.items = [];
     pickerPreview.started = performance.now();
     body.replaceChildren();
+    ml.hidden = !toggle.checked;
+    const onlyMine = toggle.checked && mineOnly.checked;
     for (const [heading, house] of groups) {
       if (heading) {
         const sh = document.createElement("div");
@@ -897,26 +911,33 @@ function chooseEffect({ title, groups, dev = null, length = 3, from = null, curr
       const grid = document.createElement("div");
       grid.className = "preset-groups";
       for (const [key, fx] of effects) {
+        const presets = presetsFor(key).filter((p) => !onlyMine || p.mine);
+        if (onlyMine && !presets.length) continue;
         const g = document.createElement("fieldset");
         g.className = `preset-group${key === current ? " current" : ""}`;
         const legend = document.createElement("legend");
         legend.textContent = fx.label;
         const row = document.createElement("div");
         row.className = "effect-picker";
-        row.append(choice(key, null, "Default", key === current && !currentPreset));
-        for (const preset of PRESETS[key] || []) {
-          row.append(choice(key, preset, preset.label, key === current && preset === currentPreset));
+        if (!onlyMine) row.append(choice(key, null, "Default", key === current && !currentPreset));
+        for (const preset of presets) {
+          row.append(choice(key, preset, presetLabel(preset), key === current && preset === currentPreset));
         }
         g.append(legend, row);
         grid.append(g);
       }
+      if (!grid.children.length) {
+        grid.innerHTML = `<p class="hint">No presets of your own yet. Select a clip and press <b>Save as preset</b>.</p>`;
+      }
       body.append(grid);
     }
   };
-  toggle.addEventListener("change", () => {
-    try { localStorage.setItem(SHOW_PRESETS_KEY, toggle.checked ? "1" : "0"); } catch { /* not remembered */ }
-    render();
-  });
+  for (const [box, key] of [[toggle, SHOW_PRESETS_KEY], [mineOnly, MINE_ONLY_KEY]]) {
+    box.addEventListener("change", () => {
+      try { localStorage.setItem(key, box.checked ? "1" : "0"); } catch { /* not remembered */ }
+      render();
+    });
+  }
   dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); }); // the backdrop
   dlg.addEventListener("close", () => { pickerPreview.items = []; dlg.remove(); });
   render();
@@ -927,13 +948,15 @@ function chooseEffect({ title, groups, dev = null, length = 3, from = null, curr
 }
 
 function drawPickerPreviews() {
-  const items = pickerPreview.items;
-  // offsetParent is null while the Selection panel is hidden.
-  if (!items.length || !items[0].canvas.isConnected || !items[0].canvas.offsetParent) return;
-  const secs = (performance.now() - pickerPreview.started) / 1000;
-  for (const { canvas, clip, dev } of items) {
-    const n = dev?.segments || 15;
-    drawStrip(canvas, renderTrack([clip], secs % clip.end, n), n, (dev?.brightness ?? 100) / 100);
+  for (const set of [pickerPreview, presetTabPreview]) {
+    const items = set.items;
+    // offsetParent is null while the strips' panel or tab is hidden.
+    if (!items.length || !items[0].canvas.isConnected || !items[0].canvas.offsetParent) continue;
+    const secs = (performance.now() - set.started) / 1000;
+    for (const { canvas, clip, dev } of items) {
+      const n = dev?.segments || 15;
+      drawStrip(canvas, renderTrack([clip], secs % clip.end, n), n, (dev?.brightness ?? 100) / 100);
+    }
   }
 }
 
@@ -981,9 +1004,10 @@ function renderInspector() {
   };
 
   // The effect (and preset) is changed in the same chooser used to add one.
-  const presets = PRESETS[clip.effect] || [];
-  const currentPreset = presets.find((pr) => matchesPreset(pr, clip)) || null;
-  const effect = button(`${fxLabel}${currentPreset ? ` · ${currentPreset.label}` : ""} ▾`, () => chooseEffect({
+  const presets = presetsFor(clip.effect);
+  // Prefer the user's own preset when one matches as well as a built-in one.
+  const currentPreset = [...presets].reverse().find((pr) => matchesPreset(pr, clip)) || null;
+  const effect = button(`${fxLabel}${currentPreset ? ` · ${presetLabel(currentPreset)}` : ""} ▾`, () => chooseEffect({
     title: `Change the effect on ${trackName(sel.track)}`,
     groups: [[null, isHouse(sel.track)]],
     dev, length: clip.end - clip.start, from: clip, current: clip.effect, currentPreset,
@@ -1071,6 +1095,7 @@ function renderInspector() {
   box.append(...Object.values(groups).filter((g) => g.children.length > 1));
   const actions = document.createElement("div");
   actions.className = "insp-actions";
+  actions.append(button("Save as preset…", () => savePresetFrom(clip), "ghost"));
   actions.append(button("Copy", copySelection, "ghost"));
   if (!isHouse(sel.track)) {
     actions.append(button("Copy to all lights", () => copyClipsTo([clip], sel.track, otherTracks(sel.track)), "ghost"));
@@ -1203,6 +1228,189 @@ function renderTrackInspector(i) {
       app.show.tracks[i].clips = [];
       app.changed();
     }, "ghost danger"));
+  }
+}
+
+// your own effect presets -----------------------------------------------------------
+// Saved from a clip, they show in the effect chooser with a ★ and are managed on the Presets tab.
+const presetTabPreview = { items: [], started: 0 };
+let presetSettingsOpen = null; // the preset whose settings are showing on the Presets tab
+const asPreset = (p) => ({ name: p.name, effect: p.effect, params: p.params, label: p.name, mine: true });
+
+async function loadPresets() {
+  try { app.myPresets = (await api("api/presets")).map(asPreset); } catch { app.myPresets = []; }
+  renderPresetsTab();
+}
+
+let savePresetsTimer = null;
+function savePresets() {
+  clearTimeout(savePresetsTimer);
+  savePresetsTimer = setTimeout(async () => {
+    try {
+      await api("api/presets", { method: "PUT",
+        json: app.myPresets.map(({ name, effect, params }) => ({ name, effect, params })) });
+      status("Presets saved");
+    } catch (e) { status(`Couldn't save presets: ${e.message}`, true); }
+  }, 400);
+}
+
+// A name not yet used by another of that effect's presets.
+function freePresetName(effect, base, except = null) {
+  const taken = new Set(presetsFor(effect).filter((p) => p !== except).map((p) => p.label.toLowerCase()));
+  if (!taken.has(base.toLowerCase())) return base;
+  for (let i = 2; ; i++) if (!taken.has(`${base} ${i}`.toLowerCase())) return `${base} ${i}`;
+}
+
+// Asks for a name (and whether to keep the colours), then saves the clip's settings as a preset.
+function savePresetFrom(clip) {
+  const fx = EFFECTS[clip.effect];
+  const dlg = document.createElement("dialog");
+  dlg.className = "effect-dialog save-preset-dialog";
+  const form = document.createElement("form");
+  form.method = "dialog";
+  const h = document.createElement("h3");
+  h.textContent = `Save as a ${fx.label} preset`;
+  const name = document.createElement("input");
+  name.required = true;
+  name.maxLength = 60;
+  name.value = freePresetName(clip.effect, `My ${fx.label.toLowerCase()}`);
+  const nl = document.createElement("label");
+  nl.append("Name", name);
+  const colours = document.createElement("input");
+  colours.type = "checkbox";
+  colours.checked = true;
+  const cl = document.createElement("label");
+  cl.append(colours, "Include colours");
+  cl.title = "Untick to save only the movement and other settings, so the preset keeps whatever colours a clip has";
+  const hasColours = fx.params.some((p) => p.type === "color");
+  cl.hidden = !hasColours;
+  const actions = document.createElement("div");
+  actions.className = "insp-actions";
+  const save = button("Save preset", () => {}, "primary");
+  save.type = "submit";
+  const cancel = button("Cancel", () => dlg.close(), "ghost");
+  cancel.type = "button";
+  actions.append(save, cancel);
+  form.append(h, nl, cl, actions);
+  dlg.append(form);
+  form.addEventListener("submit", () => {
+    const label = name.value.trim();
+    if (!label) return;
+    const params = {};
+    for (const p of fx.params) {
+      if (p.type === "scene" || (p.type === "color" && !colours.checked)) continue;
+      params[p.key] = clip[p.key] ?? p.default;
+    }
+    const finalName = freePresetName(clip.effect, label);
+    app.myPresets.push(asPreset({ name: finalName, effect: clip.effect, params }));
+    savePresets();
+    renderPresetsTab();
+    status(`Saved ★ ${finalName} as a ${fx.label} preset`);
+    renderInspector();
+  });
+  dlg.addEventListener("close", () => dlg.remove());
+  document.body.append(dlg);
+  dlg.showModal();
+  name.select();
+}
+
+// One input for an effect setting, as in the clip's settings. onChange gets the new value.
+function settingInput(p, value, onChange) {
+  let el;
+  if (p.type === "select") {
+    el = document.createElement("select");
+    for (const o of p.options) el.add(new Option(o, o, false, o === value));
+  } else {
+    el = document.createElement("input");
+    el.type = p.type === "range" ? "number" : p.type;
+    if (p.type === "number" || p.type === "range") Object.assign(el, { min: p.min, max: p.max, step: p.step });
+    el.value = value;
+  }
+  const numeric = p.type === "number" || p.type === "range";
+  el.addEventListener("change", () => {
+    const v = numeric ? Number(el.value) : el.value;
+    if (!numeric || Number.isFinite(v)) onChange(v);
+  });
+  const l = document.createElement("label");
+  l.append(p.label, el);
+  return l;
+}
+
+// The Presets tab: your presets by effect, each previewed, with rename, settings, duplicate and delete.
+function renderPresetsTab() {
+  const box = $("my-presets");
+  if (!box) return;
+  presetTabPreview.items = [];
+  presetTabPreview.started = performance.now();
+  if (!app.myPresets.length) {
+    box.innerHTML = `<p class="hint">None yet. In the editor, select a clip and press <b>Save as preset…</b>.</p>`;
+    return;
+  }
+  box.replaceChildren();
+  for (const [key, fx] of Object.entries(EFFECTS)) {
+    const mine = app.myPresets.filter((p) => p.effect === key);
+    if (!mine.length) continue;
+    const g = document.createElement("fieldset");
+    g.className = "preset-group";
+    const legend = document.createElement("legend");
+    legend.textContent = fx.label;
+    g.append(legend);
+    for (const preset of mine) {
+      const row = document.createElement("div");
+      row.className = "preset-item";
+      const strip = document.createElement("canvas");
+      strip.className = "fx-strip";
+      presetTabPreview.items.push({ canvas: strip, clip: { effect: key, start: 0, end: 4, ...chosenParams(key, preset) } });
+      const name = document.createElement("input");
+      name.value = preset.name;
+      name.maxLength = 60;
+      name.addEventListener("change", () => {
+        const v = name.value.trim();
+        if (!v) { name.value = preset.name; return; }
+        preset.name = preset.label = freePresetName(key, v, preset);
+        name.value = preset.name;
+        savePresets();
+      });
+      const settings = document.createElement("div");
+      settings.className = "preset-settings";
+      settings.hidden = presetSettingsOpen !== preset;
+      for (const p of fx.params) {
+        if (p.type === "scene") continue;
+        const kept = p.key in preset.params;
+        if (p.type === "color" && !kept) continue; // saved without colours: clips keep theirs
+        settings.append(settingInput(p, preset.params[p.key] ?? p.default, (v) => {
+          preset.params[p.key] = v;
+          savePresets();
+          renderPresetsTab();
+        }));
+      }
+      const edit = button("Settings", () => {
+        settings.hidden = !settings.hidden;
+        presetSettingsOpen = settings.hidden ? null : preset;
+        edit.classList.toggle("active", !settings.hidden);
+      }, settings.hidden ? "ghost" : "ghost active");
+      const dup = button("Duplicate", () => {
+        const copy = asPreset({ name: freePresetName(key, `${preset.name} copy`), effect: key,
+          params: { ...preset.params } });
+        app.myPresets.splice(app.myPresets.indexOf(preset) + 1, 0, copy);
+        savePresets();
+        renderPresetsTab();
+      }, "ghost");
+      const del = button("Delete", () => {
+        if (!confirm(`Delete the preset ${preset.name}? Clips using its settings keep them.`)) return;
+        app.myPresets.splice(app.myPresets.indexOf(preset), 1);
+        savePresets();
+        renderPresetsTab();
+      }, "ghost danger");
+      const colours = document.createElement("span");
+      colours.className = "hint";
+      colours.textContent = fx.params.some((p) => p.type === "color")
+        ? (fx.params.some((p) => p.type === "color" && p.key in preset.params) ? "with colours" : "keeps clip colours")
+        : "";
+      row.append(strip, name, colours, edit, dup, del, settings);
+      g.append(row);
+    }
+    box.append(g);
   }
 }
 
@@ -1955,6 +2163,7 @@ function wire() {
       $("view-editor").hidden = tab.dataset.view !== "editor";
       $("view-devices").hidden = tab.dataset.view !== "devices";
       $("view-palettes").hidden = tab.dataset.view !== "palettes";
+      $("view-presets").hidden = tab.dataset.view !== "presets";
       $("view-house").hidden = tab.dataset.view !== "house";
       $("view-speakers").hidden = tab.dataset.view !== "speakers";
       if (tab.dataset.view === "speakers") loadSpeakers();
@@ -2102,6 +2311,7 @@ async function init() {
     loadSpeakers();
     loadModels();
     loadPalettes();
+    loadPresets();
     house.load().then(renderHouseLights);
     const shows = await api("api/shows");
     const last = prefs.get("lastShow", null);

@@ -256,3 +256,14 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
 .preset-group legend { padding: 0 6px; font-weight: 600; }
 .preset-group.current { border-color: var(--accent); }
 .add-actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; margin-top: 4px; }
+/* Your own presets: the Presets tab and the save dialog. */
+.preset-item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; }
+.preset-item + .preset-item { border-top: 1px solid var(--line); }
+.preset-item .fx-strip { width: 120px; }
+.preset-item > input { width: 200px; }
+.preset-settings { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 4px 0 2px; }
+.save-preset-dialog { width: min(420px, calc(100vw - 32px)); }
+.save-preset-dialog form { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.save-preset-dialog h3 { margin: 0; }
+.save-preset-dialog label { display: flex; align-items: center; gap: 8px; }
+.save-preset-dialog input:not([type]) { flex: 1; }
