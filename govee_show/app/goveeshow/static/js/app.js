@@ -6,6 +6,7 @@ import {
 } from "./effects.js";
 import { House } from "./house.js";
 import { Layout } from "./layout.js";
+import { MusicEditor } from "./music.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
 
@@ -120,6 +121,7 @@ const app = {
 
 const audio = $("audio");
 const timeline = new Timeline(app);
+const music = new MusicEditor({ api, status, songs: () => app.songs || [], songsChanged: () => refreshAudio() });
 const hasAudio = () => !!app.show.audio && audio.src !== "";
 
 // history -----------------------------------------------------------------
@@ -1925,9 +1927,10 @@ async function saveClicked() {
 // audio -----------------------------------------------------------------------
 async function refreshAudio() {
   const list = await api("api/audio");
+  app.songs = list;
   const sel = $("audio-select");
   sel.replaceChildren(new Option("No song (lights only)", ""));
-  const current = app.show.audio;
+  const current = app.show?.audio;
   for (const a of list) {
     const label = `${a.source === "media" ? "Media" : "Uploaded"}: ${a.path}`;
     const value = JSON.stringify(a);
@@ -2294,6 +2297,8 @@ function wire() {
       for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t === tab);
       $("view-editor").hidden = tab.dataset.view !== "editor";
       $("view-devices").hidden = tab.dataset.view !== "devices";
+      $("view-music").hidden = tab.dataset.view !== "music";
+      if (tab.dataset.view === "music") refreshAudio().catch(() => {}).then(() => music.show()); else music.hide();
       $("view-palettes").hidden = tab.dataset.view !== "palettes";
       $("view-presets").hidden = tab.dataset.view !== "presets";
       $("view-house").hidden = tab.dataset.view !== "house";
@@ -2407,6 +2412,7 @@ function wire() {
   });
 
   document.addEventListener("keydown", (e) => {
+    if (music.active) { music.key(e); return; }
     const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName);
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); saveClicked(); return; }

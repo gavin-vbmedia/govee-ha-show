@@ -14,6 +14,7 @@
   <h1>Light Shows</h1>
   <nav>
     <button class="tab active" data-view="editor">Editor</button>
+    <button class="tab" data-view="music">Music</button>
     <button class="tab" data-view="devices">Devices</button>
     <button class="tab" data-view="speakers">Speakers</button>
     <button class="tab" data-view="house">House</button>
@@ -117,6 +118,69 @@
   <audio id="audio" preload="auto"></audio>
 </main>
 
+<main id="view-music" class="view music" hidden>
+  <p class="hint">Cut, shorten and splice songs here, then <b>Save as new file</b> and pick it under <b>Song</b> in the
+    editor. The original file isn't changed. Drag across the waveform to select, click to move the playhead, and use the
+    wheel to zoom (Shift + wheel scrolls). Space plays, Delete cuts the selection, Ctrl+Z undoes.</p>
+  <section class="toolbar">
+    <label>Song <select id="music-src"></select></label>
+    <label class="button ghost" title="Upload a song to the add-on and start editing it">Upload<input id="music-upload" type="file" accept="audio/*" hidden></label>
+    <span id="music-info" class="hint"></span>
+  </section>
+  <section class="card music-card">
+    <div class="music-stage"><canvas id="music-wave"></canvas></div>
+    <div class="toolbar">
+      <div class="group">
+        <button id="music-play" class="primary" title="Play from the playhead (Space)">▶ Play</button>
+        <button id="music-play-sel" title="Play just the selection">Play selection</button>
+        <span id="music-clock" class="clock">0:00.00 / 0:00.00</span>
+      </div>
+      <div class="group">
+        <label title="Selection start in seconds">From <input id="music-sel-start" type="number" min="0" step="0.01"></label>
+        <label title="Selection end in seconds">to <input id="music-sel-end" type="number" min="0" step="0.01"></label>
+        <span id="music-sel-len" class="hint"></span>
+      </div>
+      <div class="group">
+        <button id="music-zoom-out" class="ghost" title="Zoom out (-)">−</button>
+        <button id="music-zoom-in" class="ghost" title="Zoom in (+)">+</button>
+        <button id="music-zoom-sel" class="ghost" title="Zoom to the selection">Zoom to selection</button>
+        <button id="music-fit" class="ghost" title="Show the whole song">Show all</button>
+      </div>
+    </div>
+  </section>
+  <section class="card">
+    <div class="toolbar">
+      <div class="group">
+        <span class="section-label">Edit</span>
+        <button id="music-cut" title="Remove the selection and join the parts either side (Delete)">Cut selection</button>
+        <button id="music-keep" title="Keep only the selection, to shorten the song">Keep only selection</button>
+        <button id="music-undo" class="ghost" title="Undo (Ctrl+Z)">Undo</button>
+        <button id="music-redo" class="ghost" title="Redo (Ctrl+Shift+Z)">Redo</button>
+      </div>
+      <div class="group">
+        <span class="section-label">Splice</span>
+        <select id="music-insert-src" title="A song to add"></select>
+        <label class="button ghost" title="Upload a song to add">Upload<input id="music-insert-upload" type="file" accept="audio/*" hidden></label>
+        <button id="music-insert" title="Insert the whole song at the playhead; it's selected afterwards so you can trim it">Insert at playhead</button>
+        <button id="music-append" title="Add the whole song to the end">Add to end</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="group">
+        <span class="section-label">Smoothing</span>
+        <label title="How long the parts overlap and blend at each join; a few hundredths of a second hides the click, a few seconds blends one song into the next">Crossfade at joins
+          <input id="music-xf" type="number" min="0" max="10" step="0.05" value="0.05"> s</label>
+        <label title="Fade the start up from silence">Fade in <input id="music-fadein" type="number" min="0" max="30" step="0.5" value="0"> s</label>
+        <label title="Fade the end down to silence">Fade out <input id="music-fadeout" type="number" min="0" max="30" step="0.5" value="0"> s</label>
+      </div>
+    </div>
+  </section>
+  <section class="toolbar">
+    <label>File name <input id="music-name" size="32" placeholder="song (edit).wav"></label>
+    <button id="music-save" class="primary" title="Save the result as a new song in the add-on's folder (Ctrl+S)">Save as new file</button>
+    <span class="hint">Saved as WAV in /media/govee_show, so it plays on every speaker.</span>
+  </section>
+</main>
 <main id="view-devices" class="view" hidden>
   <section class="toolbar">
     <button id="btn-scan" class="primary">Scan network</button>
