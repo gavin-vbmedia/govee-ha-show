@@ -90,13 +90,20 @@ and works with Copy and Recolour like any other light. **Segments in no part sta
 show**: the row lists them as *Unused, off in shows*. Parts can't overlap, and making the light
 shorter trims them. Remove a part with ✕; its effects stay in your shows.
 
-**The whole light as one.** The light keeps its own track too, marked *All parts*. Effects on it
+**The whole light as one.** Unless you untick **Also play as one** under the parts, the light
+keeps its own track too, marked *All parts*. Effects on it
 run across all its parts joined end to end, as if the unused segments weren't there. A 30 m string
 that goes up the left pillar, across the top and down the right pillar could be split into *Left*,
 *Top* and *Right*: a chase on the light's own track then runs up, across and down in one go. While
 a clip is playing on a part's own track, that part shows its clip instead, so you can run one
 effect over the whole string and drop a different one on just the left pillar. **Generate** puts
-effects on the parts and leaves the light's own track for you.
+effects on the parts and leaves the light's own track for you. Untick **Also play as one** for a
+light you only ever use in parts, like a roof line where only the front 30 segments are seen: its
+own track goes away (or, if it has effects on it, is marked *Not played: parts only*).
+
+On the timeline a split light's tracks are grouped: a coloured bar runs down the left of the light
+and its parts, the parts are indented under it, and a heavier line marks where the group starts and
+ends.
 
 ## 2. Speakers
 
