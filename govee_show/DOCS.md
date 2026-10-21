@@ -193,12 +193,14 @@ Each light has a **Style**:
 
 ## 4. Build a show
 
-**Shows.** Pick a show in the Show panel, or **＋ New show** to start one. Type in the name box to
-rename it, and **Delete** removes it.
+**Shows.** Pick a show in the Show panel, or **＋ New show** to start one. **⚙ Settings…** beside it
+opens the show's settings: its **Name**, its **Show speaker** (below), **Auto save**, and **Delete
+show…** to remove it.
 
-**Songs.** Pick a song from your Home Assistant **media** folder, or **Upload** one (MP3, M4A, AAC,
-OGG, Opus, WAV, FLAC or WebM). Uploads go to `/media/govee_show/` so media players can play them.
-For a lights-only show, choose no song and set its **Length**.
+**Songs.** The Song panel shows the show's song with its length, tempo and sections. Press
+**Change…** to pick another from your Home Assistant **media** folder, or **Upload a song…** (MP3,
+M4A, AAC, OGG, Opus, WAV, FLAC or WebM). Uploads go to `/media/govee_show/` so media players can play
+them. For a lights-only show, choose **No song** and set its **Length**.
 
 **Editing a song.** The **Music** tab cuts, shortens and splices songs before you build a show. Pick a
 song (or **Upload** one), drag across the waveform to select, then **Cut selection** to remove it or
@@ -399,7 +401,7 @@ House lane. They sit on top of each light's own effects.
 ## 5. Play it
 
 **Saving.** **Save** stores the show and bakes every frame for playback (Play saves first if
-needed). With **Auto save** ticked (the default), the show also saves itself a couple of seconds
+needed). With **Auto save** ticked in the show's settings (the default), the show also saves itself a couple of seconds
 after each change and when you switch shows; the note next to it says whether everything is saved.
 A new show is saved once it has its first effect. Auto save waits while a show is playing.
 
@@ -413,7 +415,7 @@ and never changes where the real show plays:
   playhead follows along. Line the lights up with the speaker's **Delay ms** under **Setup →
   Speakers** (also shown under Timing there while that speaker is picked).
 
-**The real show.** **Show speaker** in the Song panel is where the song plays when the show is
+**The real show.** **Show speaker** in the show's **⚙ Settings…** (Show panel) is where the song plays when the show is
 started from an automation or the MQTT Play button. Leave it on **Default** to use the default show
 speaker from the Speakers tab, or pick a speaker for this show only. So you can design on a speaker
 indoors and the real show still plays outside. With no show speaker and no default, the lights play
