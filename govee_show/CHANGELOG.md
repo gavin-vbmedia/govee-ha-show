@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.72
+
+- **Setup → Settings → Listen for Govee traffic** records, for a minute, the messages your Govee lights
+  send each other that Home Assistant can hear. For example, run **Scene Stage** in the Govee Home app,
+  press **Listen**, then **Download** the recording and attach it to a GitHub issue. It helps work out
+  how Govee drives lights like the Christmas String Lights 2 in more detail than the add-on can yet.
+  Nothing is sent to your lights.
+
 ## 0.2.71
 
 - **App segments (experimental)** lags less. It now sends only a few segment changes at a time, the

@@ -199,6 +199,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
   app/goveeshow/__main__.py             Entry point and environment settings
   app/goveeshow/protocol.py             Govee LAN and razer packet encoding
   app/goveeshow/discovery.py            Multicast device scan
+  app/goveeshow/listen.py               Records other Govee traffic (Settings → Listen)
   app/goveeshow/output.py               Per-device streaming, keepalive, test pattern
   app/goveeshow/baked.py                Baked show file format
   app/goveeshow/player.py               Plays baked frames against a movable clock

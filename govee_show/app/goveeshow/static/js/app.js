@@ -3384,8 +3384,40 @@ function wire() {
   window.addEventListener("beforeunload", (e) => { if (app.dirty) e.preventDefault(); });
 }
 
+// Settings → Listen for Govee traffic: record what the lights say to each other, e.g. during Scene Stage.
+async function listenForTraffic() {
+  try {
+    await api("api/diagnostics/listen", { method: "POST", json: { seconds: 60 } });
+  } catch (e) { status(`Couldn't listen: ${e.message}`, true); return; }
+  $("btn-listen").disabled = true;
+  const poll = async () => {
+    let s;
+    try { s = await api("api/diagnostics/listen"); } catch { setTimeout(poll, 2000); return; }
+    $("listen-status").textContent = s.running
+      ? `Listening… ${s.left} seconds left, ${s.count} messages so far.`
+      : s.count
+        ? `Heard ${s.count} messages. Download the recording and attach it to a GitHub issue.`
+        : "Heard nothing. The lights may talk to each other directly, out of Home Assistant's hearing.";
+    const rows = $("listen-summary").querySelector("tbody");
+    rows.replaceChildren(...s.summary.map((r) => {
+      const tr = document.createElement("tr");
+      for (const v of [r.from, r.to, r.cmd, r.count]) {
+        const td = document.createElement("td");
+        td.textContent = v;
+        tr.append(td);
+      }
+      return tr;
+    }));
+    $("listen-summary").hidden = !s.summary.length;
+    $("listen-download").hidden = s.running || !s.count;
+    if (s.running) setTimeout(poll, 2000); else $("btn-listen").disabled = false;
+  };
+  poll();
+}
+
 async function init() {
   wire();
+  $("btn-listen").addEventListener("click", listenForTraffic);
   wireHouse();
   const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
   $("btn-reset-layout").addEventListener("click", () => layout.reset());
