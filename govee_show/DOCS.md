@@ -300,10 +300,21 @@ Send `input: {action: stop}` to stop. The **Settings** tab shows the exact input
 
 Drag any editor panel (Show, Song, Playback, Beats, Preview, House, Timeline and Selection) by its
 title to move it to the top, left, middle, right or bottom, or to change its order there; a blue
-bar shows where it will land. The **⋯** button in its corner does the same from a menu, with
-**Earlier** and **Later** to change the order, which also works on a touch screen. Top and bottom
-run the full width; left, middle and right sit side by side between them. Any panel except the
-Timeline can be **Hidden**. With Selection hidden, clips can still be moved, resized, copied and
+bar shows where it will land. The **⋯** button in its corner does the same from a menu: it shows a
+small picture of the page, so click the area you want the panel in. **Earlier** and **Later**
+change its order, which also works on a touch screen. Any panel except the Timeline can be
+**Hidden**.
+
+The **page layout** sets how those five areas fit together. Pick it at the bottom of any panel's
+**⋯** menu or under **Settings → Layout**:
+
+| Page layout | Arrangement |
+| --- | --- |
+| Classic | Top and bottom run the full width; left, middle and right sit side by side between them. |
+| Side columns | Left and right run the full height of the page, with top, middle and bottom stacked between them. |
+| Right column | Right runs the full height; top and bottom span the left and middle. Handy for keeping Selection beside everything. |
+
+An area with no panels in it takes no space. On a narrow screen every area stacks in one column. With Selection hidden, clips can still be moved, resized, copied and
 deleted on the timeline, but adding or editing effects needs it back. The layout is saved in your
 browser, so each computer or phone keeps its own.
 

@@ -157,7 +157,20 @@ button.swatch:hover { border-color: var(--text); }
 .region-wrap button { padding: 1px 7px; }
 .save-state { color: var(--muted); font-size: 12px; min-width: 9em; }
 
-/* editor layout: panels in five docks, top and bottom full width, left, middle and right between */
+/* editor layout: panels in five docks, placed on a 3x3 grid by the chosen frame (layout.js sets
+   --frame-areas). Docks space themselves with margins, so an empty, hidden dock leaves no gap. */
+#view-editor {
+  display: grid; gap: 0; padding: 7px 11px; align-items: start;
+  grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto 1fr;
+  grid-template-areas: var(--frame-areas, "top top top" "left middle right" "bottom bottom bottom");
+}
+.editor-middle { display: contents; }
+#view-editor .dock { margin: 5px; }
+.dock[data-dock="top"] { grid-area: top; }
+.dock[data-dock="left"] { grid-area: left; }
+.dock[data-dock="middle"] { grid-area: middle; }
+.dock[data-dock="right"] { grid-area: right; }
+.dock[data-dock="bottom"] { grid-area: bottom; }
 .panel {
   display: flex; flex-direction: column; gap: 6px; min-width: 0;
   background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px;
@@ -177,8 +190,6 @@ button.swatch:hover { border-color: var(--text); }
 .dock[data-dock="left"], .dock[data-dock="right"], .dock[data-dock="middle"] { flex-direction: column; }
 .dock[data-dock="left"], .dock[data-dock="right"] { width: 320px; flex: none; }
 .dock[data-dock="middle"] { flex: 1; min-width: 0; }
-.editor-middle { display: flex; gap: 10px; align-items: flex-start; }
-.editor-middle > .dock.empty + .dock[data-dock="right"] { margin-left: auto; }
 .panel-head[draggable="true"] { cursor: grab; }
 .panel.drag-source { opacity: 0.4; }
 /* While a panel is dragged, every dock shows, so an empty one can be dropped into. */
@@ -195,8 +206,32 @@ body.dragging-panel .dock.empty { display: flex; }
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
 }
 .panel-menu button { text-align: left; }
+.panel-menu { width: 240px; }
+/* A frame drawn small: one cell per dock, in the frame's grid areas. */
+.frame-map {
+  display: grid; gap: 3px; width: 100%; height: 120px;
+  grid-template-columns: 1fr 1.8fr 1fr; grid-template-rows: 1fr 1.6fr 1fr;
+}
+.frame-cell {
+  display: flex; align-items: center; justify-content: center; min-width: 0; padding: 0;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--muted);
+  font-size: 12px; text-align: center; overflow: hidden;
+}
+button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
+.panel-menu .frame-cell { text-align: center; }
+.frame-cell.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.frame-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.frame-choice { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; width: 120px; }
+.panel-menu .frame-choice { flex: 1; width: auto; padding: 4px; font-size: 11px; text-align: center; }
+.frame-choice .frame-map { height: 54px; gap: 2px; }
+.panel-menu .frame-choice .frame-map { height: 36px; }
+.frame-choice .frame-cell { border-radius: 2px; }
+.frame-choice.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+#layout-frames .frame-picker { margin: 8px 0 12px; }
+.frame-choice.active .frame-cell { border-color: var(--accent-text); }
 .panel-menu button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 @media (max-width: 800px) {
-  .editor-middle { flex-direction: column; align-items: stretch; }
+  #view-editor { grid-template-columns: minmax(0, 1fr); grid-template-rows: none;
+    grid-template-areas: "top" "left" "middle" "right" "bottom"; }
   .dock[data-dock="left"], .dock[data-dock="right"] { width: auto; }
 }
