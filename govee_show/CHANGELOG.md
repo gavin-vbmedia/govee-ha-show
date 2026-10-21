@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.69
+
+- **Setup → Devices**: the 30 m Christmas String Lights 2 (H70C5) is now marked **⚠ limited**. In
+  realtime mode it only lights its first 44 bulbs, so the badge suggests **Whole light only** if you
+  want the whole string lit. A new line in the user guide's troubleshooting table covers this.
+
 ## 0.2.68
 
 - **Setup → Devices**: each part of a split light has a **Test** button that lights just that part on

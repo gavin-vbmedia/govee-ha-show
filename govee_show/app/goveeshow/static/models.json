@@ -1195,7 +1195,9 @@
 {
 "sku": "H70C5",
 "name": "30m Christmas String Lights 2",
-"realtime": false
+"realtime": false,
+"segments": 44,
+"note": "In realtime mode it only lights its first 44 bulbs, one per segment. Set Protocol to Whole light only to light the whole string, one colour at a time."
 },
 {
 "sku": "H70C7",

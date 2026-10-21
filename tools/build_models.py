@@ -18,6 +18,13 @@ SOURCE = ("https://raw.githubusercontent.com/fu-raz/signalrgb-govee-direct-conne
 # Realtime segment counts confirmed by other projects.
 KNOWN_SEGMENTS = {
     "H618A": 15,  # DMXCore Govee plugin
+    "H70C5": 44,  # tested on a real light (issue #74)
+}
+
+# What testing on real lights found that the product list doesn't say, shown on the Devices tab.
+KNOWN_NOTES = {
+    "H70C5": "In realtime mode it only lights its first 44 bulbs, one per segment. "
+             "Set Protocol to Whole light only to light the whole string, one colour at a time.",
 }
 
 
@@ -34,6 +41,8 @@ def main():
         entry = {"sku": sku, "name": name.group(1).strip(), "realtime": razer.group(1) == "1"}
         if sku in KNOWN_SEGMENTS:
             entry["segments"] = KNOWN_SEGMENTS[sku]
+        if sku in KNOWN_NOTES:
+            entry["note"] = KNOWN_NOTES[sku]
         models[sku] = entry
     if len(models) < 100:
         sys.exit(f"only parsed {len(models)} models; the source format may have changed")
