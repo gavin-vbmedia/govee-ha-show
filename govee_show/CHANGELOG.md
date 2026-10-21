@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.51
+
+- **Generate** can be made by the AI: pick **AI** under **Made by** and it makes the whole show in your
+  colours and style, following the notes on the song's sections from the Music tab.
+
 ## 0.2.50
 
 - Section **Notes** on the Music tab: a line about what happens in that part of the music, or how you'd
