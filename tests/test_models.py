@@ -12,4 +12,5 @@ def test_model_list_is_well_formed():
     by_sku = {m["sku"]: m for m in models}
     assert by_sku["H7093"]["realtime"] is True  # Outdoor Spotlights 2
     assert all(isinstance(m["realtime"], bool) and m["name"] for m in models)
+    assert by_sku["H706A"]["realtime"] is True  # confirmed though Govee's list says otherwise
     assert by_sku["H70C5"]["segments"] == 44 and "Whole light only" in by_sku["H70C5"]["note"]

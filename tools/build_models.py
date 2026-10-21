@@ -21,6 +21,11 @@ KNOWN_SEGMENTS = {
     "H70C5": 44,  # tested on a real light (issue #74)
 }
 
+# Realtime confirmed on real lights where Govee's product list says otherwise.
+KNOWN_REALTIME = {
+    "H706A", "H706B", "H706C",  # Permanent Outdoor Lights Pro: the owner's, and signalrgb-govee
+}
+
 # What testing on real lights found that the product list doesn't say, shown on the Devices tab.
 KNOWN_NOTES = {
     "H70C5": "In realtime mode it only lights its first 44 bulbs, one per segment. To light the whole "
@@ -38,7 +43,7 @@ def main():
         if not name or not razer:
             continue
         sku = block.group(1)
-        entry = {"sku": sku, "name": name.group(1).strip(), "realtime": razer.group(1) == "1"}
+        entry = {"sku": sku, "name": name.group(1).strip(), "realtime": razer.group(1) == "1" or sku in KNOWN_REALTIME}
         if sku in KNOWN_SEGMENTS:
             entry["segments"] = KNOWN_SEGMENTS[sku]
         if sku in KNOWN_NOTES:

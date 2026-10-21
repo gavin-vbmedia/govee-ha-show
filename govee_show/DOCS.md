@@ -104,9 +104,10 @@ Lights accept different forms of the realtime command. Change
 
 Pick the model (for example `H7093`), give it a name and press **Add
 planned light**, then build shows with it straight away. The model list comes from Govee's product
-data: **✓ realtime** means Govee lists the model as supporting per-segment realtime control, which
-this add-on needs, and **⚠ unverified** means it isn't on that list (some still work, but test one
-before buying more). **⚠ limited** marks a model that has been tested and only partly works; point
+data: **✓ realtime** means the model is known to support per-segment realtime control, which this
+add-on needs, and **? untested** means it isn't known yet. Govee's list is out of date for its newer
+lights, many of which work anyway (the Permanent Outdoor Lights Pro does), so test one before buying
+more. **⚠ limited** marks a model that has been tested and only partly works; point
 at the badge to see what it can do. Segment counts aren't published, so 15 is a guess until you test the real
 light. Planned lights appear in the previews but nothing is sent to them. When the light arrives,
 press **Scan network** and choose **Link to** next to it, or type its IP into the planned light's
@@ -613,6 +614,7 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 | AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
 | Experimental | **Govee scenes** (below). |
+| Packet lab | Sends hand-made messages to one light, for trying out new ways of driving it (below). |
 | Listen for Govee traffic | Records what your lights say to each other, to help support new ways of driving them (below). |
 
 ## Setting up the AI
@@ -631,6 +633,23 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 The **Settings** tab shows which one is in use. The AI is sent your lights' names and segment counts,
 the effect list, the song's tempo, beats and sections, your palettes, the selection and the effects
 already on the lights. It's never sent the song itself.
+
+## Packet lab
+
+**Setup → Settings → Packet lab** is for experiments: it sends one light a message you choose and
+lists anything the light sends back. You won't need it to make shows.
+
+1. Pick the **Light** (only lights on the Devices tab with an IP address are offered).
+2. Pick a starting point under **Start from**, such as **Ask for its status** or **Realtime: rainbow**,
+   and set **Segments** and **Colour** for it. The message appears in the box, where you can change it.
+3. Choose how many times to send it and how often. Realtime messages are sent 50 times, a tenth of a
+   second apart, with **Realtime on first**, because lights drop back to their own scene within a
+   moment otherwise.
+4. Press **Send**. **Stop** ends it early. A playing show is stopped first.
+
+The three types are a whole **JSON message**, a **Realtime (razer) packet** (type the command byte
+and its data in hex; the header, length and checksum are added, and **Length field** overrides the
+length), and an **App command (ptReal)**: one Govee app command per line, in hex.
 
 ## Listen for Govee traffic
 

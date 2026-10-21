@@ -200,6 +200,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
   app/goveeshow/protocol.py             Govee LAN and razer packet encoding
   app/goveeshow/discovery.py            Multicast device scan
   app/goveeshow/listen.py               Records other Govee traffic (Settings → Listen)
+  app/goveeshow/lab.py                  Packet lab: hand-made messages to one light
   app/goveeshow/output.py               Per-device streaming, keepalive, test pattern
   app/goveeshow/baked.py                Baked show file format
   app/goveeshow/player.py               Plays baked frames against a movable clock
@@ -218,6 +219,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/timeline.js                      Timeline canvas: waveform, clips, selection, zoom
     js/house.js                         House photo: tracing, bulb layout, icicles, spots
     js/devicetest.js                    Frames for testing a light's parts on the Devices tab
+    js/labtemplates.js                  Packet lab starting points
     js/layout.js                        Movable panel layout
     js/palettes.js                      Colour palette presets
     js/music.js                         Music tab: cutting, trimming and splicing songs
