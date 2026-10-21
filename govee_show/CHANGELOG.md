@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.61
+
+- **House** tab: pin segments where they really are. Drag a picked light's segment number along its line
+  and the bulbs between pins are spread evenly, so a photo taken at an angle lines up with the real
+  bulbs. **Light it** lights just that segment on the real light to find it. Right-click or **Unpin**
+  removes a pin.
+
 ## 0.2.60
 
 - **House** tab: a light split into parts is listed as its parts, and each part is traced on its own, so

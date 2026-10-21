@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { bulbLayout, bulbPositions, bulbSegment, icicleDrops, segmentPositions, spotColour } from "../../govee_show/app/goveeshow/static/js/house.js";
+import { arcNearest, bulbLayout, bulbPositions, bulbSegment, icicleDrops, pinBulbs, segmentBulb, segmentPositions, spotColour }
+  from "../../govee_show/app/goveeshow/static/js/house.js";
 
 const close = (a, b) => a.every((p, i) => Math.abs(p[0] - b[i][0]) < 1e-9 && Math.abs(p[1] - b[i][1]) < 1e-9);
 
@@ -71,4 +72,34 @@ test("segment positions span the traced lights from 0 to 1", () => {
   assert.ok(near(pos.spots[1], [0.15 / 0.55, 1]));
   assert.ok(near(pos.spots[0], [1, 1]));
   assert.deepEqual(segmentPositions([]), {});
+});
+
+test("a pinned segment moves its first bulb along the path, the bulbs between spread evenly", () => {
+  const line = [[0, 0], [1, 0]];
+  const bulbs = bulbLayout(line, 11); // 0, 0.1, ... 1
+  // 10 segments over 11 bulbs: segment 5's first bulb is bulb 6, at 0.6 until pinned at 0.9.
+  assert.equal(segmentBulb(5, 11, 10, false), 6);
+  assert.equal(bulbSegment(6, 11, 10, false), 5);
+  const pinned = pinBulbs(line, bulbs, { 5: 0.9 }, 10, false);
+  assert.deepEqual(pinned.map((p) => +p[0].toFixed(3)), [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 0.925, 0.95, 0.975, 1]);
+  assert.ok(pinned.every((p) => p[1] === 0));
+  // Reverse counts segments from the far end.
+  assert.equal(segmentBulb(0, 11, 10, true), 10);
+  // No pins leaves them as they were.
+  assert.equal(pinBulbs(line, bulbs, {}, 10, false), bulbs);
+});
+
+test("pins follow corners and leave stretches out of view alone", () => {
+  const path = [[0, 0], [1, 0], [1, 1]];
+  assert.equal(arcNearest(path, [1.2, 0.5]), 0.75);
+  const pinned = pinBulbs(path, bulbLayout(path, 5), { 1: 0.25 }, 4, false);
+  assert.deepEqual(pinned.slice(0, 4), [[0, 0], [0.25, 0], [0.5, 0], [1, 0.25]]);
+  // The ends of a run in view stay put, so a pin only moves bulbs in its own run.
+  const hidden = [[0, 0], [1, 0], [1, 1, 4], [2, 1]];
+  const before = bulbLayout(hidden, 12);
+  const after = pinBulbs(hidden, before, { 1: 0.1 }, 6, false);
+  assert.equal(after.filter((b) => !b).length, 4);
+  const round = (list) => list.map((p) => p.map((v) => +v.toFixed(6)));
+  assert.deepEqual(round(after.slice(-4)), round(before.slice(-4)));
+  assert.deepEqual(after[3], [1, 0]);
 });

@@ -604,7 +604,8 @@ async def get_house(request):
 
 def _house(settings: dict) -> dict:
     house = settings.get("house", {})
-    return {"paths": house.get("paths", {}), "styles": house.get("styles", {}), "dim": house.get("dim", 0.5)}
+    return {"paths": house.get("paths", {}), "styles": house.get("styles", {}), "pins": house.get("pins", {}),
+            "dim": house.get("dim", 0.5)}
 
 
 def _clean_style(style) -> dict | None:
@@ -665,13 +666,30 @@ async def put_house(request):
     if not isinstance(styles, dict) or len(styles) > 100:
         raise web.HTTPBadRequest(text="expected styles for up to 100 lights")
     styles = {str(k)[:64]: v for k, v in ((k, _clean_style(v)) for k, v in styles.items()) if v}
+    # Pins: {light: {segment: how far along its path, 0 to 1}}, where a photo taken at an angle needs
+    # a segment's bulbs somewhere other than evenly spread.
+    pins = body.get("pins") or {}
+    if not isinstance(pins, dict) or len(pins) > 100:
+        raise web.HTTPBadRequest(text="expected pins for up to 100 lights")
+    clean_pins = {}
+    for dev_id, marks in pins.items():
+        if not isinstance(marks, dict) or len(marks) > MAX_POINTS:
+            raise web.HTTPBadRequest(text=f"a light has up to {MAX_POINTS} pins")
+        try:
+            got = {str(int(s)): round(min(max(float(t), 0), 1), 5) for s, t in marks.items()}
+        except (TypeError, ValueError):
+            raise web.HTTPBadRequest(text="pins are a segment and a number from 0 to 1")
+        if any(int(s) < 0 for s in got):
+            raise web.HTTPBadRequest(text="pins are a segment and a number from 0 to 1")
+        if got and str(dev_id)[:64] in clean:
+            clean_pins[str(dev_id)[:64]] = got
     try:
         dim = min(max(float(body.get("dim", 0.5)), 0), 0.9)
     except (TypeError, ValueError):
         raise web.HTTPBadRequest(text="dim must be a number")
     storage = request.app[STORAGE]
     settings = storage.load_settings()
-    settings["house"] = {"paths": clean, "styles": styles, "dim": dim}
+    settings["house"] = {"paths": clean, "styles": styles, "pins": clean_pins, "dim": dim}
     storage.save_settings(settings)
     return web.json_response(_house(settings))
 

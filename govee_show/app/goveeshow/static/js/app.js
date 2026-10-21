@@ -866,6 +866,38 @@ function houseStretchEditor(d) {
   return box;
 }
 
+// The segment number picked on the photo: light that segment on the real light to see where it
+// is, and unpin it. Dragging the number along the line pins it (see House.pinBulbs).
+function houseSegmentEditor(d) {
+  const pick = house.active ? null : house.pinPick;
+  if (pick?.id !== d.id) return null;
+  const light = app.lights[d.parent || d.id];
+  const num = pick.s + (d.from || 1); // counted on the whole light, in show order
+  const pinned = house.pins[d.id]?.[pick.s] != null;
+  const box = document.createElement("div");
+  box.className = "house-stretch row";
+  const label = document.createElement("span");
+  label.textContent = `Segment ${num}${pinned ? " (pinned)" : ""}`;
+  const lightIt = button("Light it", async () => {
+    // Find segments lights one segment, counted from the light's own first one.
+    const segment = light.reverse ? light.segments + 1 - num : num;
+    try {
+      await api("api/devices/probe", { method: "POST", json: { ...light, segment } });
+      status(`Segment ${num} of ${light.name} is lit white. Drag its number to where it is.`);
+    } catch (e) { status(`Couldn't light it: ${e.message}`, true); }
+  }, "primary");
+  lightIt.title = "Light just this segment on the real light, white, so you can see where it is";
+  lightIt.disabled = !light.ip || light.protocol === "whole";
+  const stop = button("Stop", async () => {
+    try { await api("api/devices/probe", { method: "POST", json: { ...light, segment: 0 } }); } catch { /* it lets go by itself */ }
+  }, "ghost");
+  stop.disabled = !light.ip;
+  box.append(label, lightIt, stop);
+  if (pinned) box.append(button("Unpin", () => { house.unpin(d.id, pick.s); renderHouseLights(); }, "ghost"));
+  box.append(button("✕", () => { house.pinPick = null; renderHouseLights(); }, "ghost"));
+  return box;
+}
+
 // Line, Icicle (how many drops and how far the longest hangs) or Spots (how wide the beams are).
 function houseStyleControls(d) {
   const style = house.styles[d.id];
@@ -1016,6 +1048,7 @@ function renderHouseLights() {
       actions.append(button(pts ? "Retrace" : "Trace", () => {
         if (pts && !confirm(`Trace ${d.name} again from the start?`)) return;
         delete house.paths[d.id];
+        delete house.pins[d.id];
         if (house.styles[d.id]?.aims) house.styles[d.id].aims = [];
         house.active = house.selected = d.id;
         house.stretch = null;
@@ -1027,6 +1060,7 @@ function renderHouseLights() {
       actions.append(button("Clear", () => {
         if (!confirm(`Remove ${d.name} from the photo?`)) return;
         delete house.paths[d.id];
+        delete house.pins[d.id];
         if (house.active === d.id) house.active = null;
         house.stretch = null;
         house.save();
@@ -1045,14 +1079,19 @@ function renderHouseLights() {
       actions.append(split);
     }
     card.append(actions, ...houseStyleControls(d));
-    const stretch = houseStretchEditor(d);
+    const stretch = houseStretchEditor(d) || houseSegmentEditor(d);
     if (stretch) card.append(stretch);
     else if (house.active === d.id && house.styles[d.id]?.style === "spots") {
       card.append(hint("Click where each spotlight sits, starting nearest the plug."));
     } else if (pts && !house.active && house.styles[d.id]?.style === "spots") {
       card.append(hint("Drag a spot's round handle to aim it."));
     } else if (pts > 1 && !house.active) {
-      card.append(hint("Click a line on the photo to mark part of it out of view."));
+      card.append(hint("Click a line on the photo to mark part of it out of view. If the bulbs don't line up "
+        + "with the real ones (a photo taken at an angle), drag a segment number along the line to where that "
+        + "segment really is."));
+      if (house.pins[d.id]) {
+        card.append(button("Unpin all", () => { house.unpin(d.id); house.pinPick = null; renderHouseLights(); }, "ghost small"));
+      }
     }
     if (d.parent && house.active === d.id) {
       card.append(hint(`Start at the end of ${d.partName} nearest the light's plug.`));
