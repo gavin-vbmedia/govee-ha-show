@@ -195,6 +195,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
   README.md                             Intro shown on the add-on's Info tab
   DOCS.md                               User guide (shown on the add-on's Documentation tab)
   CHANGELOG.md                          What changed in each version
+  icon.png, logo.png                    Pictures shown in the Add-on Store
   app/goveeshow/__main__.py             Entry point and environment settings
   app/goveeshow/protocol.py             Govee LAN and razer packet encoding
   app/goveeshow/discovery.py            Multicast device scan

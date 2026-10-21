@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.67
+
+- The add-on has its own icon and logo, a string of coloured lights, in the **Add-on Store** and on
+  the add-on's page, instead of the blank placeholder. Nothing in the add-on itself has changed.
+
 ## 0.2.66
 
 - Docs: a refreshed README with screenshots, a proper intro on the add-on's **Info** tab, and a
