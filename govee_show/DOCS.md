@@ -149,6 +149,11 @@ under **Song**, it takes them automatically (asking first if the show already ha
 song** in the Beats panel brings them back later. Detect in the editor also saves its results with the
 song. Each show keeps its own copy, so moving beats in one show doesn't change the song or other shows.
 
+**Editing sections.** On the Music tab, the lane above the waveform shows each section in its colour.
+Click one to rename it or pick its colour (every section with the same name changes colour together),
+**Split at playhead**, **Merge with next** or **Delete** it, and drag the line between two sections to
+move it. Changes save with the song; a show that already uses the song picks them up with **From song**.
+
 **Beats.** Press **Detect** to have the editor listen to the song and find its tempo, every beat,
 where each bar starts (drawn as stronger markers) and its sections, which show as tinted, named bands
 behind the waveform (Intro, Verse, Chorus, Bridge, Outro). It runs in your browser in a few seconds,
