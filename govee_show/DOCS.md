@@ -153,6 +153,8 @@ song. Each show keeps its own copy, so moving beats in one show doesn't change t
 Click one to rename it or pick its colour (every section with the same name changes colour together),
 **Split at playhead**, **Merge with next** or **Delete** it, and drag the line between two sections to
 move it. Changes save with the song; a show that already uses the song picks them up with **From song**.
+Give a section **Notes** to tell **Describe it** what happens there or how you'd like it lit, such as
+"bells only, very gentle" or "big drop at the end, everything flashes"; the AI follows them.
 
 **Beats.** Press **Detect** to have the editor listen to the song and find its tempo, every beat,
 where each bar starts (drawn as stronger markers) and its sections, which show as tinted, named bands

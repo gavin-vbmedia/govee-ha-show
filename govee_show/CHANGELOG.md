@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.50
+
+- Section **Notes** on the Music tab: a line about what happens in that part of the music, or how you'd
+  like it lit ("bells only, very gentle", "big drop, everything flashes"). Saved with the song, carried into
+  shows with its sections, and passed to the AI by **Describe it**, which is told to follow them.
+
 ## 0.2.49
 
 - Edit a song's sections on the **Music** tab. A new lane above the waveform shows each section in its

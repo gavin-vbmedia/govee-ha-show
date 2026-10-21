@@ -98,11 +98,14 @@ async def test_song_info_is_kept_per_file_until_the_file_changes(client, tmp_pat
     assert await (await client.get("/api/audio/info", params=q)).json() == {
         "tempo": 120, "beats": [0.5, 1.0], "bars": [0.5],
         "sections": [{"start": 0.0, "end": 1.5, "label": "Intro", "energy": 0.3}]}
-    coloured = {**info, "sections": [{**info["sections"][0], "color": "#AABBCC"}]}
+    coloured = {**info, "sections": [{**info["sections"][0], "color": "#AABBCC", "notes": "  bells only " + "x" * 400}]}
     assert (await client.put("/api/audio/info", params=q, json=coloured)).status == 200
-    assert (await (await client.get("/api/audio/info", params=q)).json())["sections"][0]["color"] == "#aabbcc"
+    saved = (await (await client.get("/api/audio/info", params=q)).json())["sections"][0]
+    assert saved["color"] == "#aabbcc"
+    assert saved["notes"].startswith("bells only x") and len(saved["notes"]) == 300
     for bad in ({"beats": [-1]}, {"beats": "x"}, {"tempo": "fast"}, {"sections": [{"start": "a"}]}, [],
-                {"sections": [{"start": 0, "end": 1, "color": "red"}]}):
+                {"sections": [{"start": 0, "end": 1, "color": "red"}]},
+                {"sections": [{"start": 0, "end": 1, "notes": 5}]}):
         assert (await client.put("/api/audio/info", params=q, json=bad)).status == 400
     missing = {"source": "media", "path": "songs/none.mp3"}
     assert (await client.put("/api/audio/info", params=missing, json=info)).status == 404
