@@ -181,20 +181,28 @@ def test_scene_pauses_realtime_then_hands_back():
     assert razer_packets(sock)[-1][3] == 0xB0
 
 
-def test_app_segments_protocol_sends_changed_segments_by_ptreal():
+def test_app_segments_send_a_few_commands_at_a_time_biggest_change_first():
     sock = FakeSock()
-    dev = output.OutputDevice("10.0.0.6", 3, sock, protocol="segments")
+    dev = output.OutputDevice("10.0.0.6", 5, sock, protocol="segments")
     dev.enable()
     t = dev.last_enable
-    dev.update(b"\xff\x00\x00" * 3)
-    dev.tick(t + 1)
-    dev.update(b"\xff\x00\x00\x00\xff\x00\xff\x00\x00")
-    dev.tick(t + 1.2)
-    dev.tick(t + 1.4)  # unchanged and not due a resend
-    dev.tick(t + 2.5)  # resent whole
-    cmds = [m["cmd"] for m, _ in sock.sent]
-    assert "razer" not in cmds
-    sends = [[base64.b64decode(p) for p in m["data"]["command"]] for m, _ in sock.sent if m["cmd"] == "ptReal"]
-    assert [len(s) for s in sends] == [1, 1, 2]
-    assert sends[1][0][4:7] == b"\x00\xff\x00" and sends[1][0][12] == 0b010
+    sends = lambda: [[base64.b64decode(p) for p in m["data"]["command"]] for m, _ in sock.sent if m["cmd"] == "ptReal"]
+    # Five different colours, black included: all are sent, a few at a time.
+    dev.update(bytes([0, 0, 0, 50, 0, 0, 100, 0, 0, 150, 0, 0, 200, 0, 0]))
+    for k in range(3):
+        dev.tick(t + 1 + k * 0.1)
+    assert [len(s) for s in sends()] == [3, 2]
+    assert sorted(p[4] for s in sends() for p in s) == [0, 50, 100, 150, 200]
+    # A small change waits; a big one goes first.
+    sock.sent.clear()
+    dev.update(bytes([5, 0, 0, 50, 0, 0, 100, 0, 0, 150, 0, 0, 0, 255, 0]))
+    dev.tick(t + 2)
+    dev.tick(t + 2.1)
+    [[only]] = sends()
+    assert only[4:7] == b"\x00\xff\x00" and only[12] == 0b10000
+    # Settled: after a second the whole picture is repeated, still a few at a time.
+    dev.tick(t + 3.2)
+    dev.tick(t + 3.35)
+    assert [len(s) for s in sends()] == [1, 3, 2]
+    assert "razer" not in [m["cmd"] for m, _ in sock.sent]
     assert dev.min_interval >= 1 / output.SEGMENTS_FPS

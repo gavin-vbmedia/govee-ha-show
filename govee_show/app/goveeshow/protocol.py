@@ -124,16 +124,33 @@ def ptreal_msg(packets: list[bytes]) -> bytes:
 SEGMENT_MASK_MAX = 56
 
 
-def segment_colour_packets(rgb: bytes, previous: bytes | None = None) -> list[bytes]:
-    """One packet per colour in the frame, covering every segment that colour. With `previous`
-    (the last frame sent, the same length), segments that haven't changed are left out."""
+def segment_changes(rgb: bytes, previous: bytes | None = None, close: int = 0) -> list[tuple[bytes, list[int]]]:
+    """Segments to recolour, grouped by colour, biggest change first: [(rgb, [segment index, ...])].
+
+    With `previous` (what the light shows now, the same length), segments that differ from it by no
+    more than `close` in every channel are left out."""
     n = min(len(rgb) // 3, SEGMENT_MASK_MAX)
     if previous is not None and len(previous) != len(rgb):
         previous = None
-    masks: dict[bytes, int] = {}
+    groups: dict[bytes, list[int]] = {}
+    weight: dict[bytes, int] = {}
     for i in range(n):
         c = bytes(rgb[i * 3: i * 3 + 3])
-        if previous is None or previous[i * 3: i * 3 + 3] != c:
-            masks[c] = masks.get(c, 0) | 1 << i
-    return [_ble_packet(bytes([0x33, 0x05, 0x15, 0x01, *c, 0, 0, 0, 0, 0]) + mask.to_bytes((n + 7) // 8, "little"))
-            for c, mask in masks.items()]
+        d = 255 if previous is None else max(abs(a - b) for a, b in zip(c, previous[i * 3: i * 3 + 3]))
+        if previous is not None and d <= close:
+            continue
+        groups.setdefault(c, []).append(i)
+        weight[c] = weight.get(c, 0) + d
+    return sorted(groups.items(), key=lambda g: -weight[g[0]])
+
+
+def segment_colour_packet(rgb: bytes, segments: list[int]) -> bytes:
+    mask = sum(1 << i for i in segments)
+    return _ble_packet(bytes([0x33, 0x05, 0x15, 0x01, *rgb, 0, 0, 0, 0, 0]) +
+                       mask.to_bytes((max(segments) + 8) // 8, "little"))
+
+
+def segment_colour_packets(rgb: bytes, previous: bytes | None = None) -> list[bytes]:
+    """One packet per colour in the frame, covering every segment that colour. With `previous`
+    (the last frame sent, the same length), segments that haven't changed are left out."""
+    return [segment_colour_packet(c, segs) for c, segs in segment_changes(rgb, previous)]
