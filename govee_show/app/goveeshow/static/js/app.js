@@ -7,7 +7,7 @@ import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, composeLight, defaultParams, matchesPreset, presetParams,
   renderTrack, showDuration,
 } from "./effects.js";
-import { House } from "./house.js";
+import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
 import { MusicEditor } from "./music.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys, seasonalPalette } from "./palettes.js";
@@ -463,7 +463,7 @@ function partsRow(d) {
   list.className = "parts-list";
   panel.append(label, map, list);
   td.append(panel);
-  const colourOf = (i) => `hsl(${(i * 137 + 200) % 360} 65% 55%)`;
+  const colourOf = (k) => `rgb(${partRgb(k).join()})`;
   for (let s = 1; s <= d.segments; s++) {
     const cell = document.createElement("span");
     const k = parts.findIndex((p) => p.from <= s && s <= p.to);

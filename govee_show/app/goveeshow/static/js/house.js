@@ -152,6 +152,9 @@ function hueRgb(h) {
   return [f(5), f(3), f(1)];
 }
 
+// Part k of a split light's colour, the same on the Devices tab and the House tab.
+export const partRgb = (k) => hueRgb(((k * 137 + 200) % 360) / 360);
+
 export class House {
   // api(path, opts), status(msg, error), frameFor(device) -> Uint8Array of the show's colours now.
   constructor({ api, status, frameFor }) {
@@ -167,6 +170,7 @@ export class House {
     this.drag = null; // {id, i} while a point is dragged
     this.stretch = null; // {id, i}: the stretch from point i - 1 to point i, picked on the House tab
     this.hover = null; // pointer position on the House tab, for the line to the next point
+    this.hoverBulb = null; // {x, y, text}: the bulb under the pointer on the House tab
     this.hiddenLights = new Set(); // ids hidden on the House tab, to get at a light traced under another
     this.saveTimer = null;
     this.cache = new Map(); // id -> {key, bulbs}
@@ -375,8 +379,14 @@ export class House {
   // the spread of its segments are easy to check, with the traced paths on top.
   drawSetup(canvas) {
     if (!this.photo) return;
+    // A rainbow from the plug, or for a split light each part in its colour with unused segments
+    // left off, so you can see where the parts fall.
     const { ctx, w, h } = this.paint(canvas, Math.max(window.innerHeight - 260, 300), (dev) => {
       const out = new Uint8Array(dev.segments * 3);
+      if (dev.parts?.length) {
+        dev.parts.forEach((p, k) => { for (let s = p.from - 1; s < p.to; s++) out.set(partRgb(k), s * 3); });
+        return out;
+      }
       for (let i = 0; i < dev.segments; i++) {
         const s = dev.reverse ? dev.segments - 1 - i : i;
         out.set(hueRgb((i / dev.segments) * 0.8), s * 3);
@@ -455,7 +465,93 @@ export class House {
       ctx.font = "12px system-ui, sans-serif";
       ctx.fillStyle = "#fff";
       ctx.fillText(`${dev.name} (plug)`, x0 * w + 8, y0 * h - 8);
+      if (active) this.drawSegmentMarks(ctx, dev, w, h);
     }
+    if (this.hoverBulb) {
+      const { x, y, text } = this.hoverBulb;
+      ctx.font = "12px system-ui, sans-serif";
+      const tw = ctx.measureText(text).width + 12;
+      const bx = Math.min(x * w + 10, w - tw - 2), by = Math.max(y * h - 30, 2);
+      ctx.fillStyle = "rgba(0,0,0,0.8)";
+      ctx.fillRect(bx, by, tw, 20);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(text, bx + 6, by + 14);
+    }
+  }
+
+  // Bulb j of a light: where it is on the photo, or null when out of view.
+  bulbPoint(b) {
+    return !b ? null : b.top || b;
+  }
+
+  // The picked light's segment numbers along it (as many as fit), and a split light's part names.
+  drawSegmentMarks(ctx, dev, w, h) {
+    const bulbs = this.bulbs(dev);
+    if (!bulbs) return;
+    const n = dev.segments;
+    const first = new Map(); // segment -> its first bulb in view
+    const spots = {}; // segment -> [x, y] sums, for the middle of each part
+    bulbs.forEach((b, j) => {
+      const p = this.bulbPoint(b);
+      if (!p) return;
+      const s = bulbSegment(j, bulbs.length, n, dev.reverse);
+      if (!first.has(s)) first.set(s, p);
+      (spots[s] ||= []).push(p);
+    });
+    ctx.font = "10px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    const placed = [];
+    const room = (x, y, d) => placed.every(([px, py]) => Math.hypot(px - x, py - y) >= d);
+    // Part edges first, then 1 and every 5th segment where there's room.
+    const edges = new Set((dev.parts || []).flatMap((p) => [p.from - 1, p.to - 1]));
+    const order = [...first.keys()].sort((a, b) => (edges.has(b) - edges.has(a)) || a - b)
+      .filter((s) => edges.has(s) || s === 0 || (s + 1) % 5 === 0);
+    for (const s of order) {
+      const [x, y] = first.get(s);
+      if (!room(x * w, y * h, 22)) continue;
+      placed.push([x * w, y * h]);
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillRect(x * w - 9, y * h + 6, 18, 13);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(String(s + 1), x * w, y * h + 16);
+    }
+    ctx.textAlign = "start";
+    // Part names beside the middle of each part, on a dark tag so they read over the line.
+    ctx.font = "600 12px system-ui, sans-serif";
+    for (const [k, p] of (dev.parts || []).entries()) {
+      const pts = [];
+      for (let s = p.from - 1; s < p.to; s++) pts.push(...(spots[s] || []));
+      if (!pts.length) continue;
+      const [x, y] = pts[Math.floor(pts.length / 2)];
+      const tw = ctx.measureText(p.name).width + 10;
+      const bx = Math.min(x * w + 10, w - tw - 2), by = Math.max(y * h - 26, 2);
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillRect(bx, by, tw, 18);
+      ctx.fillStyle = `rgb(${partRgb(k).join()})`;
+      ctx.fillText(p.name, bx + 5, by + 13);
+    }
+  }
+
+  // The bulb nearest `p` on a light that's shown, as text for a tooltip, or null.
+  bulbAt(p) {
+    const { w, h } = this.size || { w: 1, h: 1 };
+    let best = null, bestD = HIT_PX;
+    for (const dev of this.devices) {
+      if (!this.shown(dev.id) || this.styles[dev.id]?.style === "spots") continue;
+      const bulbs = this.bulbs(dev);
+      bulbs?.forEach((b, j) => {
+        const q = this.bulbPoint(b);
+        if (!q) return;
+        const d = Math.hypot((q[0] - p[0]) * w, (q[1] - p[1]) * h);
+        if (d >= bestD) return;
+        bestD = d;
+        const s = bulbSegment(j, bulbs.length, dev.segments, dev.reverse) + 1;
+        const part = dev.parts?.find((x) => x.from <= s && s <= x.to);
+        const where = !dev.parts?.length ? "" : part ? ` · ${part.name}` : " · unused, off";
+        best = { x: q[0], y: q[1], text: `${dev.name}: segment ${s}${where}` };
+      });
+    }
+    return best;
   }
 
   // Out of view: the picked stretch holds `bulbs` bulbs that can't be seen (0 for an extension
@@ -555,6 +651,7 @@ export class House {
     canvas.addEventListener("pointermove", (e) => {
       const p = at(e);
       this.hover = this.active && !this.drag && this.styles[this.active]?.style !== "spots" ? p : null;
+      this.hoverBulb = this.drag || this.active ? null : this.bulbAt(p);
       const d = this.drag;
       if (d?.aim) {
         const style = this.styles[d.id], [x, y] = this.paths[d.id][d.i];
@@ -565,7 +662,7 @@ export class House {
         this.paths[d.id][d.i].splice(0, 2, ...p);
       }
     });
-    canvas.addEventListener("pointerleave", () => { this.hover = null; });
+    canvas.addEventListener("pointerleave", () => { this.hover = null; this.hoverBulb = null; });
     const end = () => {
       if (!this.drag) return;
       this.drag = null;

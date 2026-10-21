@@ -142,6 +142,11 @@ tick **Reverse** on the Devices tab if the effects themselves run the wrong way.
 **Brightness %** applies here as well. Click a light in the list, or its line on the photo, to pick
 it; Esc lets go.
 
+A light split into parts is drawn with each part in its colour (the same colours as on the Devices
+tab) and its unused segments as faint, unlit bulbs. The picked light shows segment numbers along it
+(1, every 5th, and where each part starts and ends) and each part's name. Hover over any bulb to see
+which light, segment and part it belongs to.
+
 **Lights on top of each other.** When two traced lights overlap, press 👁 on the one in front to
 hide it on the photo, so you can click and drag the one underneath. It stays hidden (🙈) on this
 browser until you press it again. Hiding only affects the House tab's photo: the light still shows
