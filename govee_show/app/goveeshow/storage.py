@@ -4,6 +4,7 @@
 Assistant backups. Uploaded songs go to /media/govee_show so Home Assistant media
 players can play them through the media source.
 """
+import hashlib
 import io
 import json
 import math
@@ -67,6 +68,7 @@ class Storage:
         self.config_dir = config_dir
         self.media_dir = media_dir
         self.shows_dir = config_dir / "shows"
+        self.songs_dir = config_dir / "songs"
         self.upload_dir = media_dir / "govee_show"
         self.devices_file = config_dir / "devices.json"
         self.settings_file = config_dir / "settings.json"
@@ -186,6 +188,39 @@ class Storage:
             return None
         p = safe_join(root, rel)
         return p if p and p.is_file() else None
+
+    # What Detect found in a song (tempo, beats, bars, sections), kept per file so every show
+    # using the song can start from it. Stamped with the file's size and time, so replacing
+    # the file (saving over an edit, say) drops the old results.
+    def _song_info_file(self, source: str, rel: str) -> Path:
+        key = hashlib.sha1(f"{source}:{rel}".encode()).hexdigest()[:20]
+        return self.songs_dir / f"{key}.json"
+
+    @staticmethod
+    def _stamp(p: Path) -> list[int]:
+        st = p.stat()
+        return [st.st_size, st.st_mtime_ns]
+
+    def load_song_info(self, source: str, rel: str) -> dict | None:
+        p = self.audio_path(source, rel)
+        if p is None:
+            return None
+        try:
+            info = json.loads(self._song_info_file(source, rel).read_text())
+        except (OSError, ValueError):
+            return None
+        if info.get("stamp") != self._stamp(p):
+            return None
+        return info.get("analysis")
+
+    def save_song_info(self, source: str, rel: str, analysis: dict) -> bool:
+        p = self.audio_path(source, rel)
+        if p is None:
+            return False
+        self.songs_dir.mkdir(parents=True, exist_ok=True)
+        body = {"source": source, "path": rel, "stamp": self._stamp(p), "analysis": analysis}
+        _write_atomic(self._song_info_file(source, rel), json.dumps(body).encode())
+        return True
 
     def upload_path(self, filename: str) -> Path | None:
         name = _UNSAFE_NAME.sub("_", Path(filename).name).strip(" .")

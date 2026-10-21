@@ -1,7 +1,7 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
 import { buildContext, checkClips, placeClips } from "./aiclips.js";
-import { analyse, toMono } from "./analysis.js";
+import { analyseInWorker, toMono } from "./analysis.js";
 import { STYLES, applyGenerated, generateShow, suggestLooks } from "./autogen.js";
 import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, presetParams, renderTrack,
@@ -2302,6 +2302,36 @@ function fillBeats() {
   app.changed();
 }
 
+// What Detect found in a song is also kept with the song file (on the Music tab or here), so any
+// show using that song can start from it.
+const songInfoUrl = (a) => `api/audio/info?source=${encodeURIComponent(a.source)}&path=${encodeURIComponent(a.path)}`;
+async function songInfo(ref) {
+  try { return ref ? await api(songInfoUrl(ref)) : null; } catch { return null; }
+}
+
+function applySongInfo(info) {
+  Object.assign(app.show, {
+    beats: [...info.beats], bars: [...info.bars], sections: info.sections.map((s) => ({ ...s })), tempo: info.tempo || null,
+  });
+  if (info.tempo) $("bpm").value = info.tempo;
+}
+
+// After picking a song: take its saved beats and sections, asking first if the show has its own.
+async function importSongInfo({ quiet = true } = {}) {
+  const ref = app.show.audio;
+  const info = await songInfo(ref);
+  if (ref !== app.show.audio) return;
+  if (!info) {
+    if (!quiet) status("No beats saved for this song yet. Use Detect here or on the Music tab", true);
+    return;
+  }
+  const has = app.show.beats.length || app.show.sections?.length;
+  if (has && !confirm("Replace this show's beat markers and sections with the ones saved for this song?")) return;
+  applySongInfo(info);
+  app.changed();
+  status(`Using the song's ${info.beats.length} beats and ${info.sections.length} sections`);
+}
+
 // Finds the beats, bars and sections in the song, in a worker so the editor stays responsive.
 async function detectBeats() {
   if (!songBuffer) { status("Choose a song first", true); return; }
@@ -2332,8 +2362,9 @@ async function analyseSong() {
     $("btn-detect").disabled = false;
   }
   if (song !== songBuffer) return null;
-  Object.assign(app.show, { beats: r.beats, bars: r.bars, sections: r.sections, tempo: r.tempo || null });
-  if (r.tempo) $("bpm").value = r.tempo;
+  const info = { tempo: r.tempo || null, beats: r.beats, bars: r.bars, sections: r.sections };
+  applySongInfo(info);
+  if (app.show.audio) api(songInfoUrl(app.show.audio), { method: "PUT", json: info }).catch(() => {});
   return r;
 }
 
@@ -2492,27 +2523,6 @@ function aiWorking() {
   };
 }
 
-function analyseInWorker(samples, rate) {
-  let worker;
-  try {
-    worker = new Worker(new URL("./analysis-worker.js", import.meta.url), { type: "module" });
-  } catch {
-    return Promise.resolve(analyse(samples, rate));
-  }
-  return new Promise((resolve, reject) => {
-    worker.onmessage = (e) => {
-      worker.terminate();
-      if (e.data.error) reject(new Error(e.data.error));
-      else resolve(e.data.result);
-    };
-    worker.onerror = (e) => {
-      worker.terminate();
-      reject(new Error(e.message || "the analysis stopped"));
-    };
-    worker.postMessage({ samples, rate }, [samples.buffer]);
-  });
-}
-
 function frame() {
   if (app.playing) {
     app.time = currentTime();
@@ -2587,6 +2597,7 @@ function wire() {
     app.changed();
     await stop();
     await loadAudio(app.show.audio);
+    await importSongInfo();
   });
   $("audio-upload").addEventListener("change", (e) => e.target.files[0] && upload(e.target.files[0]));
   $("duration").addEventListener("change", (e) => {
@@ -2603,6 +2614,7 @@ function wire() {
   $("btn-tap").addEventListener("click", tapBeat);
   $("btn-fill-beats").addEventListener("click", fillBeats);
   $("btn-detect").addEventListener("click", detectBeats);
+  $("btn-song-beats").addEventListener("click", () => importSongInfo({ quiet: false }));
   $("btn-generate").addEventListener("click", generateDialog);
   $("ai-form").addEventListener("submit", describeIt);
   $("btn-clear-beats").addEventListener("click", () => {

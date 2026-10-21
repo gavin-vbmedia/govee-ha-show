@@ -89,6 +89,24 @@ async def test_show_lifecycle(client):
     assert (await client.get("/api/shows/..%2Fdevices")).status in (400, 404)
 
 
+async def test_song_info_is_kept_per_file_until_the_file_changes(client, tmp_path):
+    q = {"source": "media", "path": "songs/tune.mp3"}
+    assert await (await client.get("/api/audio/info", params=q)).json() is None
+    info = {"tempo": 120, "beats": [0.5, 1.0], "bars": [0.5],
+            "sections": [{"start": 0, "end": 1.5, "label": "Intro", "energy": 0.3}]}
+    assert (await client.put("/api/audio/info", params=q, json=info)).status == 200
+    assert await (await client.get("/api/audio/info", params=q)).json() == {
+        "tempo": 120, "beats": [0.5, 1.0], "bars": [0.5],
+        "sections": [{"start": 0.0, "end": 1.5, "label": "Intro", "energy": 0.3}]}
+    for bad in ({"beats": [-1]}, {"beats": "x"}, {"tempo": "fast"}, {"sections": [{"start": "a"}]}, []):
+        assert (await client.put("/api/audio/info", params=q, json=bad)).status == 400
+    missing = {"source": "media", "path": "songs/none.mp3"}
+    assert (await client.put("/api/audio/info", params=missing, json=info)).status == 404
+    # Replacing the file drops the old results.
+    (tmp_path / "media" / "songs" / "tune.mp3").write_bytes(b"ID3 a different song")
+    assert await (await client.get("/api/audio/info", params=q)).json() is None
+
+
 async def test_audio_listing_upload_and_path_safety(client):
     listed = await (await client.get("/api/audio")).json()
     assert listed == [{"source": "media", "path": "songs/tune.mp3"}]

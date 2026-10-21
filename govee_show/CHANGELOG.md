@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.45
+
+- **Detect** on the **Music** tab: finds a song's tempo, beats, bars and sections, draws them over the
+  waveform and keeps them with the song file. Saving an edit detects the new file straight away.
+- Picking a song in the editor brings in its saved beats and sections (asking first if the show already
+  has some), and **From song** in the Beats panel re-imports them. Detect in the editor saves to the song
+  too. Results are dropped if the file is replaced.
+
 ## 0.2.44
 
 - **Describe it** now shows it's working: the button spins with a seconds counter while the AI
