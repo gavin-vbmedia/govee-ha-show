@@ -1197,7 +1197,7 @@
 "name": "30m Christmas String Lights 2",
 "realtime": false,
 "segments": 44,
-"note": "In realtime mode it only lights its first 44 bulbs, one per segment. Set Protocol to Whole light only to light the whole string, one colour at a time."
+"note": "In realtime mode it only lights its first 44 bulbs, one per segment. To light the whole string, set Protocol to App segments (experimental) with 10 segments, or Whole light only."
 },
 {
 "sku": "H70C7",

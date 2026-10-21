@@ -11,7 +11,7 @@ import socket
 import time
 
 from .protocol import (CMD_PORT, average, colorwc_msg, ptreal_msg, razer_colors, razer_enable, razer_msg,
-                       scene_packets, wrap)
+                       scene_packets, segment_colour_packets, wrap)
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +27,10 @@ STARTUP_S = 5
 STARTUP_REENABLE_S = 0.5
 MAX_FPS = 40
 WHOLE_FPS = 10  # colorwc fades each change, so faster than this just blurs
+# The app's segment command isn't made for streaming: only changed segments are sent, at most this
+# often, and the whole frame is repeated now and then in case a packet was lost.
+SEGMENTS_FPS = 10
+SEGMENTS_RESEND_S = 1.0
 
 
 class OutputDevice:
@@ -36,9 +40,10 @@ class OutputDevice:
         self.ip = ip
         self.brightness = brightness  # per-light cap, 1-100, applied to every frame
         self.protocol = protocol
-        self.realtime = protocol != "whole"
+        self.realtime = protocol not in ("whole", "segments")
         if not self.realtime:
-            max_fps = min(max_fps, WHOLE_FPS)
+            max_fps = min(max_fps, SEGMENTS_FPS if protocol == "segments" else WHOLE_FPS)
+        self.keepalive = SEGMENTS_RESEND_S if protocol == "segments" else KEEPALIVE_S
         self.segments = segments
         self.reverse = reverse
         self.gradient = gradient
@@ -101,7 +106,9 @@ class OutputDevice:
             seg = bytes(v * self.brightness // 100 for v in seg)
         self.pending = seg
 
-    def packet(self, frame: bytes) -> bytes:
+    def packet(self, frame: bytes, previous: bytes | None = None) -> bytes:
+        if self.protocol == "segments":
+            return ptreal_msg(segment_colour_packets(frame, previous))
         if not self.realtime:
             return colorwc_msg(*average(frame))
         return razer_msg(razer_colors(frame, self.gradient, self.protocol))
@@ -117,8 +124,8 @@ class OutputDevice:
         frame = self.pending if self.pending is not None else self.last_frame
         if frame is None or now - self.last_sent < self.min_interval:
             return  # rate limited; latest pending frame wins
-        if frame != self.last_frame or now - self.last_sent > KEEPALIVE_S:
-            self._send(self.packet(frame))
+        if frame != self.last_frame or now - self.last_sent > self.keepalive:
+            self._send(self.packet(frame, self.last_frame if frame != self.last_frame else None))
             self.last_frame, self.last_sent = frame, now
         self.pending = None
 
@@ -196,8 +203,7 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
                        brightness=brightness)
     # Logged so a light that ignores the pattern can be compared against other tools.
     first = test_frame(segments, 0)
-    packet = (razer_colors(first, gradient, protocol).hex(" ") if dev.realtime
-              else colorwc_msg(*average(first)).decode())
+    packet = razer_colors(first, gradient, protocol).hex(" ") if dev.realtime else dev.packet(first).decode()
     log.info("Test pattern on %s (%s): %d segments, first colour packet %s", ip, protocol, segments, packet)
     t0 = time.monotonic()
     try:

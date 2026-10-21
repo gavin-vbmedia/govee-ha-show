@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.70
+
+- New, experimental **Protocol** on **Setup → Devices**: **App segments (experimental)**. It colours a
+  light the way the Govee Home app does, in the app's own segments, for lights like the 30 m Christmas
+  String Lights 2 (H70C5) whose realtime mode only reaches some of the bulbs. Set **Segments** to the
+  number the Govee app shows (10 for the H70C5) and press **Test**. It changes up to 10 times a second,
+  so slower looks suit it best.
+
 ## 0.2.69
 
 - **Setup → Devices**: the 30 m Christmas String Lights 2 (H70C5) is now marked **⚠ limited**. In

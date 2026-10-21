@@ -179,3 +179,22 @@ def test_scene_pauses_realtime_then_hands_back():
     dev.update(b"\x00\xff\x00")
     dev.tick(time.monotonic() + 0.01)
     assert razer_packets(sock)[-1][3] == 0xB0
+
+
+def test_app_segments_protocol_sends_changed_segments_by_ptreal():
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.6", 3, sock, protocol="segments")
+    dev.enable()
+    t = dev.last_enable
+    dev.update(b"\xff\x00\x00" * 3)
+    dev.tick(t + 1)
+    dev.update(b"\xff\x00\x00\x00\xff\x00\xff\x00\x00")
+    dev.tick(t + 1.2)
+    dev.tick(t + 1.4)  # unchanged and not due a resend
+    dev.tick(t + 2.5)  # resent whole
+    cmds = [m["cmd"] for m, _ in sock.sent]
+    assert "razer" not in cmds
+    sends = [[base64.b64decode(p) for p in m["data"]["command"]] for m, _ in sock.sent if m["cmd"] == "ptReal"]
+    assert [len(s) for s in sends] == [1, 1, 2]
+    assert sends[1][0][4:7] == b"\x00\xff\x00" and sends[1][0][12] == 0b010
+    assert dev.min_interval >= 1 / output.SEGMENTS_FPS
