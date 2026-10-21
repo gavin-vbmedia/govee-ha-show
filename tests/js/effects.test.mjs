@@ -165,3 +165,20 @@ test("the bake lays the House lane over every light with a position", () => {
   const frame5 = blob.subarray(9 + hlen + 5 * 9, 9 + hlen + 6 * 9);
   assert.deepEqual([...frame5], [0, 255, 0, 0, 0, 255, 0, 0, 255]);
 });
+
+test("presets only name settings their effect has, and keep the clip's colours", async () => {
+  const { PRESETS, presetParams, matchesPreset } = await import("../../govee_show/app/goveeshow/static/js/effects.js");
+  for (const [key, presets] of Object.entries(PRESETS)) {
+    const keys = new Set(EFFECTS[key].params.map((p) => p.key));
+    for (const preset of presets) for (const k of Object.keys(preset.params)) assert.ok(keys.has(k), `${key}: ${k}`);
+  }
+  const clip = { ...newClip("trio", 0, 2), color: "#123456" };
+  const marquee = PRESETS.trio.find((p) => p.label === "Slow marquee");
+  Object.assign(clip, presetParams(marquee, clip));
+  assert.equal(clip.color, "#123456");
+  assert.equal(clip.layout, "alternate");
+  assert.ok(matchesPreset(marquee, clip));
+  const fade = { ...newClip("fade", 0, 2), from: "#000000", to: "#ff0000" };
+  Object.assign(fade, presetParams(PRESETS.fade.find((p) => p.label === "Fade out"), fade));
+  assert.deepEqual([fade.from, fade.to], ["#ff0000", "#000000"]);
+});

@@ -1,6 +1,9 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
-import { EFFECTS, FPS, HOUSE, applyHouse, bake, defaultParams, newClip, renderTrack, showDuration } from "./effects.js";
+import {
+  EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, newClip, presetParams, renderTrack,
+  showDuration,
+} from "./effects.js";
 import { House } from "./house.js";
 import { Layout } from "./layout.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
@@ -878,6 +881,8 @@ function renderInspector() {
   const h = document.createElement("h3");
   h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${trackName(sel.track)}`;
   box.append(h, clipPreviewRow(clip, dev));
+  pickerPreview.items = [];
+  pickerPreview.started = performance.now();
 
   // Settings are grouped so a clip with many of them stays readable.
   const group = (title) => {
@@ -889,8 +894,9 @@ function renderInspector() {
     g.append(legend);
     return g;
   };
-  const groups = { clip: group("Clip"), colours: group("Colours"), settings: group("Effect settings"),
-    brightness: group("Brightness") };
+  const fxLabel = EFFECTS[clip.effect]?.label || clip.effect;
+  const groups = { clip: group("Clip"), presets: group(`${fxLabel} presets`), colours: group("Colours"),
+    settings: group("Effect settings"), brightness: group("Brightness") };
   let target = groups.clip;
   const field = (label, el) => {
     const l = document.createElement("label");
@@ -902,9 +908,7 @@ function renderInspector() {
   // The effect is changed from the same previewing buttons used to add one, opened under the Clip
   // settings, so you can see what you're switching to.
   const effect = button(`${EFFECTS[clip.effect]?.label || clip.effect} ▾`, () => {
-    if (picker.hidden) {
-      pickerPreview.items = [];
-      pickerPreview.started = performance.now();
+    if (!picker.children.length) {
       picker.replaceChildren(effectPicker((key) => {
         if (key === clip.effect) { picker.hidden = true; return; }
         const defaults = defaultParams(key);
@@ -922,6 +926,29 @@ function renderInspector() {
   picker.className = "effect-change-picker";
   picker.hidden = true;
   field("Effect", effect);
+
+  // Presets of this effect, each previewed with the clip's own colours.
+  const presets = PRESETS[clip.effect] || [];
+  if (presets.length) {
+    const row = document.createElement("div");
+    row.className = "effect-picker preset-picker";
+    const len = Math.min(Math.max(clip.end - clip.start, 1), 6);
+    for (const preset of presets) {
+      const b = button("", () => {
+        Object.assign(clip, presetParams(preset, clip));
+        app.changed();
+      }, matchesPreset(preset, clip) ? "active" : "");
+      b.title = `Set this ${fxLabel} clip's settings to ${preset.label}`;
+      const strip = document.createElement("canvas");
+      strip.className = "fx-strip";
+      const label = document.createElement("span");
+      label.textContent = preset.label;
+      b.append(strip, label);
+      row.append(b);
+      pickerPreview.items.push({ canvas: strip, clip: { ...clip, ...presetParams(preset, clip), start: 0, end: len }, dev });
+    }
+    groups.presets.append(row);
+  }
 
   const timeInput = (key) => {
     const el = document.createElement("input");
