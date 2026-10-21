@@ -153,6 +153,15 @@ from the playhead, or click the beat lane to add or remove one. **Clear** remove
 sections. With **Snap** ticked, clips and selections snap to beats and to each other; hold Shift to
 place freely.
 
+**Generate.** **✨ Generate** in the Show panel makes a first draft of the whole show from the song.
+Pick the **Colours** (any palette) and a **Style** (Calm, Balanced or Lively), and it fills every light
+with effects that follow the song: soft, slow looks in quiet parts, faster ones that move on the beat
+as it gets louder, every light moving together in the chorus, the same looks each time a section comes
+back, and a change every few bars. Quiet starts and ends fade in and out, and with lights traced on the
+house photo it can add a sweep across the house as the music lifts. It runs **Detect** first if the song
+hasn't been analysed. It replaces the lights' effects, so Ctrl+Z brings them back; press it again for a
+different take, then edit whatever you like.
+
 **The timeline.** Each light has a track, with the **House** lane at the top. Scroll with the mouse
 wheel; zoom with the **−** and **+** buttons in the Timeline panel, the + and − keys, or
 Ctrl+wheel (or a trackpad pinch) around the pointer. Click the ruler to move the playhead.

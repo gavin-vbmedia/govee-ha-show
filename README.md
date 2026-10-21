@@ -26,6 +26,7 @@ editor inside Home Assistant, with no external sequencing software or separate h
 
 **Building a show**
 
+- Generate a first draft of a whole show from the song in one click, in a palette and style you pick
 - Detect the song's tempo, beats, bars and sections (intro, verse, chorus…) automatically, in the
   browser
 - Timeline editor with the song's waveform, one track per device, beat markers and snapping, and
@@ -109,6 +110,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/palettes.js                      Colour palette presets
     js/analysis.js                      Song analysis: tempo, beats, bars and sections
     js/analysis-worker.js               Runs the analysis off the main thread
+    js/autogen.js                       Generates a draft show from the analysis
     models.json                         Govee model names and segment counts
 tools/build_models.py                   Regenerates models.json
 tests/                                  pytest and node tests (tests/js)

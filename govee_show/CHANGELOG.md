@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.41
+
+- **✨ Generate** in the Show panel makes a first draft of the whole show from the song, in the palette
+  and style (Calm, Balanced or Lively) you pick. Quiet sections get slow, soft looks and loud ones fast
+  looks that move on the beat, every light moves together in the chorus, repeated sections get the same
+  looks, quiet starts and ends fade, and it can sweep across the house as the music lifts. It detects
+  the beats first if needed, Ctrl+Z undoes it, and pressing it again gives a different take.
+
 ## 0.2.40
 
 - **Detect** on the Beats panel listens to the song and finds its tempo, beats, bars and sections.
