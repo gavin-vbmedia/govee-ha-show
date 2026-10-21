@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.73
+
+- **Setup → Settings → Packet lab**: send one of your lights a message you choose and see what it sends
+  back. For trying out new ways of driving lights; ready-made starting points cover the realtime forms,
+  Govee app commands and status requests.
+- The model badge on **Setup → Devices** now says **? untested** instead of **⚠ unverified** for models
+  Govee's list doesn't mark for realtime. That list is out of date for newer lights, many of which work.
+  The Permanent Outdoor Lights Pro now shows **✓ realtime**.
+
 ## 0.2.72
 
 - **Setup → Settings → Listen for Govee traffic** records, for a minute, the messages your Govee lights

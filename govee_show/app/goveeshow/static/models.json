@@ -1085,17 +1085,17 @@
 {
 "sku": "H706A",
 "name": "30m Permanent Outdoor Lights Pro",
-"realtime": false
+"realtime": true
 },
 {
 "sku": "H706B",
 "name": "45m Permanent Outdoor Lights Pro",
-"realtime": false
+"realtime": true
 },
 {
 "sku": "H706C",
 "name": "60m Permanent Outdoor Lights Pro",
-"realtime": false
+"realtime": true
 },
 {
 "sku": "H7070",

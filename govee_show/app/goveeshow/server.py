@@ -19,6 +19,7 @@ from aiohttp import web
 from . import __version__, ai, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
+from .lab import KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, Lab, LabError, build as lab_build
 from .listen import Listener
 from .mqtt import MqttBridge
 from .output import PROBE_MAX, LivePreview, Output, run_hold, run_probe, run_test_pattern
@@ -46,6 +47,7 @@ BACKGROUND = web.AppKey("background", list)
 ALLOW_ALL = web.AppKey("allow_all", bool)
 # {"listener": the latest Listener or None, "options": Listener options (tests use spare ports)}
 LISTENING = web.AppKey("listening", dict)
+LAB = web.AppKey("lab", Lab)
 
 
 @web.middleware
@@ -123,6 +125,52 @@ async def listening_status(request):
     left = max(0.0, listener.until - time.monotonic()) if listener.running else 0.0
     return web.json_response({"running": listener.running, "left": round(left), "raw": listener.raw,
                               "count": len(listener.records), "summary": listener.summary()[:30]})
+
+
+async def lab_send(request):
+    """Packet lab: send a hand-made message to one of your lights, `repeat` times."""
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise web.HTTPBadRequest(text="expected an object")
+    app = request.app
+    ip = str(body.get("ip", ""))
+    if not ip or ip not in {d["ip"] for d in app[STORAGE].load_devices()}:
+        raise web.HTTPBadRequest(text="pick one of your lights")
+    kind = body.get("kind")
+    if kind not in LAB_KINDS:
+        raise web.HTTPBadRequest(text=f"kind must be one of {', '.join(LAB_KINDS)}")
+    try:
+        repeat = int(body.get("repeat", 1))
+        interval = float(body.get("interval_ms", 100)) / 1000
+        length = None if body.get("length") in (None, "") else int(body["length"])
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="repeat, interval and length must be numbers")
+    if not 1 <= repeat <= LAB_MAX_REPEAT:
+        raise web.HTTPBadRequest(text=f"repeat must be 1-{LAB_MAX_REPEAT}")
+    if not 0.02 <= interval <= 5:
+        raise web.HTTPBadRequest(text="interval must be 20-5000 ms")
+    if length is not None and not 0 <= length <= 0xFFFF:
+        raise web.HTTPBadRequest(text="length must be 0-65535")
+    try:
+        payload = lab_build(kind, str(body.get("text", "")), length)
+    except LabError as e:
+        raise web.HTTPBadRequest(text=str(e))
+    # Nothing else may talk to the light meanwhile, or the results mean nothing.
+    await app[RUNNER].stop()
+    if (old := app[TESTS].pop(ip, None)):
+        old.cancel()
+    app[OUTPUT].release(ip)
+    app[LAB].start(ip, payload, repeat, interval, bool(body.get("realtime_on")))
+    return web.json_response({"ok": True, "bytes": len(payload)})
+
+
+async def lab_stop(request):
+    request.app[LAB].stop()
+    return web.json_response({"ok": True})
+
+
+async def lab_status(request):
+    return web.json_response(request.app[LAB].status())
 
 
 # devices -----------------------------------------------------------------
@@ -863,6 +911,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     app[TESTS] = {}
     app[PREVIEWS] = {}
     app[LISTENING] = {"listener": None, "options": {}}
+    app[LAB] = Lab()
 
     async def lifecycle(app):
         app[OUTPUT] = Output()
@@ -899,6 +948,9 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_post("/api/devices/preview", preview_device)
     r.add_post("/api/diagnostics/listen", start_listening)
     r.add_get("/api/diagnostics/listen", listening_status)
+    r.add_post("/api/lab/send", lab_send)
+    r.add_post("/api/lab/stop", lab_stop)
+    r.add_get("/api/lab", lab_status)
     r.add_get("/api/shows", list_shows)
     r.add_post("/api/shows", create_show)
     r.add_get("/api/shows/{id}", get_show)

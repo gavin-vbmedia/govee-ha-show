@@ -336,8 +336,8 @@
     <p id="finder-progress" class="hint"></p>
   </section>
   <p class="hint">Lights not delivered yet? Pick the <b>model</b> and add a <b>planned light</b>, then build shows
-    with it. ✓ realtime means Govee lists the model as supporting per-segment control; ⚠ unverified models
-    may not. Segment counts aren't published, so 15 is a guess until you Test the real light. When it arrives, scan and choose <b>Link to</b>, or type its IP into the row. Its
+    with it. ✓ realtime means the model is known to support per-segment control; ? untested means it isn't
+    known yet (many newer lights work), so Test one before buying more. Segment counts aren't published, so 15 is a guess until you Test the real light. When it arrives, scan and choose <b>Link to</b>, or type its IP into the row. Its
     shows carry over.</p>
   <div id="scan-results"></div>
   <div class="table-scroll">
@@ -440,6 +440,28 @@
       app (the Scenes list, not your saved snapshots) for the length of the clip. It uses an unofficial command
       and Govee's public scene list, so it may not work on every light. The editor's preview can't show the
       scene itself, and the light may blink as it switches in and out. Saved in this browser.</p>
+  </section>
+  <section class="card">
+    <h2>Packet lab</h2>
+    <p class="hint">For trying out commands the add-on doesn't use yet. Pick one of your lights and a starting
+      point, edit the message if you like, and press <b>Send</b>. Anything the light sends back is listed below.
+      A playing show is stopped first. Only lights on the Devices tab can be sent to.</p>
+    <div class="lab-grid">
+      <label>Light <select id="lab-light"></select></label>
+      <label>Start from <select id="lab-template"></select></label>
+      <label>Segments <input id="lab-n" type="number" min="1" max="255" value="10"></label>
+      <label>Colour <input id="lab-colour" type="color" value="#ff0000"></label>
+      <label>Type <select id="lab-kind"><option value="json">JSON message</option>
+        <option value="razer">Realtime (razer) packet</option><option value="ptreal">App command (ptReal)</option></select></label>
+      <label>Length field <input id="lab-length" type="number" min="0" max="65535" placeholder="auto"></label>
+      <label>Send <input id="lab-repeat" type="number" min="1" max="1200" value="1"> times</label>
+      <label>every <input id="lab-interval" type="number" min="20" max="5000" value="100"> ms</label>
+      <label><input id="lab-on" type="checkbox"> Realtime on first</label>
+    </div>
+    <textarea id="lab-text" rows="4" spellcheck="false"></textarea>
+    <p class="hint" id="lab-help"></p>
+    <p><button id="btn-lab-send" class="primary">Send</button> <button id="btn-lab-stop" class="ghost">Stop</button></p>
+    <pre id="lab-log" class="lab-log" hidden></pre>
   </section>
   <section class="card">
     <h2>Listen for Govee traffic</h2>

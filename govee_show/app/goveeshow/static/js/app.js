@@ -8,6 +8,7 @@ import {
   renderTrack, showDuration,
 } from "./effects.js";
 import { partsFrame } from "./devicetest.js";
+import { LAB_TEMPLATES } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
 import { MusicEditor } from "./music.js";
@@ -297,6 +298,7 @@ async function stopTest(d) {
 }
 
 function renderDevices() {
+  renderLab();
   const rows = $("device-rows");
   rows.replaceChildren();
   if (!app.deviceList.length) {
@@ -653,7 +655,7 @@ async function loadModels() {
     const { models } = await (await fetch("static/models.json")).json();
     app.models = Object.fromEntries(models.map((m) => [m.sku, m]));
     const list = $("model-list");
-    for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.realtime ? "" : " (unverified)"}`, m.sku));
+    for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.realtime ? "" : " (untested)"}`, m.sku));
     renderDevices();
   } catch { /* the picker is a convenience; manual entry still works */ }
 }
@@ -674,11 +676,12 @@ function realtimeBadge(sku) {
   const m = app.models[skuOf(sku)];
   const span = document.createElement("span");
   if (!m) return span;
-  span.className = `badge ${m.realtime && !m.note ? "ok" : "warn"}`;
-  span.textContent = m.note ? "⚠ limited" : m.realtime ? "✓ realtime" : "⚠ unverified";
+  span.className = `badge ${m.note ? "warn" : m.realtime ? "ok" : "unknown"}`;
+  span.textContent = m.note ? "⚠ limited" : m.realtime ? "✓ realtime" : "? untested";
   span.title = m.note ? `${m.name}: ${m.note}` : m.realtime
-    ? `${m.name}: Govee lists this model as supporting realtime segment control.`
-    : `${m.name}: not on Govee's realtime list. Some unlisted models still work, but test it before relying on it.`;
+    ? `${m.name}: known to support realtime segment control.`
+    : `${m.name}: not known yet. Govee's product list doesn't mark it for realtime control, but that list is ` +
+      "out of date: many newer lights, like the Permanent Outdoor Lights Pro, work anyway. Press Test to check.";
   return span;
 }
 
@@ -3384,6 +3387,67 @@ function wire() {
   window.addEventListener("beforeunload", (e) => { if (app.dirty) e.preventDefault(); });
 }
 
+// Settings → Packet lab: send a hand-made message to one light and show what comes back.
+const LAB_HELP = {
+  json: "A whole LAN message, sent as it is.",
+  razer: "The command byte and its data in hex; the BB header, length and checksum are added. Set Length field to override it.",
+  ptreal: "One app command per line, in hex; each is padded to 20 bytes and given its checksum.",
+};
+
+function renderLab() {
+  const lights = $("lab-light"), keep = lights.value;
+  lights.replaceChildren(...app.deviceList.filter((d) => d.ip).map((d) => new Option(`${d.name} (${d.ip})`, d.ip)));
+  if (keep) lights.value = keep;
+  $("btn-lab-send").disabled = !lights.options.length;
+}
+
+function fillLab() {
+  const t = LAB_TEMPLATES[$("lab-template").value];
+  const hex = $("lab-colour").value;
+  const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  $("lab-kind").value = t.kind;
+  $("lab-text").value = t.text(Math.max(1, Math.min(255, Number($("lab-n").value) || 1)), rgb);
+  $("lab-length").value = t.length ?? "";
+  $("lab-repeat").value = t.repeat ?? 1;
+  $("lab-interval").value = t.interval ?? 100;
+  $("lab-on").checked = !!t.realtimeOn;
+  $("lab-help").textContent = LAB_HELP[t.kind];
+}
+
+async function labSend() {
+  const json = {
+    ip: $("lab-light").value, kind: $("lab-kind").value, text: $("lab-text").value,
+    length: $("lab-length").value, repeat: Number($("lab-repeat").value),
+    interval_ms: Number($("lab-interval").value), realtime_on: $("lab-on").checked,
+  };
+  try {
+    await api("api/lab/send", { method: "POST", json });
+  } catch (e) { status(`Not sent: ${e.message}`, true); return; }
+  const poll = async () => {
+    let s;
+    try { s = await api("api/lab"); } catch { return; }
+    const log = $("lab-log");
+    log.hidden = false;
+    log.textContent = [`${s.running ? "Sending" : "Done"}: ${s.sent} sent to ${s.ip}`,
+      ...s.log.map((e) => `${e.t.toFixed(2).padStart(7)}s ${e.dir === "sent" ? "→" : "←"} ${e.text}`)].join("\n");
+    if (s.running) setTimeout(poll, 500);
+  };
+  poll();
+}
+
+function wireLab() {
+  for (const [k, t] of Object.entries(LAB_TEMPLATES)) $("lab-template").add(new Option(t.label, k));
+  for (const id of ["lab-template", "lab-n", "lab-colour"]) $(id).addEventListener("change", fillLab);
+  $("lab-kind").addEventListener("change", () => { $("lab-help").textContent = LAB_HELP[$("lab-kind").value]; });
+  $("lab-light").addEventListener("change", () => {
+    const d = app.deviceList.find((x) => x.ip === $("lab-light").value);
+    if (d) { $("lab-n").value = d.segments; fillLab(); }
+  });
+  $("btn-lab-send").addEventListener("click", labSend);
+  $("btn-lab-stop").addEventListener("click", () => api("api/lab/stop", { method: "POST", json: {} }).catch(() => {}));
+  fillLab();
+}
+
 // Settings → Listen for Govee traffic: record what the lights say to each other, e.g. during Scene Stage.
 async function listenForTraffic() {
   try {
@@ -3418,6 +3482,7 @@ async function listenForTraffic() {
 async function init() {
   wire();
   $("btn-listen").addEventListener("click", listenForTraffic);
+  wireLab();
   wireHouse();
   const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
   $("btn-reset-layout").addEventListener("click", () => layout.reset());

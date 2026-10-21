@@ -417,3 +417,25 @@ async def test_listening_records_govee_packets(client):
     assert not (await (await client.get("/api/diagnostics/listen")).json())["running"]
     for bad in ({"seconds": 0}, {"seconds": 999}, {"seconds": "x"}):
         assert (await client.post("/api/diagnostics/listen", json=bad)).status == 400
+
+
+async def test_packet_lab_sends_only_to_your_lights(client):
+    import socket
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind(("127.0.0.1", 4003))
+    rx.settimeout(1)
+    try:
+        await client.put("/api/devices", json=[{"ip": "127.0.0.1", "name": "Tree", "segments": 10}])
+        ok = {"ip": "127.0.0.1", "kind": "razer", "text": "b1 01", "repeat": 2, "interval_ms": 20}
+        assert (await client.post("/api/lab/send", json=ok)).status == 200
+        await asyncio.sleep(0.2)  # the sends happen on the event loop
+        got = [json.loads(rx.recv(4096))["msg"]["cmd"] for _ in range(2)]
+        assert got == ["razer", "razer"]
+        status = await (await client.get("/api/lab")).json()
+        assert status["sent"] == 2 and [e["dir"] for e in status["log"]] == ["sent", "sent"]
+        assert (await client.post("/api/lab/stop")).status == 200
+    finally:
+        rx.close()
+    for bad in ({**ok, "ip": "192.0.2.99"}, {**ok, "kind": "dmx"}, {**ok, "text": "zz"}, {**ok, "repeat": 0},
+                {**ok, "repeat": 99999}, {**ok, "interval_ms": 1}, {**ok, "length": -1}):
+        assert (await client.post("/api/lab/send", json=bad)).status == 400
