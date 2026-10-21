@@ -283,3 +283,10 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
 .ai-form { flex-wrap: nowrap; }
 .ai-form input { flex: 1; width: 30em; min-width: 200px; }
 [data-panel="ai"] .hint:empty { display: none; }
+.spinner {
+  display: inline-block; width: 0.9em; height: 0.9em; vertical-align: -0.1em;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }

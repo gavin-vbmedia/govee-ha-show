@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.44
+
+- **Describe it** now shows it's working: the button spins with a seconds counter while the AI
+  makes your effects, and the result (or what went wrong) stays in the panel afterwards.
+
 ## 0.2.43
 
 - **Suggestions**: once the song has been analysed, **＋ Add effect…** on a selection starts with looks
