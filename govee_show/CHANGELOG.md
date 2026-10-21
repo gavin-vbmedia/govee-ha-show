@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.59
+
+- **House** tab: a split light shows each part in its colour, with unused segments as faint unlit bulbs. The
+  picked light has segment numbers along it and its parts named, and hovering a bulb shows its light, segment
+  and part.
+
 ## 0.2.58
 
 - Parts on the **Devices** tab are listed one per line, each with a colour and its segment count, under a
