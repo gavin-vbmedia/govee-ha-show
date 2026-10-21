@@ -2179,8 +2179,6 @@ function renderRangeInspector(r) {
   const overlaps = tracks.some((t) => app.show.tracks[t].clips.some((c) => c.start < r.end && c.end > r.start));
   const del = button("Delete effects here", deleteRange, "ghost danger");
   del.disabled = !overlaps;
-  box.append(timeInput("start"), timeInput("end"), del,
-    button("▶ Play this part", () => { app.setRegion(r); app.seek(r.start); play(); }, "ghost"));
   // With the House lane in the selection, House effects go there and light effects on the lights.
   const onHouse = tracks.some(isHouse);
   const groups = !onHouse ? [[null, false]] : !lights.length ? [[null, true]]
@@ -2192,14 +2190,19 @@ function renderRangeInspector(r) {
     groups, dev: app.devices[app.show.tracks[lights[0] ?? tracks[0]]?.device], length: r.end - r.start,
     current: null, suggested: lights.length ? suggestionsFor(r, lights) : null,
     onPick: (key, preset) => { app.lastAdd = { key, preset }; addToRange(key, preset); },
-  }));
+  }), "primary");
   actions.append(choose);
   const last = app.lastAdd;
   if (last && tracks.some((t) => fitsTrack(last.key, t))) {
     actions.append(button(`Add ${EFFECTS[last.key].label}${last.preset ? ` · ${last.preset.label}` : ""} again`,
       () => addToRange(last.key, last.preset), "ghost"));
   }
-  box.append(actions);
+  // Adding is what a selection is for, so it comes first; clearing sits last, away from it.
+  const times = document.createElement("div");
+  times.className = "group";
+  times.append(timeInput("start"), timeInput("end"),
+    button("▶ Play this part", () => { app.setRegion(r); app.seek(r.start); play(); }, "ghost"));
+  box.append(actions, times, del);
 }
 
 // Looks that suit the selected part of the song, in the current palette's colours.

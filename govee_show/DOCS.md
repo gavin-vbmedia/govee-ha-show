@@ -467,6 +467,11 @@ The **page layout** sets how those five areas fit together. Pick it at the botto
 | Side columns | Left and right run the full height of the page, with top, middle and bottom stacked between them. |
 | Right column | Right runs the full height; top and bottom span the left and middle. Handy for keeping Selection beside everything. |
 
+Out of the box the Show and Playback panels run along the top, Song, Preview, House and Beats sit
+down the left, Selection and Describe it down the right, and the Timeline takes the middle, so the
+timeline and the selected clip are on screen together. **Reset layout** goes back to this. While the
+top area is short enough, it stays in view as you scroll, so **Play** is always to hand.
+
 An area with no panels in it takes no space. On a narrow screen every area stacks in one column. With Selection hidden, clips can still be moved, resized, copied and
 deleted on the timeline, but adding or editing effects needs it back. The layout is saved in your
 browser, so each computer or phone keeps its own.
