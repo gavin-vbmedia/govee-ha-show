@@ -124,6 +124,11 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .insp-group .palette-row { width: auto; flex-basis: 100%; }
 .insp-actions { display: flex; gap: 8px; width: 100%; }
 
+.music-card { display: flex; flex-direction: column; gap: 10px; }
+.music-stage { width: 100%; border-radius: 6px; overflow: hidden; }
+.music-stage canvas { display: block; touch-action: none; cursor: text; }
+.music .toolbar + .toolbar { margin-top: 8px; }
+
 .settings { max-width: 860px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
 .card p { margin: 8px 0; }

@@ -133,6 +133,16 @@ rename it, and **Delete** removes it.
 OGG, Opus, WAV, FLAC or WebM). Uploads go to `/media/govee_show/` so media players can play them.
 For a lights-only show, choose no song and set its **Length**.
 
+**Editing a song.** The **Music** tab cuts, shortens and splices songs before you build a show. Pick a
+song (or **Upload** one), drag across the waveform to select, then **Cut selection** to remove it or
+**Keep only selection** to shorten the song to it. **Insert at playhead** and **Add to end** splice in
+another song, which is then selected so you can trim it. Joins blend over the **Crossfade at joins**
+time (a few hundredths of a second hides the click, a few seconds blends one song into the next), and
+**Fade in** and **Fade out** soften the ends. Zoom with the wheel, or type the selection's times for
+precision. **Save as new file** writes a WAV to `/media/govee_show/` and leaves the original alone, so
+pick the new file under **Song** in the editor. Edit the song before placing clips, because cutting it
+afterwards won't move them.
+
 **Beats.** Press **B** (or **Tap beat**) in time with the music while it plays, type a **BPM** and
 press **Fill** to add beats from the playhead, or click the beat lane to add or remove one. With
 **Snap** ticked, clips and selections snap to beats and to each other; hold Shift to place freely.

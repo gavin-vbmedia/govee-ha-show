@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.39
+
+- A **Music** tab for editing songs before you build a show. Select part of the waveform to **Cut** it or
+  **Keep only** that part, splice in another song with **Insert at playhead** or **Add to end**, and set a
+  crossfade for the joins plus a fade in and out. Undo, zoom and play the result, then **Save as new
+  file** to write a WAV to `/media/govee_show/`, ready to pick under **Song**. The original is untouched.
+
 ## 0.2.38
 
 - A proper preset editor on the **Presets** tab: your presets listed by effect on the left, and the
