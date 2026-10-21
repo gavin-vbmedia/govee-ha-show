@@ -164,7 +164,7 @@ const partId = (d, p) => `${d.id}#${p.id}`;
 function partDevice(d, p) {
   const segments = p.to - p.from + 1;
   return { ...d, id: partId(d, p), name: `${d.name} · ${p.name}`, partName: p.name, parent: d.id,
-    from: p.from, to: p.to, segments, parts: undefined,
+    partIndex: d.parts.indexOf(p), from: p.from, to: p.to, segments, parts: undefined,
     bulbs: d.bulbs ? Math.max(1, Math.round(d.bulbs * segments / d.segments)) : null };
 }
 // What a split light's own track plays on: its parts end to end, as one strip.
@@ -744,7 +744,8 @@ new ResizeObserver(layoutPreview).observe(preview);
 const house = new House({
   api, status,
   frameFor(dev) {
-    return physicalFrame(dev, app.time, housePositions());
+    if (!dev.parent) return physicalFrame(dev, app.time, housePositions());
+    return physicalFrame(app.lights[dev.parent], app.time, housePositions()).slice((dev.from - 1) * 3, dev.to * 3);
   },
 });
 house.hiddenLights = new Set(prefs.get("house.hiddenLights", []));
@@ -764,7 +765,7 @@ const posMemo = { at: -Infinity, value: {} };
 function housePositionsAll() {
   const now = performance.now();
   if (now - posMemo.at > 100) {
-    house.devices = app.deviceList;
+    house.devices = houseLights();
     const value = house.positions();
     // A part sits on its slice of the light's traced path.
     for (const d of app.deviceList) {
@@ -821,7 +822,7 @@ function spreadParts(light, rgb) {
 }
 
 function drawHouse() {
-  house.devices = app.deviceList;
+  house.devices = houseLights();
   const panel = $("house");
   if (panel.closest(".panel").offsetParent) house.drawPanel(panel, $("house-hint"));
   if (!$("view-house").hidden) house.drawSetup($("house-setup"));
@@ -935,6 +936,22 @@ function hint(text) {
 
 // The House tab's sidebar: a card per light. The selected light (or the one being traced) is
 // highlighted on the photo and shows its settings; the rest stay one line each.
+// A split light's parts are listed under its name.
+function withLightHeader(d, card) {
+  if (!d.parent || d.partIndex !== 0) return [card];
+  const head = document.createElement("div");
+  head.className = "house-light-head";
+  head.textContent = app.lights[d.parent].name;
+  return [head, card];
+}
+
+// What gets traced on the House tab: each light, or each part of a split light. A split light
+// traced whole before it was split stays whole until its trace is split into parts.
+function houseLights() {
+  return app.deviceList.flatMap((d) => (d.parts?.length && !house.paths[d.id]?.length
+    ? d.parts.map((p) => app.devices[partId(d, p)]) : [d]));
+}
+
 function renderHouseLights() {
   $("house-remove").hidden = !house.photo;
   $("house-dim").value = house.dim;
@@ -948,15 +965,21 @@ function renderHouseLights() {
     return;
   }
   const current = house.active || house.selected;
-  box.replaceChildren(...app.deviceList.map((d) => {
+  box.replaceChildren(...houseLights().flatMap((d) => {
     const card = document.createElement("div");
     const open = current === d.id;
-    card.className = `house-card${open ? " selected" : ""}`;
+    card.className = `house-card${open ? " selected" : ""}${d.parent ? " house-part" : ""}`;
     const pts = house.paths[d.id]?.length || 0;
     const head = document.createElement("div");
     head.className = "house-card-head";
     const name = document.createElement("b");
-    name.textContent = d.name;
+    name.textContent = d.parent ? d.partName : d.name;
+    if (d.parent) {
+      const sw = document.createElement("span");
+      sw.className = "part-swatch";
+      sw.style.background = `rgb(${partRgb(d.partIndex).join()})`;
+      head.append(sw);
+    }
     const state = document.createElement("span");
     state.className = "hint";
     const hidden = house.hiddenLights.has(d.id);
@@ -983,7 +1006,7 @@ function renderHouseLights() {
         house.stretch = null;
         renderHouseLights();
       });
-      return card;
+      return withLightHeader(d, card);
     }
     const actions = document.createElement("div");
     actions.className = "row";
@@ -1010,6 +1033,17 @@ function renderHouseLights() {
         renderHouseLights();
       }, "ghost"));
     }
+    // Traced whole before it was split: one click gives each part its own trace where it already is.
+    if (d.parts?.length && pts && house.styles[d.id]?.style !== "spots") {
+      const split = button("Split trace into parts", () => {
+        house.splitTrace(d);
+        house.selected = partId(d, d.parts[0]);
+        house.stretch = null;
+        renderHouseLights();
+      }, "primary");
+      split.title = "Give each part its own line, starting where it is now, so you can move the parts on their own";
+      actions.append(split);
+    }
     card.append(actions, ...houseStyleControls(d));
     const stretch = houseStretchEditor(d);
     if (stretch) card.append(stretch);
@@ -1020,7 +1054,10 @@ function renderHouseLights() {
     } else if (pts > 1 && !house.active) {
       card.append(hint("Click a line on the photo to mark part of it out of view."));
     }
-    return card;
+    if (d.parent && house.active === d.id) {
+      card.append(hint(`Start at the end of ${d.partName} nearest the light's plug.`));
+    }
+    return withLightHeader(d, card);
   }));
   box.querySelector(".house-card.selected")?.scrollIntoView({ block: "nearest" });
 }
@@ -1583,6 +1620,27 @@ function renderTrackInspector(i) {
       app.show.tracks[i].clips = [];
       app.changed();
     }, "ghost danger"));
+  }
+  // A track that plays on nothing (its light was removed, or it's a parts-only light's own track)
+  // can be taken out of the show, with its effects.
+  if (!isHouse(i) && !playingDev(app.show.tracks[i])) {
+    const dead = app.show.tracks.filter((t) => t.device !== HOUSE && !playingDev(t));
+    const remove = (tracks) => {
+      const n = tracks.reduce((s, t) => s + t.clips.length, 0);
+      if (n && !confirm(`Remove ${tracks.length === 1 ? "this track" : `${tracks.length} tracks`} and ${n} effect${n === 1 ? "" : "s"} from the show?`)) return;
+      app.show.tracks = app.show.tracks.filter((t) => !tracks.includes(t));
+      app.select(null);
+      app.changed();
+      layoutPreview();
+      timeline.layout();
+    };
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = app.devices[app.show.tracks[i].device]
+      ? "This light plays its parts only, so this track isn't played."
+      : "This light isn't on the Devices tab any more, so this track isn't played.";
+    box.append(p, button("Remove from show", () => remove([app.show.tracks[i]]), "danger"));
+    if (dead.length > 1) box.append(button(`Remove all ${dead.length} unplayed tracks`, () => remove(dead), "ghost danger"));
   }
 }
 

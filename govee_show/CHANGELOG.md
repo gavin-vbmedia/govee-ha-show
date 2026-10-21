@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.60
+
+- **House** tab: a light split into parts is listed as its parts, and each part is traced on its own, so
+  parts that aren't joined up on the photo can each go where they really are. A light traced whole before
+  it was split has **Split trace into parts**, which cuts its line at each part's ends.
+- Editor: a track for a light that's no longer on the Devices tab can be taken out of the show with
+  **Remove from show** (or **Remove all unplayed tracks**).
+
 ## 0.2.59
 
 - **House** tab: a split light shows each part in its colour, with unused segments as faint unlit bulbs. The

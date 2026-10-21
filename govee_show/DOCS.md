@@ -159,8 +159,12 @@ extension lead). It's drawn dashed on the House tab and left out of the House pa
 take their share of the segments, so the bulbs you can see show the right part of each effect, and
 the real light plays the whole show as usual.
 
-A light split into parts (see **Devices**) is traced once, as the whole light. Each part sits on its
-own stretch of the line, for the House panel and the House lane.
+**Lights split into parts.** A light split into parts (see **Devices**) is listed as its parts, each
+under the light's name with its colour, and you trace each part on its own, starting at the end of
+the part nearest the light's plug. That suits a light whose parts aren't joined up on the photo,
+like a string that runs up one pillar, across and down the other. A light you traced whole before
+splitting it keeps its one line and has a **Split trace into parts** button: it cuts the line where
+each part starts and ends, so you can then move each part's points on their own.
 
 Each light has a **Style**:
 
@@ -303,6 +307,10 @@ light's name to **Recolour this light** or **Recolour all lights**: each light s
 palette effect by effect, so the lights stay matched (backgrounds are left alone). The **Palettes**
 tab lists the presets and your own: press **New palette**, or **Copy to my palettes** on a preset,
 then rename it and change its colours (up to 12). Your palettes are available in every show.
+
+**Lights that are gone.** A track whose light was removed from the Devices tab shows as **Missing
+device**, and isn't played. Click its name and press **Remove from show** to take it out with its
+effects (Ctrl+Z brings it back), or **Remove all unplayed tracks** when there are several.
 
 **Working on one part.** Drag along the time ruler to set a **play region**, or select a stretch
 and press **▶ Play this part**. Play then plays just that part, and Home goes back to its start.

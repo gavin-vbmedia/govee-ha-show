@@ -383,6 +383,10 @@ export class House {
     // left off, so you can see where the parts fall.
     const { ctx, w, h } = this.paint(canvas, Math.max(window.innerHeight - 260, 300), (dev) => {
       const out = new Uint8Array(dev.segments * 3);
+      if (dev.parent) {
+        for (let s = 0; s < dev.segments; s++) out.set(partRgb(dev.partIndex), s * 3);
+        return out;
+      }
       if (dev.parts?.length) {
         dev.parts.forEach((p, k) => { for (let s = p.from - 1; s < p.to; s++) out.set(partRgb(k), s * 3); });
         return out;
@@ -479,6 +483,50 @@ export class House {
     }
   }
 
+  // Turns a split light's one trace into a trace per part (keyed "light#part"), each starting where
+  // that part's bulbs were, so the parts can then be moved on their own. Bulbs out of view inside a
+  // part stay out of view; segments in no part are dropped.
+  splitTrace(dev) {
+    const bulbs = this.bulbs(dev);
+    if (!bulbs || !dev.parts?.length) return;
+    const style = this.styles[dev.id];
+    for (const p of dev.parts) {
+      const pts = []; // [x, y] or [x, y, bulbs out of view before it]
+      let hidden = 0;
+      bulbs.forEach((b, j) => {
+        const s = bulbSegment(j, bulbs.length, dev.segments, dev.reverse);
+        if (s < p.from - 1 || s >= p.to) return;
+        const q = this.bulbPoint(b);
+        if (!q) { hidden++; return; }
+        pts.push(hidden && pts.length ? [q[0], q[1], hidden] : [q[0], q[1]]);
+        hidden = 0;
+      });
+      if (!pts.length) continue;
+      // Keep the ends, both sides of anything out of view, and the corners.
+      const turn = (a, b, c) => {
+        const d1 = Math.atan2(b[1] - a[1], b[0] - a[0]), d2 = Math.atan2(c[1] - b[1], c[0] - b[0]);
+        return Math.abs(((d2 - d1 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI) > 0.25;
+      };
+      const kept = pts.filter((q, i) => i === 0 || i === pts.length - 1 || q[2] != null || pts[i + 1][2] != null
+        || turn(pts[i - 1], q, pts[i + 1]));
+      // A corner bends over two bulbs; join the pair into one point.
+      for (let i = kept.length - 2; i > 1; i--) {
+        const a = kept[i - 1], b = kept[i];
+        if (a[2] == null && b[2] == null && Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.015
+          && kept[i + 1][2] == null) kept.splice(i - 1, 2, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]);
+      }
+      const id = `${dev.id}#${p.id}`;
+      this.paths[id] = kept.map((q) => q.map((v, k) => (k < 2 ? +v.toFixed(5) : v)));
+      if (style && style.style !== "spots") {
+        const share = (p.to - p.from + 1) / dev.segments;
+        this.styles[id] = style.style === "icicle" ? { ...style, drops: Math.max(1, Math.round(style.drops * share)) } : { ...style };
+      }
+    }
+    delete this.paths[dev.id];
+    delete this.styles[dev.id];
+    this.save();
+  }
+
   // Bulb j of a light: where it is on the photo, or null when out of view.
   bulbPoint(b) {
     return !b ? null : b.top || b;
@@ -488,7 +536,8 @@ export class House {
   drawSegmentMarks(ctx, dev, w, h) {
     const bulbs = this.bulbs(dev);
     if (!bulbs) return;
-    const n = dev.segments;
+    // A part traced on its own counts its segments from where it starts on the light.
+    const n = dev.segments, offset = (dev.from || 1) - 1;
     const first = new Map(); // segment -> its first bulb in view
     const spots = {}; // segment -> [x, y] sums, for the middle of each part
     bulbs.forEach((b, j) => {
@@ -503,9 +552,9 @@ export class House {
     const placed = [];
     const room = (x, y, d) => placed.every(([px, py]) => Math.hypot(px - x, py - y) >= d);
     // Part edges first, then 1 and every 5th segment where there's room.
-    const edges = new Set((dev.parts || []).flatMap((p) => [p.from - 1, p.to - 1]));
+    const edges = new Set(dev.parts?.length ? dev.parts.flatMap((p) => [p.from - 1, p.to - 1]) : [0, n - 1]);
     const order = [...first.keys()].sort((a, b) => (edges.has(b) - edges.has(a)) || a - b)
-      .filter((s) => edges.has(s) || s === 0 || (s + 1) % 5 === 0);
+      .filter((s) => edges.has(s) || s === 0 || (s + offset + 1) % 5 === 0);
     for (const s of order) {
       const [x, y] = first.get(s);
       if (!room(x * w, y * h, 22)) continue;
@@ -513,7 +562,7 @@ export class House {
       ctx.fillStyle = "rgba(0,0,0,0.65)";
       ctx.fillRect(x * w - 9, y * h + 6, 18, 13);
       ctx.fillStyle = "#fff";
-      ctx.fillText(String(s + 1), x * w, y * h + 16);
+      ctx.fillText(String(s + offset + 1), x * w, y * h + 16);
     }
     ctx.textAlign = "start";
     // Part names beside the middle of each part, on a dark tag so they read over the line.
@@ -545,7 +594,7 @@ export class House {
         const d = Math.hypot((q[0] - p[0]) * w, (q[1] - p[1]) * h);
         if (d >= bestD) return;
         bestD = d;
-        const s = bulbSegment(j, bulbs.length, dev.segments, dev.reverse) + 1;
+        const s = bulbSegment(j, bulbs.length, dev.segments, dev.reverse) + (dev.from || 1);
         const part = dev.parts?.find((x) => x.from <= s && s <= x.to);
         const where = !dev.parts?.length ? "" : part ? ` · ${part.name}` : " · unused, off";
         best = { x: q[0], y: q[1], text: `${dev.name}: segment ${s}${where}` };
