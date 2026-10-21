@@ -2445,18 +2445,16 @@ async function describeIt(e) {
     : sel?.clip ? { start: sel.clip.start, end: sel.clip.end, lights: names([sel.track]) } : null;
   const show = app.show, duration = app.duration();
   const context = buildContext({ show, lights, duration, selection, palettes: allPalettes() });
-  $("btn-ai").disabled = true;
-  status("Asking the AI…");
+  const done = aiWorking();
   let reply;
   try {
     reply = await api("api/ai/clips", { method: "POST", json: { request, context } });
   } catch (err) {
+    done(err.message, true);
     status(err.message, true);
     return;
-  } finally {
-    $("btn-ai").disabled = false;
   }
-  if (show !== app.show) return; // another show was opened meanwhile
+  if (show !== app.show) { done(""); return; } // another show was opened meanwhile
   const { placed, skipped } = checkClips(reply, lights, duration);
   if (placed.length) {
     placeClips(show, placed);
@@ -2464,7 +2462,34 @@ async function describeIt(e) {
     app.changed();
   }
   const extra = skipped.length ? ` (left out ${skipped.length}: ${[...new Set(skipped)].slice(0, 2).join("; ")})` : "";
-  status(`${reply.summary || `Added ${placed.length} effects`}${extra}`, !placed.length);
+  const message = `${reply.summary || `Added ${placed.length} effects`}${extra}`;
+  done(placed.length ? `✓ ${message}` : message, !placed.length);
+  status(message, !placed.length);
+}
+
+// Shows that the AI is working (a spinner and a running count of seconds in the panel) until the
+// returned function is called with the outcome to leave there.
+function aiWorking() {
+  const btn = $("btn-ai"), input = $("ai-request"), hint = $("ai-hint");
+  const label = btn.innerHTML;
+  btn.disabled = input.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Working…`;
+  hint.hidden = false;
+  hint.classList.remove("error");
+  const started = performance.now();
+  const tick = () => {
+    const secs = Math.round((performance.now() - started) / 1000);
+    hint.textContent = `Asking the AI to make your effects… ${secs} s (usually 10 to 60 seconds)`;
+  };
+  tick();
+  const timer = setInterval(tick, 1000);
+  return (message, error = false) => {
+    clearInterval(timer);
+    btn.disabled = input.disabled = false;
+    btn.innerHTML = label;
+    hint.textContent = message;
+    hint.classList.toggle("error", error);
+  };
 }
 
 function analyseInWorker(samples, rate) {
