@@ -27,7 +27,7 @@ play them from Home Assistant. Open **Light Shows** from the Home Assistant side
 2. **Speakers** tab (optional): **Test and add** your speaker and pick it as the default show
    speaker.
 3. **House** tab (optional): upload a photo of your house and trace each light on it.
-4. **Editor** tab: pick or upload a song, drag across a light's track and pick an effect. Press
+4. **Editor** tab: pick or upload a song, drag across a light's track, press **＋ Add effect…** and pick one. Press
    Space to play.
 5. Run it from an automation with the MQTT **Play** button or the `hassio.addon_stdin` action.
 
@@ -143,23 +143,27 @@ Ctrl+wheel (or a trackpad pinch) around the pointer. Click the ruler to move the
 
 **Adding effects.** Drag across a light's track to select a stretch of time (drag up or down to
 cover several lights; a plain click selects up to the next beat; hold **Alt** to start a selection
-on top of an existing clip). The **Selection** panel shows a button for every effect, each with a
-strip playing it on that light, so you can see it first. Click one to add it. To clear a stretch,
+on top of an existing clip). Press **＋ Add effect…** in the Selection panel to open the effect
+chooser: a button for every effect, each with a strip playing it on that light for the selection's
+length, so you can see it first. Click one to add it (Esc or ✕ closes it without adding). The last
+effect you added also gets an **Add … again** button, for laying down a run of the same thing. With
+the House lane and lights selected together, the chooser has a section for each. To clear a stretch,
 select it and press **Delete effects here** or the Delete key: effects inside it are removed and
 ones crossing its edges are trimmed.
 
 **Editing a clip.** Click a clip to select it. Drag it to move it (onto another light too), drag
 its edges to resize it, and change its effect, colours and settings in the Selection panel. While a
 clip is selected it loops on its own in a strip at the top of its settings, so changes show
-straight away. To swap the effect, press the **Effect** button: the same previewing buttons used
-to add one open beneath it (only one set of previews is open at a time), playing on that light for the clip's length.
+straight away. To swap the effect, press the **Effect** button: it opens the same effect
+chooser used to add one, playing on that light for the clip's length, with the current effect
+outlined. Changing effect keeps the clip's colours and brightness.
 
 **Presets.** Most effects can look very different depending on their settings (Three colours can sit
-still, alternate, or run as a slow or fast marquee). Next to **Effect** in the Clip settings, the
-**Preset** button shows which preset the clip matches (or **Custom**). Press it to open that
-effect's presets, each with a strip previewing it in your colours, and click one to use it; your
-colours stay, and the drawer stays open so you can try a few. Press the button again to close it.
-You can still fine-tune the settings afterwards. Tick **Show on the light** to loop it on the real light too while the show is
+still, alternate, or run as a slow or fast marquee). Tick **Show presets** in the effect chooser and
+each effect becomes its own boxed group: **Default** first, then its presets, each previewed. Picking
+a preset sets just the settings it names. When adding an effect it uses the effect's default colours;
+when changing a clip your colours stay. The Effect button shows the preset a clip matches, such as
+**Three colours · Wide marquee**. The chooser remembers whether presets were showing. Tick **Show on the light** to loop it on the real light too while the show is
 stopped; the light goes back to normal when you click away. Every effect has a **Brightness %**
 slider, so one section can glow softly and the next hit full brightness.
 

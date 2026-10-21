@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.36
+
+- One **effect chooser** for adding an effect and for changing a clip's: a window with a previewing
+  button for every effect. Open it with **＋ Add effect…** on a selection (plus an **Add … again**
+  button for the last one you added) or the **Effect** button on a clip.
+- **Show presets** in the chooser turns each effect into its own boxed group, Default first then its
+  presets, all previewed. It remembers whether presets were showing. The separate Preset button is
+  gone; the Effect button now names the preset a clip matches (for example Three colours · Wide
+  marquee).
+- Changing a clip's effect keeps its colours and brightness and resets its other settings.
+
 ## 0.2.35
 
 - Calmer clip settings: presets moved behind a **Preset** button next to **Effect**, which names the
