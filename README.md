@@ -41,7 +41,8 @@ editor inside Home Assistant, with no external sequencing software or separate h
 - Copy and paste effects between lights (Ctrl+C / Ctrl+V), or copy a whole light's effects to
   one or every other light
 - Play just a region of the show, and loop it while you design; undo and redo
-- Arrange the editor your way: drag any panel to the top, left, middle, right or bottom, or hide it
+- Arrange the editor your way: pick a page layout (classic, side columns or a right column), then
+  drag any panel to the top, left, middle, right or bottom, or hide it
 - Experimental: hand a light to one of Govee's built-in scenes for part of the show
 
 **Playing it**

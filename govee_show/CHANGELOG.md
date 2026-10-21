@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.33
+
+- Page layouts: choose how the editor's top, left, middle, right and bottom areas fit together.
+  **Classic** is the layout so far; **Side columns** runs left and right the full height of the
+  page; **Right column** runs just the right side full height. Pick one at the bottom of any
+  panel's ⋯ menu or under Settings → Layout. Empty areas take no space.
+- A panel's ⋯ menu now shows a small picture of the page: click the area to move the panel there.
+
 ## 0.2.32
 
 - Documentation refresh. The add-on guide is rewritten to cover everything up to now, in the order
