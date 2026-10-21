@@ -24,6 +24,16 @@ export const PRESET_PALETTES = [
   { name: "Warm white", colors: ["#ffd8a0", "#ffb060", "#ffffff"] },
 ];
 
+// The preset palette for the time of year, if one is in season: Halloween through October, then
+// Bonfire Night, Christmas through December, and so on. null otherwise.
+export function seasonalPalette(date = new Date()) {
+  const m = date.getMonth() + 1, d = date.getDate();
+  const name = m === 10 ? "Halloween" : m === 11 && d <= 7 ? "Bonfire Night" : m === 12 || (m === 11 && d >= 20) ? "Christmas"
+    : m === 2 && d <= 14 ? "Valentine's" : m === 3 && d >= 10 && d <= 17 ? "St Patrick's"
+      : (m === 3 && d >= 20) || (m === 4 && d <= 20) ? "Easter" : m === 7 && d <= 4 ? "Red, white and blue" : null;
+  return PRESET_PALETTES.find((p) => p.name === name) || null;
+}
+
 // The colours a palette fills on an effect. Backgrounds stay as they are, usually off.
 export function paletteKeys(effect) {
   return (EFFECTS[effect]?.params || []).filter((p) => p.type === "color" && p.key !== "background").map((p) => p.key);

@@ -2,7 +2,7 @@
 
 import { buildContext, checkClips, placeClips } from "./aiclips.js";
 import { analyse, toMono } from "./analysis.js";
-import { STYLES, applyGenerated, generateShow } from "./autogen.js";
+import { STYLES, applyGenerated, generateShow, suggestLooks } from "./autogen.js";
 import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, defaultParams, matchesPreset, presetParams, renderTrack,
   showDuration,
@@ -10,7 +10,7 @@ import {
 import { House } from "./house.js";
 import { Layout } from "./layout.js";
 import { MusicEditor } from "./music.js";
-import { PRESET_PALETTES, applyPalette, paletteKeys } from "./palettes.js";
+import { PRESET_PALETTES, applyPalette, paletteKeys, seasonalPalette } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
 
 const $ = (id) => document.getElementById(id);
@@ -856,9 +856,10 @@ function chosenParams(effect, preset, from = null) {
 // The effect chooser, used both to add an effect and to change a clip's. Effects are shown as
 // previewing buttons; with "Show presets" ticked each effect becomes a group of its default and its
 // presets. groups lists [heading, house] sections (heading null for a single unnamed one).
-// onPick(effect, preset) runs with the choice; current/currentPreset are outlined.
+// onPick(effect, preset) runs with the choice; current/currentPreset are outlined. suggested is
+// {heading, looks: [{effect, label, params}]}, shown first, for adding to a part of the song.
 function chooseEffect({ title, groups, dev = null, length = 3, from = null, current = null, currentPreset = null,
-  onPick }) {
+  suggested = null, onPick }) {
   const dlg = document.createElement("dialog");
   dlg.className = "effect-dialog";
   const head = document.createElement("div");
@@ -901,7 +902,17 @@ function chooseEffect({ title, groups, dev = null, length = 3, from = null, curr
     body.replaceChildren();
     ml.hidden = !toggle.checked;
     const onlyMine = toggle.checked && mineOnly.checked;
-    for (const [heading, house] of groups) {
+    if (suggested?.looks.length) {
+      const sh = document.createElement("div");
+      sh.className = "section-label effect-dialog-section";
+      sh.textContent = suggested.heading;
+      const row = document.createElement("div");
+      row.className = "effect-picker";
+      for (const look of suggested.looks) row.append(choice(look.effect, look, look.label, false));
+      body.append(sh, row);
+    }
+    for (const [named, house] of groups) {
+      const heading = named || (suggested?.looks.length ? "All effects" : null);
       if (heading) {
         const sh = document.createElement("div");
         sh.className = "section-label effect-dialog-section";
@@ -1745,7 +1756,8 @@ function renderRangeInspector(r) {
   const choose = button("＋ Add effect…", () => chooseEffect({
     title: `Add an effect to ${h.textContent.replace(/^Selected /, "")}`,
     groups, dev: app.devices[app.show.tracks[lights[0] ?? tracks[0]]?.device], length: r.end - r.start,
-    current: null, onPick: (key, preset) => { app.lastAdd = { key, preset }; addToRange(key, preset); },
+    current: null, suggested: lights.length ? suggestionsFor(r, lights) : null,
+    onPick: (key, preset) => { app.lastAdd = { key, preset }; addToRange(key, preset); },
   }));
   actions.append(choose);
   const last = app.lastAdd;
@@ -1754,6 +1766,23 @@ function renderRangeInspector(r) {
       () => addToRange(last.key, last.preset), "ghost"));
   }
   box.append(actions);
+}
+
+// Looks that suit the selected part of the song, in the current palette's colours.
+function suggestionsFor(r, lights) {
+  if (!app.show.sections?.length && !app.show.tempo) return null;
+  const segments = app.devices[app.show.tracks[lights[0]].device]?.segments || 15;
+  const { section, tier, looks } = suggestLooks({ ...app.show, duration: app.duration() }, r.start, r.end, segments,
+    prefs.get("genStyle", "balanced"));
+  const colors = currentPalette().colors;
+  for (const look of looks) {
+    const tmp = { effect: look.effect };
+    applyPalette(tmp, colors);
+    delete tmp.effect;
+    Object.assign(look.params, tmp);
+  }
+  const mood = { low: "quiet", mid: "steady", high: "loud" }[tier];
+  return { heading: `Suggested for this ${section ? `part (${section.label}, ${mood})` : "part"} in ${currentPalette().name} colours`, looks };
 }
 
 function addToRange(effect, preset = null) {
@@ -2323,7 +2352,11 @@ function generateDialog() {
     + "parts, fast ones on the beat when it gets loud, and the same looks each time a chorus comes back. It replaces "
     + "the lights' effects; Ctrl+Z brings them back. Generate again for a different take.";
   const palette = document.createElement("select");
-  for (const p of allPalettes()) palette.add(new Option(p.name, p.name, false, p.name === currentPalette().name));
+  const preferred = seasonalPalette() || currentPalette();
+  for (const p of allPalettes()) {
+    const label = p === seasonalPalette() ? `${p.name} (in season)` : p.name;
+    palette.add(new Option(label, p.name, false, p.name === preferred.name));
+  }
   const pl = document.createElement("label");
   pl.append("Colours", palette);
   const style = document.createElement("select");
