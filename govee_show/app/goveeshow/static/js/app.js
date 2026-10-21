@@ -213,6 +213,18 @@ function ensureTracks() {
   }
   // Empty tracks for parts that no longer exist.
   app.show.tracks = tracks.filter((t) => !t.device.includes("#") || app.devices[t.device] || t.clips.length);
+  // Tracks follow the Devices tab's order: the House lane, then each light with its parts. Tracks for
+  // missing lights stay at the end.
+  const order = new Map(app.deviceList.map((d, i) => [d.id, i]));
+  const rank = (t) => {
+    if (t.device === HOUSE) return -1;
+    const dev = app.devices[t.device];
+    if (!dev) return Infinity;
+    if (!dev.parent) return order.get(dev.id) * 1000;
+    const light = app.devices[dev.parent];
+    return order.get(light.id) * 1000 + 1 + light.parts.findIndex((p) => partId(light, p) === t.device);
+  };
+  app.show.tracks.sort((a, b) => rank(a) - rank(b) || 0);
   if (app.show.tracks.map((t) => t.device).join() !== before) app.selected = null; // track numbers have moved
 }
 
@@ -231,7 +243,7 @@ function renderDevices() {
   const rows = $("device-rows");
   rows.replaceChildren();
   if (!app.deviceList.length) {
-    rows.innerHTML = `<tr><td colspan="10" class="hint">No devices yet. Scan the network or add one by IP.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="11" class="hint">No devices yet. Scan the network or add one by IP.</td></tr>`;
     return;
   }
   for (const d of app.deviceList) {
@@ -249,6 +261,7 @@ function renderDevices() {
       return el;
     };
     const cell = (child) => { const td = document.createElement("td"); td.append(child); tr.append(td); };
+    cell(orderControls(d));
     cell(input("text", "name", { size: 14 }));
     const ip = document.createElement("input");
     Object.assign(ip, { value: d.ip, placeholder: "Not linked yet", size: 13, title: "The light's IP address. Leave blank for a planned light." });
@@ -301,6 +314,81 @@ function renderDevices() {
     actions.append(test, " ", remove);
     tr.append(actions);
     rows.append(tr, partsRow(d));
+    dropTarget(tr, d);
+  }
+}
+
+// Moves light `d` to position `to` in the list. Every show's tracks follow the list's order.
+function moveDevice(d, to) {
+  const list = app.deviceList.filter((x) => x !== d);
+  to = Math.max(0, Math.min(to, list.length));
+  list.splice(to, 0, d);
+  if (list.every((x, i) => x === app.deviceList[i])) return;
+  app.deviceList = list;
+  saveDevices();
+}
+
+// A drag handle and up and down buttons. Rows (and their parts rows) take a drop above or below.
+const deviceDrag = { from: null };
+function orderControls(d) {
+  const box = document.createElement("span");
+  box.className = "order";
+  const grip = document.createElement("span");
+  grip.className = "grip";
+  grip.textContent = "⠿";
+  grip.title = "Drag to reorder";
+  grip.draggable = true;
+  grip.addEventListener("dragstart", (e) => {
+    deviceDrag.from = d;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", d.id);
+    e.dataTransfer.setDragImage(grip.closest("tr"), 10, 10);
+  });
+  grip.addEventListener("dragend", () => { deviceDrag.from = null; dropMarks(); });
+  const i = app.deviceList.indexOf(d);
+  const up = button("↑", () => moveDevice(d, i - 1), "ghost small");
+  const down = button("↓", () => moveDevice(d, i + 1), "ghost small");
+  up.title = "Move up"; down.title = "Move down";
+  up.disabled = i === 0;
+  down.disabled = i === app.deviceList.length - 1;
+  const arrows = document.createElement("span");
+  arrows.className = "arrows";
+  arrows.append(up, down);
+  box.append(grip, arrows);
+  return box;
+}
+
+const dropMarks = (keep) => {
+  for (const r of document.querySelectorAll("#device-rows .drop-above, #device-rows .drop-below")) {
+    if (r !== keep) r.classList.remove("drop-above", "drop-below");
+  }
+};
+
+// Drops onto the device row `tr` or its parts row: above the light if in its top half, else below.
+function dropTarget(tr, d) {
+  const rowsOf = () => [tr, tr.nextElementSibling?.classList.contains("parts-row") ? tr.nextElementSibling : null];
+  const where = (e) => {
+    const [top, bottom] = rowsOf();
+    const a = top.getBoundingClientRect().top, b = (bottom || top).getBoundingClientRect().bottom;
+    return e.clientY < (a + b) / 2 ? "above" : "below";
+  };
+  for (const el of rowsOf().filter(Boolean)) {
+    el.addEventListener("dragover", (e) => {
+      if (!deviceDrag.from) return;
+      e.preventDefault();
+      const above = where(e) === "above";
+      dropMarks(tr);
+      tr.classList.toggle("drop-above", above);
+      tr.classList.toggle("drop-below", !above);
+    });
+    el.addEventListener("drop", (e) => {
+      const from = deviceDrag.from;
+      if (!from) return;
+      e.preventDefault();
+      dropMarks();
+      const list = app.deviceList.filter((x) => x !== from);
+      moveDevice(from, list.indexOf(d) + (where(e) === "above" ? 0 : 1));
+    });
   }
 }
 
@@ -327,6 +415,7 @@ function partsRow(d) {
   tr.className = "parts-row";
   const td = document.createElement("td");
   td.colSpan = 10;
+  tr.prepend(document.createElement("td"));
   tr.append(td);
   const parts = d.parts || [];
   const add = () => {

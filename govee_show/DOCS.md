@@ -46,6 +46,10 @@ show up, type its IP address and add it by hand. Each light has a row of setting
 | Blend | Asks the light to blend smoothly between neighbouring segments. |
 | Protocol | How colours are sent (see below). |
 
+**Putting lights in order.** Drag a light by its ⠿ handle, or use its ↑ and ↓ buttons. Every
+show's timeline, the editor's preview and the House tab list lights in this order, with a split
+light's parts kept together under it.
+
 **Setting the segment count.** Press **Test**: a rainbow runs along the light with a white dot
 stepping from segment to segment. Set **Segments** so the dot visits every segment once per lap,
 and tick **Reverse** if it runs the wrong way. If the light is still on its reel, press **Find**
