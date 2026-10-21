@@ -3,6 +3,8 @@
 A Govee light-show sequencer packaged as a Home Assistant add-on. Think of it as a
 simple alternative to xLights built specifically for Govee lights.
 
+[![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgavin-vbmedia%2Fgovee-ha-show)
+
 Create, preview, save and play music-synchronised light shows from a browser-based
 editor inside Home Assistant, with no external sequencing software or separate hosting.
 
@@ -67,11 +69,13 @@ See [the add-on docs](govee_show/DOCS.md) for how to use it.
 
 ## Installation
 
-1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**.
-2. Open the ⋮ menu, choose **Repositories** and add
-   `https://github.com/gavin-vbmedia/govee-ha-show`.
-3. Install **Govee Light Show**, turn on **Show in sidebar**, and start it.
-4. Open **Light Shows** from the sidebar.
+[![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgavin-vbmedia%2Fgovee-ha-show)
+
+1. Press the button above. It opens your Home Assistant and offers to add this add-on repository.
+   (Or go to **Settings → Add-ons → Add-on Store**, open the ⋮ menu, choose **Repositories** and add
+   `https://github.com/gavin-vbmedia/govee-ha-show`.)
+2. Install **Govee Light Show**, turn on **Show in sidebar**, and start it.
+3. Open **Light Shows** from the sidebar.
 
 Home Assistant builds the add-on on your machine the first time, which takes a few minutes.
 Requires Home Assistant OS or Supervised. For show entities in automations, also set up the
