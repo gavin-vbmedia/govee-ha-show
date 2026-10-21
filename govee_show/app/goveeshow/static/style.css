@@ -235,3 +235,6 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
     grid-template-areas: "top" "left" "middle" "right" "bottom"; }
   .dock[data-dock="left"], .dock[data-dock="right"] { width: auto; }
 }
+.effect-change { min-width: 130px; text-align: left; }
+.effect-change.active { border-color: var(--accent); }
+.effect-change-picker { margin: 4px 0 8px; }

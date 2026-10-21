@@ -826,15 +826,15 @@ const visibleEffects = (keep, house) => Object.entries(EFFECTS).filter(([k, fx])
 // as the selection (within reason) and on `dev`'s segments, so you can see them before picking.
 const pickerPreview = { items: [], started: 0 };
 
-function effectPicker(onPick, dev = null, length = 3, house = false) {
+function effectPicker(onPick, dev = null, length = 3, house = false, current = app.paletteEffect, keep = undefined) {
   const box = document.createElement("div");
   box.className = "effect-picker";
   const len = Math.min(Math.max(length, 1), 6);
-  for (const [key, fx] of visibleEffects(undefined, house)) {
+  for (const [key, fx] of visibleEffects(keep, house)) {
     const b = button("", () => {
       app.paletteEffect = key;
       onPick(key);
-    }, key === app.paletteEffect ? "active" : "");
+    }, key === current ? "active" : "");
     const strip = document.createElement("canvas");
     strip.className = "fx-strip";
     const label = document.createElement("span");
@@ -899,15 +899,28 @@ function renderInspector() {
     return el;
   };
 
-  const effect = document.createElement("select");
-  for (const [key, fx] of visibleEffects(clip.effect, isHouse(sel.track))) effect.add(new Option(fx.label, key, false, key === clip.effect));
-  effect.addEventListener("change", () => {
-    const defaults = defaultParams(effect.value);
-    for (const k of Object.keys(clip)) if (!["effect", "start", "end"].includes(k) && !(k in defaults)) delete clip[k];
-    for (const [k, v] of Object.entries(defaults)) if (!(k in clip)) clip[k] = v;
-    clip.effect = effect.value;
-    app.changed();
-  });
+  // The effect is changed from the same previewing buttons used to add one, opened under the Clip
+  // settings, so you can see what you're switching to.
+  const effect = button(`${EFFECTS[clip.effect]?.label || clip.effect} ▾`, () => {
+    if (picker.hidden) {
+      pickerPreview.items = [];
+      pickerPreview.started = performance.now();
+      picker.replaceChildren(effectPicker((key) => {
+        if (key === clip.effect) { picker.hidden = true; return; }
+        const defaults = defaultParams(key);
+        for (const k of Object.keys(clip)) if (!["effect", "start", "end"].includes(k) && !(k in defaults)) delete clip[k];
+        for (const [k, v] of Object.entries(defaults)) if (!(k in clip)) clip[k] = v;
+        clip.effect = key;
+        app.changed();
+      }, dev, clip.end - clip.start, isHouse(sel.track), clip.effect, clip.effect));
+    }
+    picker.hidden = !picker.hidden;
+    effect.classList.toggle("active", !picker.hidden);
+  }, "ghost effect-change");
+  effect.title = "Change this clip's effect";
+  const picker = document.createElement("div");
+  picker.className = "effect-change-picker";
+  picker.hidden = true;
   field("Effect", effect);
 
   const timeInput = (key) => {
@@ -977,6 +990,7 @@ function renderInspector() {
   }
   // Only groups with something in them (a legend alone) are shown.
   box.append(...Object.values(groups).filter((g) => g.children.length > 1));
+  groups.clip.after(picker);
   const actions = document.createElement("div");
   actions.className = "insp-actions";
   actions.append(button("Copy", copySelection, "ghost"));

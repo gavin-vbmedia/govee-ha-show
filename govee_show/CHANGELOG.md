@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.34
+
+- Changing an existing clip's effect now shows previews too: the **Effect** dropdown is a button
+  that opens the same previewing effect buttons used to add one, on that light's segments and for
+  the clip's length, with the current effect outlined.
+
 ## 0.2.33
 
 - Page layouts: choose how the editor's top, left, middle, right and bottom areas fit together.
