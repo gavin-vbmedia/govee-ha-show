@@ -169,9 +169,16 @@ when changing a clip your colours stay. The Effect button shows the preset a cli
 Name it and choose whether to **Include colours** (ticked by default; untick it to save just the
 movement and other settings, so the preset takes on whatever colours a clip already has). Your
 presets appear in the effect chooser after the built-in ones, marked with a ★, and **★ My presets
-only** narrows the chooser to them. The **Presets** tab lists them by effect with a preview each,
-where you can rename them, open **Settings** to change them, **Duplicate** or **Delete** them.
-Deleting a preset doesn't change clips that used it. They're saved in the add-on, so every browser
+only** narrows the chooser to them.
+
+The **Presets** tab is the preset editor. Your presets are listed by effect on the left, each with a
+small preview; pick one to edit it on the right, where a large preview plays it (choose which light's
+segments with **Preview on**). Rename it, change its **Effect** (or start again from one of that
+effect's presets), tick or untick **Include colours**, and change its colours (palettes work here
+too), settings and brightness; the previews follow every change and it saves by itself.
+**Duplicate** makes a copy to try variations, and **Delete preset** removes it. **New preset**
+starts one from scratch: pick an effect, or any built-in preset, to start from. Changing or deleting
+a preset doesn't change clips that already used it. They're saved in the add-on, so every browser
 sees the same ones. Tick **Show on the light** to loop it on the real light too while the show is
 stopped; the light goes back to normal when you click away. Every effect has a **Brightness %**
 slider, so one section can glow softly and the next hit full brightness.

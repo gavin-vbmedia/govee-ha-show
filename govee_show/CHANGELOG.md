@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.38
+
+- A proper preset editor on the **Presets** tab: your presets listed by effect on the left, and the
+  picked one edited on the right with a large live preview (on any light's segments), the same
+  grouped Colours, Effect settings and Brightness as a clip, palettes, and Include colours. Changes
+  show and save as you make them. **New preset** starts one from any effect or built-in preset, and
+  the effect of a preset can be changed.
+
 ## 0.2.37
 
 - Your own effect presets. **Save as preset…** on a clip saves its settings under a name, with its
