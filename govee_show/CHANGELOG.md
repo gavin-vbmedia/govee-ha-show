@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.76
+
+- **Packet lab** has a **Per bulb speed test**: it flips a light between red and blue pictures at a rate
+  you pick, with a small picture or the whole light, to find how fast **Per bulb (experimental)** can go.
+
 ## 0.2.75
 
 - New, experimental **Protocol** on **Setup → Devices**: **Per bulb (experimental)**, for lights whose

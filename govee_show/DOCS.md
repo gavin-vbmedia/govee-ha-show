@@ -661,6 +661,13 @@ asks for the bulbs just past the window in its own colour. Set **Segments** to t
 first, then film the whole light while it runs. A colour appearing past the window means that guess
 works; the list under the button says which colour is which.
 
+### Per bulb speed test
+
+For lights on **Per bulb (experimental)**: **Run speed test** flips the light between a red and a
+blue picture for six seconds, at the number of **Pictures a second** you pick. Choose **First 10
+bulbs** or **Every bulb**, and set **Segments** to the light's number of bulbs. If the light swaps
+colour every time, it keeps up at that rate; if it skips, it doesn't.
+
 ## Listen for Govee traffic
 
 Some Govee features drive lights in more detail than the add-on can. In **Scene Stage**, for example,
