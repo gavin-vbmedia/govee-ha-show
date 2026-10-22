@@ -92,7 +92,7 @@ entities in automations, also set up the Mosquitto broker add-on and the MQTT in
 
 - See the show on a photo of your house: trace where each light runs and the editor plays it there,
   bulb by bulb
-- Draw icicle lights as hanging drops and spotlights (such as the H7093) as beams aimed at the wall
+- Draw icicle lights as hanging drops and spotlights as beams aimed at the wall
 - Mark stretches that run out of view (round a corner, or an extension lead) so the bulb count
   still lines up; those bulbs still play in the real show
 - Pin segments to where they really are when the photo is taken at an angle
@@ -234,8 +234,8 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/lightspeed.js                    How fast each protocol can change a light, and previews at that pace
     js/compat.js                        Whether a clip's effect can show on its light, for marking and blocking
     js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
-    models.json                         Govee model names, segment counts and realtime reach
-tools/build_models.py                   Regenerates models.json
+    models.json                         Our list of Govee lights: tested status and default settings
+tools/build_models.py                   Adds new Govee lights to models.json, by name
 tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traffic from an Android log
 docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions
 tests/                                  pytest and node tests (tests/js)
