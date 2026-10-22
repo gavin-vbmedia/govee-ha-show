@@ -473,3 +473,10 @@ async def test_packet_lab_runs_a_sweep_step_by_step(client):
     bad = {"ip": "127.0.0.1", "steps": []}
     assert (await client.post("/api/lab/send", json=bad)).status == 400
     assert (await client.post("/api/lab/send", json={**bad, "steps": [{"kind": "razer", "text": "b1 01"}] * 21})).status == 400
+
+
+async def test_long_lights_only_with_protocols_that_allow_them(client):
+    ok = await client.put("/api/devices", json=[{"ip": "192.168.1.70", "segments": 300, "protocol": "pixels"}])
+    assert ok.status == 200 and (await ok.json())[0]["segments"] == 300
+    assert (await client.put("/api/devices", json=[{"ip": "192.168.1.70", "segments": 300}])).status == 400
+    assert (await client.put("/api/devices", json=[{"ip": "192.168.1.70", "segments": 1001, "protocol": "pixels"}])).status == 400

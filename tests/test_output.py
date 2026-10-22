@@ -206,3 +206,29 @@ def test_app_segments_send_a_few_commands_at_a_time_biggest_change_first():
     assert [len(s) for s in sends()] == [1, 3, 2]
     assert "razer" not in [m["cmd"] for m, _ in sock.sent]
     assert dev.min_interval >= 1 / output.SEGMENTS_FPS
+
+
+def test_per_bulb_pictures_go_as_several_messages_a_little_apart():
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.7", 300, sock, protocol="pixels")
+    dev.enable()
+    t = dev.last_enable
+    # 300 bulbs in 20 colours: well over one message's worth of packets.
+    dev.update(bytes(v for i in range(300) for v in (255 * (i % 20 < 10), (i % 20) * 12, 255 - (i % 20) * 12)))
+    dev.tick(t + 1)
+    dev.tick(t + 1.01)  # too soon for the next message
+    dev.tick(t + 1 + 1.5 * output.PIXELS_GAP_S)
+    dev.tick(t + 1 + 3 * output.PIXELS_GAP_S)
+    sent = [[base64.b64decode(p) for p in m["data"]["command"]] for m, _ in sock.sent if m["cmd"] == "ptReal"]
+    assert "razer" not in [m["cmd"] for m, _ in sock.sent]
+    assert len(sent) >= 3 and all(len(s) <= output.PIXELS_PER_MESSAGE for s in sent)
+    packets = [p for s in sent for p in s]
+    assert packets[0][:2] == b"\xa3\x00" and packets[-1][:5] == bytes.fromhex("33050a2003")
+    assert packets[0][3] == len(packets) - 1  # the picture's own line count, then the show command
+    assert dev.min_interval >= 1 / output.PIXELS_FPS
+
+
+def test_per_bulb_lights_can_have_more_than_255_segments():
+    dev = output.OutputDevice("10.0.0.7", 300, FakeSock(), protocol="pixels")
+    dev.update(b"\xff\x00\x00" * 300)
+    assert len(dev.pending) == 900

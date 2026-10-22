@@ -24,7 +24,7 @@ from .listen import Listener
 from .mqtt import MqttBridge
 from .output import PROBE_MAX, LivePreview, Output, run_hold, run_probe, run_test_pattern
 from .player import Player
-from .protocol import PROTOCOLS
+from .protocol import LONG_PROTOCOLS, PROTOCOLS
 from .runner import Runner, RunnerError
 from .storage import Storage, slugify, valid_id
 
@@ -34,6 +34,7 @@ STATIC = Path(__file__).parent / "static"
 INGRESS_PEER = "172.30.32.2"  # the Supervisor's ingress proxy
 MAX_UPLOAD = 200 * 1024 * 1024
 MAX_BULBS = 2000  # bulbs on one light
+MAX_SEGMENTS = 1000  # per light; the Christmas String Lights 2 have 300 bulbs
 
 OUTPUT = web.AppKey("output", Output)
 PLAYER = web.AppKey("player", Player)
@@ -226,8 +227,13 @@ def _clean_device(d: dict) -> dict:
         segments = int(d.get("segments", 15))
     except (TypeError, ValueError) as e:
         raise web.HTTPBadRequest(text=f"bad device: {e}")
-    if not 1 <= segments <= 255:
-        raise web.HTTPBadRequest(text="segments must be 1-255")
+    protocol = str(d.get("protocol") or "standard")
+    if protocol not in PROTOCOLS:
+        raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
+    # Realtime messages hold the segment count in one byte; the other protocols can go further.
+    most = MAX_SEGMENTS if protocol in LONG_PROTOCOLS else 255
+    if not 1 <= segments <= most:
+        raise web.HTTPBadRequest(text=f"segments must be 1-{most} with this protocol")
     try:
         brightness = int(d.get("brightness", 100))
     except (TypeError, ValueError):
@@ -240,9 +246,6 @@ def _clean_device(d: dict) -> dict:
         raise web.HTTPBadRequest(text="bulbs must be a number")
     if bulbs is not None and not 1 <= bulbs <= MAX_BULBS:
         raise web.HTTPBadRequest(text=f"bulbs must be 1-{MAX_BULBS}")
-    protocol = str(d.get("protocol") or "standard")
-    if protocol not in PROTOCOLS:
-        raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
     dev_id = str(d.get("id") or ip)
     if not dev_id:
         raise web.HTTPBadRequest(text="a planned device needs an id")

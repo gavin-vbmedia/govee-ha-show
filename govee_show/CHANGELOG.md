@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.75
+
+- New, experimental **Protocol** on **Setup → Devices**: **Per bulb (experimental)**, for lights whose
+  Govee app has **Finger sketch**, such as the Christmas String Lights 2 and the icicle lights. It gives
+  every bulb its own colour, the whole length of the string, where realtime mode stops after a few dozen
+  bulbs. Set **Segments** to the number of bulbs (300 on the 30 m Christmas String Lights 2) and press
+  **Test**. It changes up to about 4 times a second, so slower looks suit it best.
+- Lights using **Per bulb**, **App segments** or **Whole light only** can have up to 1,000 segments.
+
 ## 0.2.74
 
 - **Packet lab** has a **Run sweep** button for lights whose realtime mode only reaches their first few
