@@ -204,6 +204,10 @@ def pixel_picture(rgb: bytes, max_colours: int = PIXEL_MAX_COLOURS) -> bytes:
         groups.setdefault(palette[c], []).append(i)
     background = max(groups, key=lambda c: (len(groups[c]), not any(c)), default=bytes(3))
     groups.pop(background, None)
+    if not groups and n:
+        # A picture listing no bulbs makes the H70C5 fade out rather than show the background, so a
+        # light all one colour (all off included) lists its first bulb in that colour too.
+        groups[background] = [0]
     out = bytearray([PIXEL_EFFECT_STILL, 0, 100, *background]) + len(groups).to_bytes(2, "little")
     for colour, bulbs in groups.items():
         high = [b for b in bulbs if b > 255]

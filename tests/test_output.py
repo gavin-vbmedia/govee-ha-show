@@ -241,12 +241,12 @@ def test_per_bulb_pictures_wait_as_long_as_the_light_needs_for_them():
     t = dev.last_enable
     pictures = lambda: sum(any(base64.b64decode(p)[:5] == bytes.fromhex("33050a2003") for p in m["data"]["command"])
                            for m, _ in sock.sent if m["cmd"] == "ptReal")
-    dev.update(b"\xff\x00\x00" * 300)  # one colour: a 2-packet picture
+    dev.update(b"\xff\x00\x00" * 300)  # one colour: a 3-packet picture
     dev.tick(t + 1)
     dev.update(b"\x00\x00\xff" * 300)
     dev.tick(t + 1.1)  # too soon even for a small picture
     assert pictures() == 1
-    dev.tick(t + 1 + output.PIXELS_PICTURE_S + 2 * output.PIXELS_PACKET_S + 0.005)
+    dev.tick(t + 1 + output.PIXELS_PICTURE_S + 3 * output.PIXELS_PACKET_S + 0.005)
     assert pictures() == 2
     # A busy picture (every bulb different) holds the next one back for much longer.
     dev.update(bytes(v for i in range(300) for v in (i % 256, (i * 5) % 256, (i * 9) % 256)))
