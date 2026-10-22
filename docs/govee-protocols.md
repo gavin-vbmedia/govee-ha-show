@@ -52,7 +52,8 @@ Govee's product data (`static/models.json`, built by `tools/build_models.py` fro
 marks **none** of the 54 Scene Stage models as realtime-capable, including the Permanent Outdoor
 Lights Pro (H706A/B/C) that do work (owner's, and signalrgb-govee's 60/90/108 LEDs). So the flag is out
 of date for newer lights: the UI says **? untested**, not a warning, and `KNOWN_REALTIME` /
-`KNOWN_NOTES` / `KNOWN_SEGMENTS` in `build_models.py` record what real lights showed.
+`KNOWN_NOTES` / `KNOWN_SEGMENTS` / `KNOWN_REACH` in `build_models.py` record what real lights showed.
+The editor uses a model's `reach` (bulbs its realtime mode lights) to warn on the timeline (`compat.js`).
 
 ## Per bulb: the Finger sketch picture
 

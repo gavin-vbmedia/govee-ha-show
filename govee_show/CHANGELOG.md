@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.81
+
+- The editor now knows which effects each light can show. In the effect chooser, effects that won't
+  work on that light are greyed out: a chase or two-colour blocks on a light set to **Whole light only**
+  (it shows one colour at a time), or a chase wider than a short light. Click one to see why, or tick
+  **Allow effects that won't work** to use it anyway. Effects that work but not quite as meant, such as
+  ones too fast for a slow light, get a **⚠**.
+- Your existing shows open and play as before. Clips that won't work on their light are hatched on the
+  timeline with a **⚠**, the **Selection** panel says why, and a message when you open the show says
+  how many there are.
+- **Copy to all lights**, paste and adding an effect to several lights at once leave out the lights it
+  won't work on and say so. **Generate** and **Describe it** only use effects that work on each light.
+- A Christmas String Lights 2 (H70C5) set to a realtime protocol now shows **⚠ first 44 bulbs only**
+  under its name on the timeline.
+- Previews now look like the real light. On **Per bulb**, **App segments** and **Whole light only**,
+  the timeline, **Preview**, house photo, **Selection** strip and effect chooser step at the light's own
+  pace instead of moving smoothly, and a **Whole light only** light shows the one colour it really will.
+
 ## 0.2.80
 
 - New in **Setup → Settings → Packet lab**: **Try ways to switch on**. A TV sync box gets colour onto the

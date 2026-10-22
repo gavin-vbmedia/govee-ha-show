@@ -1197,6 +1197,7 @@
 "name": "30m Christmas String Lights 2",
 "realtime": false,
 "segments": 44,
+"reach": 44,
 "note": "In realtime mode it only lights its first 44 bulbs. For every bulb, set Protocol to Per bulb (experimental) with 300 segments; App segments (10 segments) and Whole light only also light the whole string."
 },
 {

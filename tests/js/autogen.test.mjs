@@ -123,3 +123,14 @@ test("slow lights get looks that change the whole light, never faster than the b
   const { looks } = suggestLooks(analysis, 20, 30, 300, "balanced", true);
   assert.ok(looks.every((l) => !["chase", "twinkle", "comet", "trio"].includes(l.effect)));
 });
+
+test("a look a light can't show is swapped for another of the section's looks", () => {
+  const blocks = (c) => !["duo", "trio", "gradient", "chase", "comet", "scanner", "twinkle"].includes(c.effect);
+  for (const seed of [1, 2, 3, 4, 5]) {
+    for (const slow of [false, true]) {
+      const { clips } = generateShow(analysis, [{ id: "a", segments: 15, slow, fits: blocks }], colors, { seed });
+      assert.ok(clips.a.length);
+      for (const c of clips.a) assert.ok(blocks(c), `${c.effect} (seed ${seed})`);
+    }
+  }
+});

@@ -194,7 +194,7 @@ table.devices td input[type="number"] { width: 5em; }
 .lab-grid { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
 .lab-grid input[type="number"] { width: 6em; }
 #lab-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 12px; }
-.pace-warning { color: #d97706; }
+.fit-warning { color: #d97706; }
 .lab-now { font-size: 18px; font-weight: 600; }
 .lab-log { max-height: 320px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 
@@ -323,13 +323,17 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
 }
 .effect-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 .effect-dialog-head {
-  position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
   padding: 10px 14px; background: var(--panel); border-bottom: 1px solid var(--line);
 }
 .effect-dialog-head h3 { margin: 0; flex: 1; font-size: 15px; }
 .effect-dialog-body { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .effect-dialog-section { margin-top: 4px; }
 .effect-dialog .effect-picker button { min-width: 110px; }
+.effect-dialog-note { flex-basis: 100%; margin: 0; }
+/* Effects that won't work on the light (compat.js) are greyed out; ones that only partly work are marked. */
+.effect-picker button.unfit { opacity: 0.45; }
+.effect-picker button.unfit span, .effect-picker button.limited span { color: #d97706; }
 .preset-groups { display: flex; flex-direction: column; gap: 10px; }
 .preset-group { margin: 0; padding: 6px 10px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .preset-group legend { padding: 0 6px; font-weight: 600; }
