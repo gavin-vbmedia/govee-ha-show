@@ -120,8 +120,9 @@ def test_pixel_picture_reaches_past_bulb_255_and_limits_colours():
 
 
 def test_pixel_picture_sends_the_most_common_colour_as_the_background():
+    # All one colour still lists the first bulb: a picture with no bulbs fades the H70C5 out.
     solid = protocol.pixel_picture(b"\xff\x00\x00" * 300)
-    assert solid == bytes([0x0F, 0, 100, 0xFF, 0, 0, 0, 0])  # no groups: every bulb is the background
+    assert solid == bytes([0x0F, 0, 100, 0xFF, 0, 0, 1, 0, 1, 0, 0xFF, 0, 0, 0, 0, 0])
     # Mostly blue with three red bulbs: only the red ones are listed.
     rgb = bytearray(b"\x00\x00\xff" * 300)
     for b in (0, 1, 299):
@@ -129,3 +130,13 @@ def test_pixel_picture_sends_the_most_common_colour_as_the_background():
     pic = protocol.pixel_picture(bytes(rgb))
     assert pic[3:6] == b"\x00\x00\xff" and pic[6:8] == b"\x01\x00"
     assert pic[8:] == b"\x03\x00\xff\x00\x00\x01\x00\x00\x01\x2b\x01"
+
+
+def test_pixel_packets_for_all_off_match_what_turned_the_h70c5_off():
+    # Sent from the packet lab on the owner's H70C5: the light went dark straight away.
+    lines = """
+a3 00 01 02 03 0f 00 64 00 00 00 01 00 01 00 00 00 00 00 c8
+a3 ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 5c
+33 05 0a 20 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 1f
+"""
+    assert [p.hex(" ") for p in protocol.pixel_packets(bytes(900))] == lines.strip().splitlines()

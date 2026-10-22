@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.83
+
+- Lights on **Per bulb** now go off between clips, and show a whole-light colour properly. Before, when
+  the whole light was meant to be one colour (or off), it could fade out or keep showing the last colour
+  instead.
+
 ## 0.2.82
 
 - The model list under **Setup → Devices** is now our own, based on what real lights showed rather than
