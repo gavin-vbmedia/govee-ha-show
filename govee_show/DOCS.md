@@ -705,6 +705,13 @@ different mode first. **Try ways to switch on** tries seven guesses at that, one
 whole light: if the rainbow reaches past the window or stretches along the whole string, note the number
 shown under the buttons at that moment.
 
+Two more sweeps try other ways past the window, each step in its own colour, with the list under the
+buttons saying which is which. Set **Segments** to the window (44 on the H70C5) for both. **Try other
+flags** sends a frame of one colour with nine different values in the byte that switches crisp or blended
+colours, for about 45 seconds. **Try app modes first** switches the light into twenty Govee app modes in
+turn, each followed by a frame in its colour, for about a minute and a half; the light goes plain white
+between steps. For either, watch for a colour lighting more than the first bulbs.
+
 ### Per bulb speed test
 
 For lights on **Per bulb (experimental)**: **Run speed test** changes the picture for six seconds,

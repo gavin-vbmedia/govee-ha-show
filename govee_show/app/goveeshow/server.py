@@ -147,17 +147,21 @@ def _lab_step(body: dict) -> LabStep:
         raise web.HTTPBadRequest(text="interval must be 20-5000 ms")
     if length is not None and not 0 <= length <= 0xFFFF:
         raise web.HTTPBadRequest(text="length must be 0-65535")
-    before = body.get("before", [])
-    if not isinstance(before, list) or len(before) > 4 or not all(
-            isinstance(b, dict) and b.get("kind") in LAB_KINDS for b in before):
-        raise web.HTTPBadRequest(text="before must be a list of up to 4 messages, each with a kind and text")
+    extra = {}
+    for key in ("before", "after"):
+        msgs = body.get(key, [])
+        if not isinstance(msgs, list) or len(msgs) > 4 or not all(
+                isinstance(b, dict) and b.get("kind") in LAB_KINDS for b in msgs):
+            raise web.HTTPBadRequest(text=f"{key} must be a list of up to 4 messages, each with a kind and text")
+        extra[key] = msgs
     try:
         payload = lab_build(kind, str(body.get("text", "")), length)
-        setup = [lab_build(b["kind"], str(b.get("text", ""))) for b in before]
+        setup = [lab_build(b["kind"], str(b.get("text", ""))) for b in extra["before"]]
+        after = [lab_build(b["kind"], str(b.get("text", ""))) for b in extra["after"]]
     except LabError as e:
         raise web.HTTPBadRequest(text=str(e))
     return LabStep(payload, repeat, interval, bool(body.get("realtime_on")), str(body.get("label", ""))[:120],
-                   before=setup)
+                   before=setup, after=after)
 
 
 async def lab_send(request):

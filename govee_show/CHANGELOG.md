@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.84
+
+- Two more experiments in **Setup → Settings → Packet lab** for lights whose realtime colours stop short,
+  like the Christmas String Lights 2 at bulb 44: **Try other flags** and **Try app modes first**. Each
+  step lights the light in its own colour; the list under the buttons says which is which.
+
 ## 0.2.83
 
 - Lights on **Per bulb** now go off between clips, and show a whole-light colour properly. Before, when

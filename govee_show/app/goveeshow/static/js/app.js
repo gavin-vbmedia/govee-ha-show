@@ -10,7 +10,7 @@ import {
 } from "./effects.js";
 import { partsFrame } from "./devicetest.js";
 import { asShown, isSlow } from "./lightspeed.js";
-import { LAB_TEMPLATES, startSweep, windowSweep } from "./labtemplates.js";
+import { LAB_TEMPLATES, flagSweep, modeSweep, startSweep, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
 import { STATUS, modelSummary, newLight, statusOf } from "./models.js";
@@ -3590,7 +3590,9 @@ function renderLab() {
   const lights = $("lab-light"), keep = lights.value;
   lights.replaceChildren(...app.deviceList.filter((d) => d.ip).map((d) => new Option(`${d.name} (${d.ip})`, d.ip)));
   if (keep) lights.value = keep;
-  for (const id of ["btn-lab-send", "btn-lab-sweep", "btn-lab-start-sweep", "btn-lab-speed"]) $(id).disabled = !lights.options.length;
+  for (const id of ["btn-lab-send", "btn-lab-sweep", "btn-lab-start-sweep", "btn-lab-flag-sweep", "btn-lab-mode-sweep", "btn-lab-speed"]) {
+    $(id).disabled = !lights.options.length;
+  }
 }
 
 function fillLab() {
@@ -3657,6 +3659,8 @@ function wireLab() {
   $("btn-lab-speed").addEventListener("click", labSpeed);
   $("btn-lab-sweep").addEventListener("click", () => labSend(windowSweep(Number($("lab-n").value) || 44)));
   $("btn-lab-start-sweep").addEventListener("click", () => labSend(startSweep(Number($("lab-n").value) || 44)));
+  $("btn-lab-flag-sweep").addEventListener("click", () => labSend(flagSweep(Number($("lab-n").value) || 44)));
+  $("btn-lab-mode-sweep").addEventListener("click", () => labSend(modeSweep(Number($("lab-n").value) || 44)));
   $("btn-lab-stop").addEventListener("click", () => api("api/lab/stop", { method: "POST", json: {} }).catch(() => {}));
   fillLab();
 }

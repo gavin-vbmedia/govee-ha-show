@@ -77,16 +77,17 @@ def build(kind: str, text: str, length: int | None = None) -> bytes:
 
 
 class Step:
-    """`before`: set-up messages sent once, 0.1 s apart, ahead of everything else in the step. `more`: further messages sent after the payload, PIXELS_GAP_S apart (a per-bulb picture too big
+    """`before`: set-up messages sent once, 0.1 s apart, ahead of everything else in the step. `after`:
+    the same, once the step's messages are sent (to leave the light in a plain state). `more`: further messages sent after the payload, PIXELS_GAP_S apart (a per-bulb picture too big
     for one). `every`: start the next step this long after this one started, without switching
     realtime off in between (the per-bulb speed test)."""
 
     def __init__(self, payload: bytes, repeat: int = 1, interval: float = 0.1, realtime_on: bool = False,
                  label: str = "", more: list[bytes] | None = None, every: float | None = None,
-                 before: list[bytes] | None = None):
+                 before: list[bytes] | None = None, after: list[bytes] | None = None):
         self.payload, self.repeat, self.interval = payload, repeat, interval
         self.realtime_on, self.label = realtime_on, label
-        self.more, self.every, self.before = more or [], every, before or []
+        self.more, self.every, self.before, self.after = more or [], every, before or [], after or []
 
 
 def pixel_speed_steps(bulbs: int, small: bool, per_second: float, seconds: float = 6) -> list[Step]:
@@ -191,6 +192,10 @@ class Lab:
                     await asyncio.sleep(PIXELS_GAP_S)
                     tx.sendto(msg, (self.ip, CMD_PORT))
                     self.sent += 1
+                for msg in step.after:
+                    await asyncio.sleep(0.1)
+                    tx.sendto(msg, (self.ip, CMD_PORT))
+                    self._note("sent", msg)
                 if step.every is not None:
                     await asyncio.sleep(max(0.0, step.every - (time.monotonic() - started)))
                 elif k < len(self.steps) - 1:
