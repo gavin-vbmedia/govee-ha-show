@@ -40,6 +40,9 @@ mode, tested from the packet lab:
 - The **Run sweep** in the packet lab (`labtemplates.js` `windowSweep`) tries nine ways to address
   bulbs past the window (two-byte count, start offsets, commands `b2`/`b3`/`b5`, zone bytes). Run on the
   H70C5: **none got past bulb 44**.
+- **Try ways to switch on** (`startSweep`: `b1 01` with extra bytes, gradient switch `33 14 01`, video
+  mode `33 05 00 …` before the usual frame) was also run on the H70C5: **none of the seven changed
+  anything**; the rainbow stayed on the first 44 bulbs.
 - The Govee app has no setting for the window, and Govee Desktop doesn't offer screen sync for it.
 - The newer icicle lights (H70D1/H70D2) behave the same way ("only part of the string").
 
@@ -135,8 +138,9 @@ nothing useful.
   owners in the Govee Facebook group describe the set-up as "add the string lights to DreamView… then set
   the segments" (Nov 2024). The owner has seen video of the **whole** string following the TV, so the sync
   box gets colour onto all the bulbs live, which our razer frames can't (first 44 only). Unknown whether
-  that's per bulb or the 44 live colours spread along the string (about 7 bulbs each), but either way the
-  box sends something we haven't found: likely a set-up message when the light joins DreamView. Open. Testing it
+  that's per bulb, the 44 live colours spread along the string, or (most likely, given "set the
+  segments") the app's ~10 segments changed quickly, which **App segments** already does. Seven guesses
+  at a set-up message found nothing (see above); only a capture of a sync box would settle it. Testing it
   would mean buying one and capturing on the UniFi access point; not done.
 
 ## Tools in the add-on for this kind of work
