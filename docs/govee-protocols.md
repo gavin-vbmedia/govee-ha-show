@@ -53,6 +53,12 @@ mode, tested from the packet lab:
   `0a`), then the usual frame, run on the H70C5: every step showed its colour on the first 44 bulbs only;
   **none got past bulb 44**. (A first run with Segments at 300 sent 255-colour frames, which the light
   ignored entirely, so both sweeps now use the model's known `reach` as the window.)
+- The **"dreams" header** (`BB 00 FA B0 00 <count> …`: length field fixed at 250, flag `00`), which a
+  published H61F5 (Strip Light 2 Pro) example says reaches the whole strip with 50 pixels where the usual
+  header covers only part of it, doesn't help the H70C5 (owner's packet lab, Oct 2026): 44 pixels lit
+  the first 44 bulbs only; 50 pixels were rejected (the light went off), as with the usual header.
+- `b1 00` with extra bytes (e.g. `b1 00 10 fa b0 00`) is just realtime off: the light flashes and goes
+  back to its own colour.
 - The Govee app has no setting for the window, and Govee Desktop doesn't offer screen sync for it.
 - The newer icicle lights (H70D1/H70D2) behave the same way ("only part of the string").
 
