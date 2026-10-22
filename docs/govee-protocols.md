@@ -130,8 +130,10 @@ nothing useful.
 - **DreamView** (PC and TV sync) is the same razer protocol, not a new one: LeoSko/GoveeDreamView,
   thecristopher/lightsync and OpenRGB all send `BB … B0 <flag> <n> <rgb…>` (lightsync falls back to
   `33 05 15` for the rest). None handles long strings or anything past a light's window. Govee Desktop
-  doesn't offer screen sync for the H70C5. Whether a TV sync box (e.g. H6604) drives the String Lights 2
-  is unconfirmed; it would likely map screen zones onto the app's segments rather than bulbs. Testing it
+  doesn't offer screen sync for the H70C5. A TV sync box does drive the String Lights 2 (a UK Amazon
+  review of the 20 m set, Dec 2025: "the tree follows the colours of the tele" with the camera kit), but
+  nothing says how finely; it would likely map screen zones onto the app's segments rather than bulbs.
+  If it covers all bulbs live, its packets are something we haven't seen, and worth capturing. Testing it
   would mean buying one and capturing on the UniFi access point; not done.
 
 ## Tools in the add-on for this kind of work
