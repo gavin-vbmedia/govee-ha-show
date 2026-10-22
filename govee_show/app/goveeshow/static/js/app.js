@@ -13,6 +13,7 @@ import { asShown, isSlow } from "./lightspeed.js";
 import { LAB_TEMPLATES, startSweep, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
+import { STATUS, modelSummary, newLight, statusOf } from "./models.js";
 import { MusicEditor } from "./music.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys, seasonalPalette } from "./palettes.js";
 import { Timeline, fmtTime } from "./timeline.js";
@@ -86,7 +87,7 @@ const app = {
   speakerCandidates: [], // all of Home Assistant's media players
   haAvailable: null,
   defaultSpeaker: null, // where automations play a show that has no speaker of its own
-  models: {}, // Govee SKU -> {name, realtime, segments?}
+  models: {}, // Govee SKU -> {name, status?, protocol?, segments?, bulbs?, reach?, note?} (models.js)
   remote: false, // playing on a Home Assistant speaker; the add-on keeps time
 
   duration() {
@@ -334,7 +335,7 @@ function renderDevices() {
     });
     cell(ip);
     const model = document.createElement("span");
-    model.append(d.sku || "–", realtimeBadge(d.sku));
+    model.append(d.sku || "–", modelBadge(d.sku));
     cell(model);
     const segs = document.createElement("span");
     const find = button("Find", () => findSegments(d), "ghost");
@@ -657,7 +658,7 @@ async function loadModels() {
     const { models } = await (await fetch("static/models.json")).json();
     app.models = Object.fromEntries(models.map((m) => [m.sku, m]));
     const list = $("model-list");
-    for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.realtime ? "" : " (untested)"}`, m.sku));
+    for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.status ? "" : " (untested)"}`, m.sku));
     renderDevices();
     timeline.draw(); // lights' notes on the timeline come from the models
   } catch { /* the picker is a convenience; manual entry still works */ }
@@ -675,17 +676,15 @@ const PROTOCOLS = {
 
 const skuOf = (text) => (text || "").trim().split(/\s+/)[0].toUpperCase();
 
-// A small marker saying whether Govee lists the model as realtime-capable.
-function realtimeBadge(sku) {
+// A small marker saying what we know about the model on real lights (models.js).
+function modelBadge(sku) {
   const m = app.models[skuOf(sku)];
   const span = document.createElement("span");
   if (!m) return span;
-  span.className = `badge ${m.note ? "warn" : m.realtime ? "ok" : "unknown"}`;
-  span.textContent = m.note ? "⚠ limited" : m.realtime ? "✓ realtime" : "? untested";
-  span.title = m.note ? `${m.name}: ${m.note}` : m.realtime
-    ? `${m.name}: known to support realtime segment control.`
-    : `${m.name}: not known yet. Govee's product list doesn't mark it for realtime control, but that list is ` +
-      "out of date: many newer lights, like the Permanent Outdoor Lights Pro, work anyway. Press Test to check.";
+  const s = STATUS[statusOf(m)];
+  span.className = `badge ${s.cls}`;
+  span.textContent = s.badge;
+  span.title = modelSummary(m);
   return span;
 }
 
@@ -695,9 +694,11 @@ function planModelChanged() {
   info.replaceChildren();
   if (!m) return;
   if (!$("plan-name").value) $("plan-name").value = m.name.replace(/^Govee\s+/, "");
+  const light = newLight(m, {});
+  $("plan-segments").max = ["whole", "segments", "pixels"].includes(light.protocol) ? 1000 : 255;
   if (m.segments) $("plan-segments").value = m.segments;
-  info.append(realtimeBadge(m.sku), m.segments
-    ? ` ${m.segments} segments (known)`
+  info.append(modelBadge(m.sku), m.segments
+    ? ` Starts on ${PROTOCOLS[light.protocol]} with ${m.segments} segments.`
     : " Segment count unknown: 15 is a guess, check it with Test when it arrives.");
   if (m.note) info.append(` ${m.note}`);
 }
@@ -713,7 +714,7 @@ function button(label, onclick, cls = "") {
 function addDevice(found) {
   if (app.devices[found.id] || app.deviceList.some((d) => d.ip && d.ip === found.ip)) return;
   const name = `${found.sku || "Govee"} ${found.ip.split(".").pop()}`;
-  app.deviceList.push({ id: found.id, name, ip: found.ip, sku: found.sku || "", segments: 15, reverse: false, gradient: false, protocol: "standard", brightness: 100 });
+  app.deviceList.push(newLight(app.models[skuOf(found.sku)], { id: found.id, name, ip: found.ip, sku: found.sku || "" }));
   saveDevices();
 }
 
@@ -731,7 +732,7 @@ async function scan() {
     for (const f of found) {
       const row = document.createElement("div");
       row.className = "scan-row";
-      row.append(`${f.sku || "Govee"} at ${f.ip}`, realtimeBadge(f.sku));
+      row.append(`${f.sku || "Govee"} at ${f.ip}`, modelBadge(f.sku));
       const known = app.devices[f.id] || app.deviceList.find((d) => d.ip === f.ip);
       if (known) { row.append(` (${known.name})`); box.append(row); continue; }
       row.append(button("Add", () => { addDevice(f); row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (added)`); }));
@@ -3540,10 +3541,11 @@ function wire() {
     const base = `planned-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "light"}`;
     let id = base;
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
-    const sku = app.models[skuOf($("plan-model").value)] ? skuOf($("plan-model").value) : "";
-    app.deviceList.push({ id, name, ip: "", sku, segments: Number($("plan-segments").value) || 15, reverse: false, gradient: false, protocol: "standard", brightness: 100 });
+    const model = app.models[skuOf($("plan-model").value)];
+    app.deviceList.push(newLight(model, { id, name, ip: "", sku: model ? model.sku : "", segments: Number($("plan-segments").value) || 15 }));
     $("plan-name").value = "";
     $("plan-model").value = "";
+    $("plan-segments").max = 255;
     $("plan-info").replaceChildren();
     saveDevices();
   });

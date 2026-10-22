@@ -48,12 +48,14 @@ mode, tested from the packet lab:
 - The Govee app has no setting for the window, and Govee Desktop doesn't offer screen sync for it.
 - The newer icicle lights (H70D1/H70D2) behave the same way ("only part of the string").
 
-Govee's product data (`static/models.json`, built by `tools/build_models.py` from SignalRGB's copy)
-marks **none** of the 54 Scene Stage models as realtime-capable, including the Permanent Outdoor
-Lights Pro (H706A/B/C) that do work (owner's, and signalrgb-govee's 60/90/108 LEDs). So the flag is out
-of date for newer lights: the UI says **? untested**, not a warning, and `KNOWN_REALTIME` /
-`KNOWN_NOTES` / `KNOWN_SEGMENTS` / `KNOWN_REACH` in `build_models.py` record what real lights showed.
-The editor uses a model's `reach` (bulbs its realtime mode lights) to warn on the timeline (`compat.js`).
+Govee's product data (SignalRGB's copy) marks **none** of the 54 Scene Stage models as
+realtime-capable, including the Permanent Outdoor Lights Pro (H706A/B/C) that do work (owner's, and
+signalrgb-govee's 60/90/108 LEDs). Since 0.2.82 that flag isn't used at all: `static/models.json` is our
+own list. Names came from SignalRGB's data (`tools/build_models.py` only adds new light models' names);
+`status` (`works` / `limited`, else untested), the default `protocol`, `segments`, `bulbs`, `reach` and
+`note` are only what real lights showed, and are edited by hand. New lights start with a model's
+defaults (`static/js/models.js`); `reach` (bulbs its realtime mode lights) drives the timeline warning
+(`compat.js`). Add to it when the owner tests a light.
 
 ## Per bulb: the Finger sketch picture
 

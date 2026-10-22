@@ -1,68 +1,38 @@
-"""Regenerate the editor's Govee model list from the SignalRGB Govee plugin's product data.
+"""Add newly released Govee lights' names to the editor's model list.
 
-That file (MIT, github.com/fu-raz/signalrgb-govee-direct-connect) is a snapshot of
-Govee's product list, including whether each model supports the realtime ("razer")
-protocol this add-on uses. Govee doesn't publish realtime segment counts, so
-"segments" is only filled in where we know it.
+static/models.json is our own list: what we've found on real lights (status, the default protocol,
+segments, bulbs, reach, note), edited by hand. This only adds models it doesn't have yet, by name,
+untested, from the SignalRGB Govee plugin's copy of Govee's product list (MIT,
+github.com/fu-raz/signalrgb-govee-direct-connect). That list's realtime flag proved out of date
+(docs/govee-protocols.md), so it isn't used. Sensors, plugs and other things that aren't lights are left out.
 
-  python tools/build_models.py > govee_show/app/goveeshow/static/models.json
+  python tools/build_models.py
 """
 import json
 import re
-import sys
 import urllib.request
+from pathlib import Path
 
 SOURCE = ("https://raw.githubusercontent.com/fu-raz/signalrgb-govee-direct-connect/"
           "main/govee-products.test.js")
-
-# Realtime segment counts confirmed by other projects.
-KNOWN_SEGMENTS = {
-    "H618A": 15,  # DMXCore Govee plugin
-    "H70C5": 44,  # tested on a real light (issue #74)
-}
-
-# Lights whose realtime mode stops short of the end of the string: how many bulbs it reaches.
-KNOWN_REACH = {
-    "H70C5": 44,  # docs/govee-protocols.md
-}
-
-# Realtime confirmed on real lights where Govee's product list says otherwise.
-KNOWN_REALTIME = {
-    "H706A", "H706B", "H706C",  # Permanent Outdoor Lights Pro: the owner's, and signalrgb-govee
-}
-
-# What testing on real lights found that the product list doesn't say, shown on the Devices tab.
-KNOWN_NOTES = {
-    "H70C5": "In realtime mode it only lights its first 44 bulbs. For every bulb, set Protocol to Per bulb "
-             "(experimental) with 300 segments; App segments (10 segments) and Whole light only also light "
-             "the whole string.",
-}
+MODELS = Path(__file__).parent.parent / "govee_show/app/goveeshow/static/models.json"
+NOT_LIGHTS = re.compile(r"Thermo|Hygrometer|Plug|Air Quality|Fan\b|Purifier|Heater|Humidifier|Ice Maker|Sync Box", re.I)
 
 
 def main():
+    doc = json.loads(MODELS.read_text())
+    known = {m["sku"] for m in doc["models"]}
     text = urllib.request.urlopen(SOURCE, timeout=60).read().decode()
-    models = {}
+    added = []
     for block in re.finditer(r'"(H[0-9A-Z]{4,5})":\s*\{(.*?)\n  \}', text, re.S):
-        body = block.group(2)
-        name = re.search(r'"productName":\s*"([^"]*)"', body)
-        razer = re.search(r'"supportRazer":\s*(\d)', body)
-        if not name or not razer:
-            continue
+        name = re.search(r'"productName":\s*"([^"]*)"', block.group(2))
         sku = block.group(1)
-        entry = {"sku": sku, "name": name.group(1).strip(), "realtime": razer.group(1) == "1" or sku in KNOWN_REALTIME}
-        if sku in KNOWN_SEGMENTS:
-            entry["segments"] = KNOWN_SEGMENTS[sku]
-        if sku in KNOWN_REACH:
-            entry["reach"] = KNOWN_REACH[sku]
-        if sku in KNOWN_NOTES:
-            entry["note"] = KNOWN_NOTES[sku]
-        models[sku] = entry
-    if len(models) < 100:
-        sys.exit(f"only parsed {len(models)} models; the source format may have changed")
-    out = {"source": "github.com/fu-raz/signalrgb-govee-direct-connect (MIT)",
-           "models": sorted(models.values(), key=lambda m: m["sku"])}
-    json.dump(out, sys.stdout, indent=0, ensure_ascii=False)
-    sys.stdout.write("\n")
+        if name and sku not in known and not NOT_LIGHTS.search(name.group(1)):
+            added.append({"sku": sku, "name": name.group(1).strip()})
+            known.add(sku)
+    doc["models"] = sorted(doc["models"] + added, key=lambda m: m["sku"])
+    MODELS.write_text(json.dumps(doc, indent=0, ensure_ascii=False) + "\n")
+    print(f"added {len(added)}: {', '.join(m['sku'] for m in added) or 'none'}")
 
 
 if __name__ == "__main__":

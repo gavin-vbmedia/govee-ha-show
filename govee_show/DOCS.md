@@ -103,13 +103,14 @@ Lights accept different forms of the realtime command. Change
 
 ### Lights not delivered yet?
 
-Pick the model (for example `H7093`), give it a name and press **Add
-planned light**, then build shows with it straight away. The model list comes from Govee's product
-data: **✓ realtime** means the model is known to support per-segment realtime control, which this
-add-on needs, and **? untested** means it isn't known yet. Govee's list is out of date for its newer
-lights, many of which work anyway (the Permanent Outdoor Lights Pro does), so test one before buying
-more. **⚠ limited** marks a model that has been tested and only partly works; point
-at the badge to see what it can do. Segment counts aren't published, so 15 is a guess until you test the real
+Pick the model (for example `H706A`), give it a name and press **Add
+planned light**, then build shows with it straight away. The badge next to a model says what we've
+found on real lights: **✓ works** (tested, works on Realtime), **⚠ limited** (tested, only partly works;
+point at the badge to see what it can do) or **? untested** (not tried with this add-on yet: most
+Govee lights with LAN Control work, so add one and press **Test** before buying more). A tested model
+starts with the settings that suit it, such as **Per bulb** with 300 segments for the 30 m Christmas
+String Lights 2, both when you plan it and when you add it from **Scan network**. Lights you've already
+added keep their settings. Otherwise 15 segments is a guess until you test the real
 light. Planned lights appear in the previews but nothing is sent to them. When the light arrives,
 press **Scan network** and choose **Link to** next to it, or type its IP into the planned light's
 row. Its shows carry over, and if the real segment count differs, just change it: effects scale
@@ -205,7 +206,7 @@ Each light has a **Style**:
 | --- | --- | --- |
 | Line | Strips, string lights, eaves lights | Trace along it, as above. |
 | Icicle | Icicle lights | Trace the line the icicles hang from, then set **Drops** to how many drops it has and **Length** to how far the longest one hangs on the photo. The drops are staggered, each in its segment's colour, with the light's **Bulbs** shared between them. |
-| Spots | Spotlights such as the H7093 | Press **Trace** and click where each spotlight sits, starting nearest the plug. Each one shines a soft wash of colour; drag its round handle to aim it, and use **Beam** for how wide the beams are. A spot covering several segments shows them blended. |
+| Spots | Spotlights | Press **Trace** and click where each spotlight sits, starting nearest the plug. Each one shines a soft wash of colour; drag its round handle to aim it, and use **Beam** for how wide the beams are. A spot covering several segments shows them blended. |
 
 ### Photo taken at an angle
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.82
+
+- The model list under **Setup → Devices** is now our own, based on what real lights showed rather than
+  Govee's out-of-date product list. Each model's badge says **✓ works**, **⚠ limited** or **? untested**
+  (not tried with the add-on yet), and points at what we know. Sensors, plugs and other things that
+  aren't lights are gone from it.
+- A tested model starts with the settings that suit it when you plan it or add it from **Scan
+  network**: the 30 m Christmas String Lights 2 (H70C5) starts on **Per bulb** with 300 segments and
+  300 bulbs. Lights you've already added keep their settings.
+
 ## 0.2.81
 
 - The editor now knows which effects each light can show. In the effect chooser, effects that won't
