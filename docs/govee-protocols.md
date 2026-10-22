@@ -36,6 +36,8 @@ mode, tested from the packet lab:
   spread over bulbs 1–44; it lights `min(length field, 44)` bulbs. More than 44 colours (true length) is
   **rejected**: the whole light goes off.
 - The flag byte (byte after `B0`) only switches crisp/blend (`01`, `02` both lit the same 44 bulbs).
+  LeoSko/GoveeDreamView documents it as `00` per segment, `01` stretch across all LEDs; `00` with 10
+  colours on the H70C5 still only lit the first 44 bulbs.
 - `B4` (v2) is ignored. The fixed-length 14 variant lit 4 bulbs (the light honours the length field).
 - The **Run sweep** in the packet lab (`labtemplates.js` `windowSweep`) tries nine ways to address
   bulbs past the window (two-byte count, start offsets, commands `b2`/`b3`/`b5`, zone bytes). Run on the
