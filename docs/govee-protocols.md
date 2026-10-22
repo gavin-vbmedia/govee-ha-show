@@ -131,9 +131,9 @@ nothing useful.
   thecristopher/lightsync and OpenRGB all send `BB … B0 <flag> <n> <rgb…>` (lightsync falls back to
   `33 05 15` for the rest). None handles long strings or anything past a light's window. Govee Desktop
   doesn't offer screen sync for the H70C5. A TV sync box does drive the String Lights 2 (a UK Amazon
-  review of the 20 m set, Dec 2025: "the tree follows the colours of the tele" with the camera kit), but
-  nothing says how finely; it would likely map screen zones onto the app's segments rather than bulbs.
-  If it covers all bulbs live, its packets are something we haven't seen, and worth capturing. Testing it
+  review of the 20 m set, Dec 2025: "the tree follows the colours of the tele" with the camera kit), and
+  owners in the Govee Facebook group describe the set-up as "add the string lights to DreamView… then set
+  the segments" (Nov 2024). So it works at the app's segment level, not per bulb, and isn't worth chasing. Testing it
   would mean buying one and capturing on the UniFi access point; not done.
 
 ## Tools in the add-on for this kind of work
