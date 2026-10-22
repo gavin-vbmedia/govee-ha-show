@@ -27,5 +27,7 @@ test("status comes from our own testing, not Govee's list", () => {
   assert.equal(statusOf(by.H7093), "untested");
   assert.equal(statusOf(undefined), "untested");
   assert.match(modelSummary(by.H7093), /not tested/);
+  assert.match(modelSummary(by.H3A51), /Govee lists it as having LAN Control/); // from Govee's own list
+  assert.match(modelSummary(by.H6199), /isn't on Govee's list/);
   assert.match(modelSummary(by.H70C5), /first 44 bulbs/);
 });
