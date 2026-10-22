@@ -19,7 +19,8 @@ from aiohttp import web
 from . import __version__, ai, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
-from .lab import KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError, Step as LabStep, build as lab_build
+from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError,
+                  Step as LabStep, build as lab_build, pixel_speed_steps)
 from .listen import Listener
 from .mqtt import MqttBridge
 from .output import PROBE_MAX, LivePreview, Output, run_hold, run_probe, run_test_pattern
@@ -173,6 +174,29 @@ async def lab_send(request):
     app[OUTPUT].release(ip)
     app[LAB].start(ip, steps)
     return web.json_response({"ok": True, "steps": len(steps)})
+
+
+async def lab_speed(request):
+    """Per-bulb speed test: red and blue pictures in turn on one of your lights, at a set rate."""
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise web.HTTPBadRequest(text="expected an object")
+    app = request.app
+    ip = str(body.get("ip", ""))
+    if not ip or ip not in {d["ip"] for d in app[STORAGE].load_devices()}:
+        raise web.HTTPBadRequest(text="pick one of your lights")
+    try:
+        bulbs, per_second = int(body.get("bulbs", 300)), float(body.get("per_second", 2))
+    except (TypeError, ValueError):
+        raise web.HTTPBadRequest(text="bulbs and per_second must be numbers")
+    if not 1 <= bulbs <= MAX_SEGMENTS or not 0.5 <= per_second <= 20:
+        raise web.HTTPBadRequest(text=f"bulbs must be 1-{MAX_SEGMENTS} and per_second 0.5-20")
+    await app[RUNNER].stop()
+    if (old := app[TESTS].pop(ip, None)):
+        old.cancel()
+    app[OUTPUT].release(ip)
+    app[LAB].start(ip, pixel_speed_steps(bulbs, bool(body.get("small")), per_second))
+    return web.json_response({"ok": True})
 
 
 async def lab_stop(request):
@@ -963,6 +987,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/diagnostics/listen", listening_status)
     r.add_post("/api/lab/send", lab_send)
     r.add_post("/api/lab/stop", lab_stop)
+    r.add_post("/api/lab/speed", lab_speed)
     r.add_get("/api/lab", lab_status)
     r.add_get("/api/shows", list_shows)
     r.add_post("/api/shows", create_show)

@@ -8,6 +8,8 @@ import socket
 import time
 
 from .listen import describe
+from .output import PIXELS_GAP_S, PIXELS_PER_MESSAGE
+from .protocol import pixel_packets
 from .protocol import CMD_PORT, REPLY_PORT, _ble_packet, frame, razer_enable, razer_msg, ptreal_msg
 
 KINDS = ("json", "razer", "ptreal")
@@ -75,10 +77,31 @@ def build(kind: str, text: str, length: int | None = None) -> bytes:
 
 
 class Step:
+    """`more`: further messages sent after the payload, PIXELS_GAP_S apart (a per-bulb picture too big
+    for one). `every`: start the next step this long after this one started, without switching
+    realtime off in between (the per-bulb speed test)."""
+
     def __init__(self, payload: bytes, repeat: int = 1, interval: float = 0.1, realtime_on: bool = False,
-                 label: str = ""):
+                 label: str = "", more: list[bytes] | None = None, every: float | None = None):
         self.payload, self.repeat, self.interval = payload, repeat, interval
         self.realtime_on, self.label = realtime_on, label
+        self.more, self.every = more or [], every
+
+
+def pixel_speed_steps(bulbs: int, small: bool, per_second: float, seconds: float = 6) -> list[Step]:
+    """Two per-bulb pictures in turn, red then blue, `per_second` pictures a second: just the first
+    10 bulbs, or every bulb. Whether the light keeps up shows how fast it takes pictures, and whether
+    the size of a picture matters."""
+    lit = min(bulbs, 10) if small else bulbs
+    steps = []
+    for k in range(max(1, round(per_second * seconds))):
+        colour = b"\xff\x00\x00" if k % 2 == 0 else b"\x00\x00\xff"
+        frame = colour * lit + bytes(3 * (bulbs - lit))
+        packets = pixel_packets(frame)
+        msgs = [ptreal_msg(packets[i: i + PIXELS_PER_MESSAGE]) for i in range(0, len(packets), PIXELS_PER_MESSAGE)]
+        steps.append(Step(msgs[0], more=msgs[1:], every=1 / per_second,
+                          label=f"{'red' if k % 2 == 0 else 'blue'}, {len(packets)} packets"))
+    return steps
 
 
 class Lab:
@@ -141,7 +164,8 @@ class Lab:
         try:
             for k, step in enumerate(self.steps):
                 self.step = k
-                if len(self.steps) > 1:
+                started = time.monotonic()
+                if len(self.steps) > 1 and step.every is None:
                     self._note("step", f"{k + 1} of {len(self.steps)}: {step.label}")
                 if step.realtime_on:
                     on = razer_msg(razer_enable(True))
@@ -151,11 +175,17 @@ class Lab:
                 for i in range(step.repeat):
                     tx.sendto(step.payload, (self.ip, CMD_PORT))
                     self.sent += 1
-                    if i < 2 or i == step.repeat - 1:
+                    if (i < 2 or i == step.repeat - 1) and (step.every is None or k < 2):
                         self._note("sent", step.payload)
                     if i < step.repeat - 1:
                         await asyncio.sleep(step.interval)
-                if k < len(self.steps) - 1:
+                for msg in step.more:
+                    await asyncio.sleep(PIXELS_GAP_S)
+                    tx.sendto(msg, (self.ip, CMD_PORT))
+                    self.sent += 1
+                if step.every is not None:
+                    await asyncio.sleep(max(0.0, step.every - (time.monotonic() - started)))
+                elif k < len(self.steps) - 1:
                     tx.sendto(razer_msg(razer_enable(False)), (self.ip, CMD_PORT))
                     await asyncio.sleep(STEP_GAP_S)
             await asyncio.sleep(2)  # replies can lag

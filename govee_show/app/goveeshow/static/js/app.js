@@ -3399,7 +3399,7 @@ function renderLab() {
   const lights = $("lab-light"), keep = lights.value;
   lights.replaceChildren(...app.deviceList.filter((d) => d.ip).map((d) => new Option(`${d.name} (${d.ip})`, d.ip)));
   if (keep) lights.value = keep;
-  $("btn-lab-send").disabled = $("btn-lab-sweep").disabled = !lights.options.length;
+  $("btn-lab-send").disabled = $("btn-lab-sweep").disabled = $("btn-lab-speed").disabled = !lights.options.length;
 }
 
 function fillLab() {
@@ -3415,6 +3415,15 @@ function fillLab() {
   $("lab-help").textContent = LAB_HELP[t.kind];
 }
 
+async function labSpeed() {
+  const json = { ip: $("lab-light").value, bulbs: Number($("lab-n").value) || 300,
+    small: $("lab-speed-size").value === "small", per_second: Number($("lab-speed-rate").value) };
+  try {
+    await api("api/lab/speed", { method: "POST", json });
+  } catch (e) { status(`Not sent: ${e.message}`, true); return; }
+  labWatch(true);
+}
+
 async function labSend(sweep = null) {
   const json = sweep ? { ip: $("lab-light").value, steps: sweep } : {
     ip: $("lab-light").value, kind: $("lab-kind").value, text: $("lab-text").value,
@@ -3427,11 +3436,15 @@ async function labSend(sweep = null) {
   const legend = $("lab-legend");
   legend.hidden = !sweep;
   if (sweep) legend.replaceChildren(...sweep.map((s) => Object.assign(document.createElement("li"), { textContent: s.label })));
+  labWatch(!!sweep);
+}
+
+function labWatch(steps) {
   const poll = async () => {
     let s;
     try { s = await api("api/lab"); } catch { return; }
-    $("lab-now").hidden = !(sweep && s.steps > 1);
-    $("lab-now").textContent = s.running ? `Now ${s.step} of ${s.steps}: ${s.label}` : "Sweep finished";
+    $("lab-now").hidden = !(steps && s.steps > 1);
+    $("lab-now").textContent = s.running ? `Now ${s.step} of ${s.steps}: ${s.label}` : "Finished";
     const log = $("lab-log");
     log.hidden = false;
     log.textContent = [`${s.running ? "Sending" : "Done"}: ${s.sent} sent to ${s.ip}`,
@@ -3450,6 +3463,7 @@ function wireLab() {
     if (d) { $("lab-n").value = d.segments; fillLab(); }
   });
   $("btn-lab-send").addEventListener("click", () => labSend());
+  $("btn-lab-speed").addEventListener("click", labSpeed);
   $("btn-lab-sweep").addEventListener("click", () => labSend(windowSweep(Number($("lab-n").value) || 44)));
   $("btn-lab-stop").addEventListener("click", () => api("api/lab/stop", { method: "POST", json: {} }).catch(() => {}));
   fillLab();
