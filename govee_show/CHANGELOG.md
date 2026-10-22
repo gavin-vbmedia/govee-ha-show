@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.85
+
+- The four sweeps in **Setup → Settings → Packet lab** now work over the right number of bulbs on their
+  own for lights whose realtime window is known (44 on the Christmas String Lights 2), even when
+  **Segments** shows the whole light. Before, picking such a light set **Segments** to 300 and the sweeps
+  lit nothing.
+
 ## 0.2.84
 
 - Two more experiments in **Setup → Settings → Packet lab** for lights whose realtime colours stop short,

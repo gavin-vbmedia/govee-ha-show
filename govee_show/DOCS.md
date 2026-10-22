@@ -695,18 +695,20 @@ length), and an **App command (ptReal)**: one Govee app command per line, in hex
 Some lights, like the 30 m Christmas String Lights 2 (H70C5) and the icicle lights, only take
 realtime colours for their first few dozen bulbs (44 on the H70C5). **Run sweep** tries nine guesses
 at how the rest of the bulbs might be reached, one after another for about 45 seconds. Each guess
-asks for the bulbs just past the window in its own colour. Set **Segments** to the size of the window
-first, then film the whole light while it runs. A colour appearing past the window means that guess
+asks for the bulbs just past the window in its own colour. Film the whole light while it runs. A colour appearing past the window means that guess
 works; the list under the button says which colour is which.
 
 A Govee TV sync box does get colour onto the whole of these lights, so it may switch them into a
 different mode first. **Try ways to switch on** tries seven guesses at that, one after another for about
-50 seconds, each followed by a rainbow over **Segments** colours (set it to 44 for the H70C5). Watch the
+50 seconds, each followed by a rainbow over the window. Watch the
 whole light: if the rainbow reaches past the window or stretches along the whole string, note the number
 shown under the buttons at that moment.
 
+All four sweeps use the window of the light's model when it's known (44 for the H70C5, whatever
+**Segments** says), and otherwise **Segments**, so set **Segments** to the window for other lights.
+
 Two more sweeps try other ways past the window, each step in its own colour, with the list under the
-buttons saying which is which. Set **Segments** to the window (44 on the H70C5) for both. **Try other
+buttons saying which is which. **Try other
 flags** sends a frame of one colour with nine different values in the byte that switches crisp or blended
 colours, for about 45 seconds. **Try app modes first** switches the light into twenty Govee app modes in
 turn, each followed by a frame in its colour, for about a minute and a half; the light goes plain white

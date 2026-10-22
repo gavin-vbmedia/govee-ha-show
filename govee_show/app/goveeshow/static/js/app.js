@@ -10,7 +10,7 @@ import {
 } from "./effects.js";
 import { partsFrame } from "./devicetest.js";
 import { asShown, isSlow } from "./lightspeed.js";
-import { LAB_TEMPLATES, flagSweep, modeSweep, startSweep, windowSweep } from "./labtemplates.js";
+import { LAB_TEMPLATES, flagSweep, modeSweep, startSweep, sweepWindow, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
 import { STATUS, modelSummary, newLight, statusOf } from "./models.js";
@@ -3657,10 +3657,15 @@ function wireLab() {
   });
   $("btn-lab-send").addEventListener("click", () => labSend());
   $("btn-lab-speed").addEventListener("click", labSpeed);
-  $("btn-lab-sweep").addEventListener("click", () => labSend(windowSweep(Number($("lab-n").value) || 44)));
-  $("btn-lab-start-sweep").addEventListener("click", () => labSend(startSweep(Number($("lab-n").value) || 44)));
-  $("btn-lab-flag-sweep").addEventListener("click", () => labSend(flagSweep(Number($("lab-n").value) || 44)));
-  $("btn-lab-mode-sweep").addEventListener("click", () => labSend(modeSweep(Number($("lab-n").value) || 44)));
+  for (const [id, sweep] of [["btn-lab-sweep", windowSweep], ["btn-lab-start-sweep", startSweep],
+    ["btn-lab-flag-sweep", flagSweep], ["btn-lab-mode-sweep", modeSweep]]) {
+    $(id).addEventListener("click", () => {
+      const d = app.deviceList.find((x) => x.ip === $("lab-light").value);
+      const w = sweepWindow(app.models[skuOf(d?.sku)], Number($("lab-n").value));
+      status(`Sweeping the first ${w} bulbs`);
+      labSend(sweep(w));
+    });
+  }
   $("btn-lab-stop").addEventListener("click", () => api("api/lab/stop", { method: "POST", json: {} }).catch(() => {}));
   fillLab();
 }
