@@ -671,6 +671,12 @@ asks for the bulbs just past the window in its own colour. Set **Segments** to t
 first, then film the whole light while it runs. A colour appearing past the window means that guess
 works; the list under the button says which colour is which.
 
+A Govee TV sync box does get colour onto the whole of these lights, so it may switch them into a
+different mode first. **Try ways to switch on** tries seven guesses at that, one after another for about
+50 seconds, each followed by a rainbow over **Segments** colours (set it to 44 for the H70C5). Watch the
+whole light: if the rainbow reaches past the window or stretches along the whole string, note the number
+shown under the buttons at that moment.
+
 ### Per bulb speed test
 
 For lights on **Per bulb (experimental)**: **Run speed test** changes the picture for six seconds,

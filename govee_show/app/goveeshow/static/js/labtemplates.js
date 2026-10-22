@@ -65,3 +65,25 @@ export function windowSweep(w = 44) {
       repeat: 30, interval_ms: 100, realtime_on: true };
   });
 }
+
+// The "switch-on" sweep: a DreamView sync box gets live colour onto the whole H70C5 string, which our
+// realtime frames can't (first 44 bulbs only), so it probably sends something first. Each step tries one
+// guess at that set-up message, then streams the usual w-colour rainbow; a rainbow stretching past the
+// window, or along the whole string, means that guess works. Realtime is switched off between steps.
+export function startSweep(w = 44) {
+  w = Math.max(1, Math.min(255, w));
+  const frame = `b0 01 ${hex([w])}  ${rainbow(w)}`;
+  const guesses = [
+    ["realtime on with a 01 byte", [], [["razer", "b1 01 01"]], false],
+    ["realtime on with a 02 byte", [], [["razer", "b1 01 02"]], false],
+    ["realtime on with the window size", [], [["razer", `b1 01 ${hex([w])}`]], false],
+    ["realtime on with the size as two bytes", [], [["razer", `b1 01 00 ${hex([w])}`]], false],
+    ["the app's gradient switch on first", [["ptreal", "33 14 01"]], [], true],
+    ["the app's video (DreamView) mode first, all", [["ptreal", "33 05 00 01 00 64"]], [], true],
+    ["the app's video (DreamView) mode first, part", [["ptreal", "33 05 00 00 00 64"]], [], true],
+  ];
+  return guesses.map(([what, setup, enable, on]) => ({
+    label: what, kind: "razer", text: frame, repeat: 50, interval_ms: 100, realtime_on: on,
+    before: [...setup, ...enable].map(([kind, text]) => ({ kind, text })),
+  }));
+}

@@ -475,6 +475,36 @@ async def test_packet_lab_runs_a_sweep_step_by_step(client):
     assert (await client.post("/api/lab/send", json={**bad, "steps": [{"kind": "razer", "text": "b1 01"}] * 21})).status == 400
 
 
+async def test_packet_lab_sends_set_up_messages_first(client):
+    import socket
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind(("127.0.0.1", 4003))
+    rx.setblocking(False)
+    try:
+        await client.put("/api/devices", json=[{"ip": "127.0.0.1", "name": "Tree", "segments": 10}])
+        step = {"kind": "razer", "text": "b0 01 01 ff0000", "repeat": 1, "realtime_on": True,
+                "before": [{"kind": "ptreal", "text": "33 14 01"}, {"kind": "razer", "text": "b1 01 2c"}]}
+        assert (await client.post("/api/lab/send", json={"ip": "127.0.0.1", **step})).status == 200
+        await asyncio.sleep(0.4)
+        msgs = []
+        while True:
+            try:
+                msgs.append(json.loads(rx.recv(4096))["msg"])
+            except BlockingIOError:
+                break
+        assert msgs[0]["cmd"] == "ptReal"
+        assert base64.b64decode(msgs[0]["data"]["command"][0])[:3] == bytes([0x33, 0x14, 0x01])
+        pts = [base64.b64decode(m["data"]["pt"]) for m in msgs[1:]]
+        assert [p[3:6] for p in pts[:1]] == [bytes([0xB1, 1, 0x2C])]
+        assert [p[3] for p in pts[1:]] == [0xB1, 0xB0]  # then realtime on and the frame, as usual
+    finally:
+        rx.close()
+    bad = {"ip": "127.0.0.1", "kind": "razer", "text": "b1 01"}
+    assert (await client.post("/api/lab/send", json={**bad, "before": [{"kind": "x", "text": ""}]})).status == 400
+    assert (await client.post("/api/lab/send", json={**bad, "before": [{"kind": "razer", "text": "zz"}]})).status == 400
+    assert (await client.post("/api/lab/send", json={**bad, "before": "b1 01"})).status == 400
+
+
 async def test_long_lights_only_with_protocols_that_allow_them(client):
     ok = await client.put("/api/devices", json=[{"ip": "192.168.1.70", "segments": 300, "protocol": "pixels"}])
     assert ok.status == 200 and (await ok.json())[0]["segments"] == 300

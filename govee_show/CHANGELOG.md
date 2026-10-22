@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.80
+
+- New in **Setup → Settings → Packet lab**: **Try ways to switch on**. A TV sync box gets colour onto the
+  whole of the Christmas String Lights 2, while the add-on's realtime colours only reach the first 44 bulbs.
+  This tries seven guesses at how the sync box switches the light over, each followed by a rainbow. If the
+  rainbow spreads further along your light during one of them, tell us its number.
+
 ## 0.2.79
 
 - On lights using **Per bulb**, **App segments** or **Whole light only**, the **Selection** panel now warns
