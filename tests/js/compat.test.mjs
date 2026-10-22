@@ -1,0 +1,92 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { clipFit, reachNote, worst } from "../../govee_show/app/goveeshow/static/js/compat.js";
+import { newClip } from "../../govee_show/app/goveeshow/static/js/effects.js";
+
+const clip = (effect, params = {}, end = 10) => ({ ...newClip(effect, 0, end), ...params });
+const realtime = { protocol: "standard", segments: 15, ip: "10.0.0.2" };
+const whole = { protocol: "whole", segments: 15, ip: "10.0.0.3" };
+const level = (c, dev, opts) => clipFit(c, dev, opts).level;
+
+test("anything that only moves along the light won't work on Whole light only", () => {
+  for (const effect of ["chase", "comet", "scanner"]) {
+    for (const speed of [0.3, 1]) assert.equal(level(clip(effect, { speed }), whole), "no", `${effect} ${speed}`);
+  }
+  for (const effect of ["duo", "trio", "gradient"]) assert.equal(level(clip(effect, { speed: 0 }), whole), "no", effect);
+  assert.equal(level(clip("rainbow", { spread: 1, speed: 0 }), whole), "no");
+  assert.match(clipFit(clip("chase"), whole).reasons[0], /Whole light only/);
+});
+
+test("whole-light changes still work on Whole light only", () => {
+  assert.equal(level(clip("solid"), whole), "ok");
+  assert.equal(level(clip("fade"), whole), "ok");
+  assert.equal(level(clip("pulse", { rate: 0.5 }), whole), "ok");
+  assert.equal(level(clip("cycle", { rate: 0.3 }), whole), "ok");
+  assert.equal(level(clip("rainbow", { spread: 0, speed: 0.2 }), whole), "ok");
+  assert.equal(level(clip("wipe"), whole), "ok"); // it fades the whole light from one colour to the other
+});
+
+test("every effect works on a realtime light of ordinary length", () => {
+  for (const effect of ["solid", "duo", "trio", "pulse", "gradient", "cycle", "fade", "chase", "rainbow", "comet",
+    "scanner", "flicker", "lightning", "strobe", "twinkle", "wipe"]) {
+    assert.equal(level(clip(effect), realtime), "ok", effect);
+  }
+});
+
+test("settings too big for a short light make it one steady colour", () => {
+  const short = { ...realtime, segments: 2 };
+  assert.equal(level(clip("chase", { width: 4, speed: 1 }), short), "no");
+  assert.equal(level(clip("chase", { width: 1, speed: 0.3 }), short), "ok");
+  const one = { ...realtime, segments: 1 };
+  assert.equal(level(clip("gradient", { speed: 0 }), one), "no");
+  assert.match(clipFit(clip("gradient", { speed: 0 }), one).reasons[0], /1 segment /);
+  assert.equal(level(clip("pulse"), one), "ok");
+});
+
+test("too fast for a slow light is limited, not blocked", () => {
+  const pixels = { protocol: "pixels", segments: 300, ip: "10.0.0.4" };
+  const r = clipFit(clip("chase", { speed: 2 }), pixels);
+  assert.equal(r.level, "limited");
+  assert.match(r.reasons[0], /Too fast/);
+  assert.equal(level(clip("cycle", { rate: 0.2, blend: "fade" }), pixels), "ok");
+});
+
+test("a Govee scene needs a linked light with its model set", () => {
+  assert.equal(level(clip("scene"), { ...realtime, ip: "", sku: "H70C5" }), "no");
+  assert.equal(level(clip("scene"), { ...realtime, sku: "" }), "no");
+  assert.equal(level(clip("scene"), { ...realtime, sku: "H70C5" }), "ok");
+});
+
+test("House lane clips are marked when lights aren't on the house photo", () => {
+  const sweep = clip("sweep");
+  assert.equal(level(sweep, null, { house: { lights: [] } }), "ok");
+  assert.equal(level(sweep, null, { house: { lights: [{ name: "Porch", placed: true }] } }), "ok");
+  const some = clipFit(sweep, null, { house: { lights: [{ name: "Porch", placed: true }, { name: "Tree", placed: false }] } });
+  assert.equal(some.level, "limited");
+  assert.match(some.reasons[0], /Tree/);
+  assert.equal(level(sweep, null, { house: { lights: [{ name: "Tree", placed: false }] } }), "no");
+});
+
+test("unknown effects and missing lights aren't judged", () => {
+  assert.equal(level({ effect: "gone", start: 0, end: 1 }, realtime), "ok");
+  assert.equal(level(clip("chase"), undefined), "ok");
+});
+
+test("worst picks the result that matters most", () => {
+  const ok = { level: "ok", reasons: [] }, lim = { level: "limited", reasons: ["a"] }, no = { level: "no", reasons: ["b"] };
+  assert.equal(worst([ok, no, lim]), no);
+  assert.equal(worst([ok, lim]), lim);
+  assert.equal(worst([]).level, "ok");
+});
+
+test("realtime reach is noted only where the model's realtime mode stops short", () => {
+  const h70c5 = { sku: "H70C5", reach: 44 };
+  assert.match(reachNote({ protocol: "standard", bulbs: 300 }, h70c5).text, /first 44 bulbs of 300/);
+  assert.match(reachNote({ protocol: "razer" }, h70c5).text, /first 44 bulbs\./);
+  assert.equal(reachNote({ protocol: "razer" }, h70c5).short, "first 44 bulbs only");
+  assert.equal(reachNote({ protocol: "pixels", bulbs: 300 }, h70c5), null);
+  assert.equal(reachNote({ protocol: "standard", bulbs: 40 }, h70c5), null);
+  assert.equal(reachNote({ protocol: "standard" }, { sku: "H6199" }), null);
+  assert.equal(reachNote({ protocol: "standard" }, undefined), null);
+});

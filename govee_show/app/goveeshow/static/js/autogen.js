@@ -102,8 +102,9 @@ function clipFor(look, start, end, bps, n, colors, offset) {
   return clip;
 }
 
-// analysis: {beats, bars, sections, tempo, duration}; lights: [{id, segments, slow}], slow for lights
-// that can only change a few times a second (they get SLOW_LOOKS);
+// analysis: {beats, bars, sections, tempo, duration}; lights: [{id, segments, slow, fits}], slow for lights
+// that can only change a few times a second (they get SLOW_LOOKS), fits(clip) false for a clip the light
+// can't show (another of the section's looks is used instead);
 // colors: the palette's colours. Returns {clips: {deviceId: [clip]}, house: [clip]}.
 export function generateShow(analysis, lights, colors, { style = "balanced", seed = 1, house = false } = {}) {
   const duration = analysis.duration;
@@ -135,7 +136,15 @@ export function generateShow(analysis, lights, colors, { style = "balanced", see
       const start = bars[k], end = bars[Math.min(k + step, bars.length - 1)];
       lights.forEach((light, li) => {
         const look = (light.slow ? slow : fast)[(phrase + (unison ? 0 : li)) % 2];
-        clips[light.id].push(clipFor(look, start, end, bps, light.segments, colors, unison ? li : phrase));
+        const make = (l) => clipFor(l, start, end, bps, light.segments, colors, unison ? li : phrase);
+        let clip = make(look);
+        if (light.fits && !light.fits(clip)) {
+          for (const other of (light.slow ? SLOW_LOOKS : LOOKS)[t]) {
+            const c = make(other);
+            if (light.fits(c)) { clip = c; break; }
+          }
+        }
+        clips[light.id].push(clip);
       });
     }
     // A sweep across the house as the music lifts into a louder section.

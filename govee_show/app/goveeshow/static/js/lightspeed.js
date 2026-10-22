@@ -54,6 +54,23 @@ export function clipPace(clip, device, { seconds = 4, fps = 20 } = {}) {
   return { needed, can, tooFast: needed > can * 1.25 || jumpy, label: speed.label };
 }
 
+// What a light shows at `time`, from renderAt(t), the show's frame at t (a fresh array, or one it may
+// overwrite). A slow light shows the frame from its last update, so previews step as the real light
+// does: it updates `whole` times a second, down to `busy` when every bulb is different. On Whole light
+// only every segment shows the frame's average colour. Realtime lights show the frame as it is.
+export function asShown(device, time, renderAt) {
+  const speed = SLOW_PROTOCOLS[device?.protocol];
+  if (!speed) return renderAt(time);
+  const at = (rate) => Math.floor(time * rate + 1e-9) / rate;
+  let frame = renderAt(at(speed.whole));
+  if (speed.busy < speed.whole) frame = renderAt(at(speed.whole - (speed.whole - speed.busy) * busyShare(frame)));
+  if (device.protocol === "whole") {
+    const [r, g, b] = average(frame);
+    for (let i = 0; i < frame.length; i += 3) { frame[i] = r; frame[i + 1] = g; frame[i + 2] = b; }
+  }
+  return frame;
+}
+
 // Bulbs whose colour moved by more than `by` in any channel.
 function changed(a, b, by) {
   let count = 0;

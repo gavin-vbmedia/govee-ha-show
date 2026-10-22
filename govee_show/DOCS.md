@@ -380,10 +380,37 @@ straight away. To swap the effect, press the **Effect** button: it opens the sam
 chooser used to add one, playing on that light for the clip's length, with the current effect
 outlined. Changing effect keeps the clip's colours and brightness.
 
+Previews show what the real light will do. A light using **Per bulb**, **App segments** or **Whole
+light only** can only change a few times a second, so its previews (the timeline, **Preview**, the
+house photo, the Selection strip and the effect chooser) step at that pace rather than moving smoothly,
+and a **Whole light only** light shows the single colour it really will.
+
 On a light using **Per bulb**, **App segments** or **Whole light only**, which can only change a few
 times a second, the Selection panel warns **⚠ Too fast for this light** when a clip's effect changes
 faster than that, such as a quick chase, sparkle or strobe. It would look steppy on the real light.
 Slow the effect down, or use a fade, pulse or colour change instead.
+
+### Effects a light can't show
+
+Not every effect works on every light. A light set to **Whole light only** shows one colour at a
+time, so a chase, comet or two-colour blocks come out as one steady colour. A light with only a few
+segments can't show a chase wider than itself. A Govee scene needs a light that is linked and has
+its model set.
+
+- In the effect chooser, effects that won't work on the light are greyed out. Click one to see why.
+  Tick **Allow effects that won't work** to pick them anyway.
+- Effects that work, but not quite as meant (too fast for a slow light, or a House lane effect that
+  leaves out lights you haven't traced on the photo), are marked **⚠**.
+- On the timeline, clips that won't work are hatched with a red corner and a **⚠**; ones that only
+  partly work get an orange corner. Select one and the Selection panel says why. When you open a show,
+  a message says how many of its clips won't work.
+- Nothing is changed or removed for you: such clips stay in your show and play as before. They are
+  marked again whenever you change a light under **Setup → Devices**, say from **Realtime** to **Whole
+  light only**.
+- **Copy to all lights**, paste and adding an effect to several lights at once leave out the lights it
+  won't work on, and say which. **Generate** and **Describe it** only use effects that work.
+- A light whose realtime mode only reaches part of it, like the 30 m Christmas String Lights 2 (H70C5)
+  at 44 bulbs, shows **⚠ first 44 bulbs only** under its name on the timeline.
 
 ### Presets
 

@@ -3,12 +3,13 @@
 import { buildContext, checkClips, checkPresets, effectsForAI, placeClips } from "./aiclips.js";
 import { analyseInWorker, toMono } from "./analysis.js";
 import { STYLES, applyGenerated, generateShow, suggestLooks } from "./autogen.js";
+import { clipFit, reachNote, worst } from "./compat.js";
 import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, composeLight, defaultParams, matchesPreset, presetParams,
   renderTrack, showDuration,
 } from "./effects.js";
 import { partsFrame } from "./devicetest.js";
-import { clipPace, isSlow } from "./lightspeed.js";
+import { asShown, isSlow } from "./lightspeed.js";
 import { LAB_TEMPLATES, startSweep, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
@@ -658,6 +659,7 @@ async function loadModels() {
     const list = $("model-list");
     for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.realtime ? "" : " (untested)"}`, m.sku));
     renderDevices();
+    timeline.draw(); // lights' notes on the timeline come from the models
   } catch { /* the picker is a convenience; manual entry still works */ }
 }
 
@@ -802,8 +804,8 @@ new ResizeObserver(layoutPreview).observe(preview);
 const house = new House({
   api, status,
   frameFor(dev) {
-    if (!dev.parent) return physicalFrame(dev, app.time, housePositions());
-    return physicalFrame(app.lights[dev.parent], app.time, housePositions()).slice((dev.from - 1) * 3, dev.to * 3);
+    if (!dev.parent) return shownFrame(dev, housePositions());
+    return shownFrame(app.lights[dev.parent], housePositions()).slice((dev.from - 1) * 3, dev.to * 3);
   },
 });
 house.hiddenLights = new Set(prefs.get("house.hiddenLights", []));
@@ -813,6 +815,101 @@ const houseClips = () => app.show.tracks.find((t) => t.device === HOUSE)?.clips 
 const isHouse = (i) => app.show.tracks[i]?.device === HOUSE;
 // House effects go on the House lane and nowhere else; light effects everywhere but.
 const fitsTrack = (effect, i) => !!EFFECTS[effect]?.house === isHouse(i);
+
+// Whether clips suit their lights (compat.js). A long show on a Per bulb light takes a while to
+// check, so the timeline and effect chooser get theirs in the background (pass `then`), and every
+// answer is remembered until the clip or the light changes. Nothing is saved with the show.
+const ALLOW_UNFIT = "allowUnfit";
+const allowUnfit = () => prefs.get(ALLOW_UNFIT, false);
+const fitMemo = new Map(), fitJobs = new Map();
+let fitTimer = null;
+
+function fitContext(i) {
+  if (!isHouse(i)) return { dev: app.devices[app.show.tracks[i]?.device], opts: {} };
+  const pos = housePositionsAll();
+  return { dev: null, opts: { house: { lights: houseLights().map((d) => ({ name: d.name, placed: !!pos[d.id] })) } } };
+}
+
+function remember(key, fit) {
+  if (fitMemo.size > 5000) fitMemo.clear();
+  fitMemo.set(key, fit);
+  return fit;
+}
+
+// The fit of `clip` on `dev`: worked out now, or with `then`, null and then(fit) once it's ready.
+function fitFor(clip, dev, opts = {}, then = null) {
+  const { start, end, ...rest } = clip;
+  const key = JSON.stringify([rest, end - start, dev && [dev.protocol, dev.segments, !!dev.ip, dev.sku || ""], opts.house]);
+  if (fitMemo.has(key)) return fitMemo.get(key);
+  if (!then) return remember(key, clipFit(clip, dev, opts));
+  const copy = { ...clip };
+  const job = fitJobs.get(key) || { run: () => clipFit(copy, dev, opts), then: [] };
+  job.then.push(then);
+  fitJobs.set(key, job);
+  fitTimer ??= setTimeout(runFits, 0);
+  return null;
+}
+
+function runFits() {
+  const until = performance.now() + 12;
+  for (const [key, job] of fitJobs) {
+    fitJobs.delete(key);
+    const fit = remember(key, job.run());
+    for (const then of job.then) then(fit);
+    if (performance.now() > until) break;
+  }
+  fitTimer = fitJobs.size ? setTimeout(runFits, 0) : null;
+}
+
+const clipFitOn = (clip, i, then = null) => {
+  const { dev, opts } = fitContext(i);
+  return fitFor(clip, dev, opts, then);
+};
+
+// The fit of an effect added to several tracks at once: it won't work only if it won't work on any of
+// them, and is limited where it's left off some.
+function fitAcross(clip, tracks, then = null) {
+  const ts = tracks.filter((t) => fitsTrack(clip.effect, t));
+  const fits = ts.map(() => null);
+  const combine = () => {
+    if (ts.length <= 1) return fits[0] || { level: "ok", reasons: [] };
+    const no = ts.filter((_, k) => fits[k].level === "no");
+    if (no.length === ts.length) return { level: "no", reasons: [`Won't work on any of these lights. ${fits[0].reasons[0]}`] };
+    if (no.length) return { level: "limited", reasons: [`Won't work on ${no.map(trackName).join(", ")}, so it's left off.`] };
+    const w = worst(fits);
+    return w.level === "ok" ? w : { level: w.level, reasons: [`On ${trackName(ts[fits.indexOf(w)])}: ${w.reasons[0]}`] };
+  };
+  let left = ts.length;
+  ts.forEach((t, k) => {
+    const fit = clipFitOn(clip, t, then && ((f) => { fits[k] = f; if (--left === 0) then(combine()); }));
+    if (fit) { fits[k] = fit; left--; }
+  });
+  return left ? null : combine();
+}
+
+const unfit = (clip, i) => !allowUnfit() && clipFitOn(clip, i).level === "no";
+const fitText = (fit) => `⚠ ${fit.level === "no" ? "Won't work here. " : ""}${fit.reasons.join(" ")}`;
+
+// The physical light a track plays on, and a note if its realtime mode doesn't reach all of it.
+function trackNote(dev) {
+  const light = dev && (dev.light || app.lights[dev.parent] || dev);
+  return light ? reachNote(light, app.models[skuOf(light.sku)]) : null;
+}
+
+let fitRedraw = false;
+const redrawForFits = () => {
+  if (fitRedraw) return;
+  fitRedraw = true;
+  requestAnimationFrame(() => { fitRedraw = false; timeline.draw(); });
+};
+// While a clip is resized its new length is still being checked, so it keeps its last mark meanwhile.
+const lastFit = new WeakMap();
+app.clipFit = (clip, i) => {
+  const fit = clipFitOn(clip, i, redrawForFits);
+  if (fit) lastFit.set(clip, fit);
+  return fit || lastFit.get(clip) || null;
+};
+app.trackNote = (dev) => trackNote(dev)?.short || null;
 
 function housePositions() {
   return houseClips().length ? housePositionsAll() : {};
@@ -846,12 +943,15 @@ function physicalFrame(light, time, pos) {
   return composeLight(light, (id) => app.show.tracks.find((t) => t.device === id), time, pos, houseClips());
 }
 
+// What a physical light shows now: stepped (and on Whole light only, one colour) as on the real light.
+const shownFrame = (light, pos) => asShown(light, app.time, (t) => physicalFrame(light, t, pos));
+
 // What a preview row shows: for a split light and its parts, their share of what the light
 // actually plays (so a part's clip shows over the whole light's). `composed` caches per light.
 function previewFrame(tr, dev, pos, composed) {
   const light = dev.light || app.lights[dev.parent];
-  if (!light) return lightFrame(tr, dev, app.time, pos);
-  const full = composed[light.id] ??= physicalFrame(light, app.time, pos);
+  if (!light) return asShown(dev, app.time, (t) => lightFrame(tr, dev, t, pos));
+  const full = composed[light.id] ??= shownFrame(light, pos);
   if (dev.parent) return full.slice((dev.from - 1) * 3, dev.to * 3);
   return joinParts(light, full);
 }
@@ -1239,7 +1339,7 @@ function drawClipPreview() {
   }
   const dev = track && app.devices[track.device];
   if (!dev) { if (clipPreview.dev) stopLightPreview(); return; }
-  const rgb = renderTrack([clip], t, dev.segments);
+  const rgb = asShown(dev, t, (tt) => renderTrack([clip], Math.max(tt, clip.start), dev.segments));
   drawStrip(c, rgb, dev.segments, (dev.brightness ?? 100) / 100);
   const onLight = previewOnLight() && dev.ip && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
   if (onLight) sendPreview(dev, rgb);
@@ -1328,8 +1428,10 @@ function chosenParams(effect, preset, from = null) {
 // presets. groups lists [heading, house] sections (heading null for a single unnamed one).
 // onPick(effect, preset) runs with the choice; current/currentPreset are outlined. suggested is
 // {heading, looks: [{effect, label, params}]}, shown first, for adding to a part of the song.
+// fit(clip, then), when given, says whether a choice suits the light (as fitFor does): ones that won't
+// work are greyed out unless "Allow effects that won't work" is ticked, and the current one never is.
 function chooseEffect({ title, groups, dev = null, length = 3, from = null, current = null, currentPreset = null,
-  suggested = null, onPick }) {
+  suggested = null, fit = null, onPick }) {
   const dlg = document.createElement("dialog");
   dlg.className = "effect-dialog";
   const head = document.createElement("div");
@@ -1348,28 +1450,53 @@ function chooseEffect({ title, groups, dev = null, length = 3, from = null, curr
   const ml = document.createElement("label");
   ml.append(mineOnly, "★ My presets only");
   ml.title = "Only show the presets you've saved";
+  const allow = document.createElement("input");
+  allow.type = "checkbox";
+  allow.checked = allowUnfit();
+  const al = document.createElement("label");
+  al.append(allow, "Allow effects that won't work");
+  al.title = "Let you pick effects this light can't show properly, such as a chase on a light that is one colour at a time";
+  al.hidden = !fit;
   const close = button("✕", () => dlg.close(), "ghost");
   close.title = "Close (Esc)";
-  head.append(h, tl, ml, close);
+  // Why a greyed-out effect won't work, once it's clicked. In the header, so it shows wherever you've scrolled.
+  const note = document.createElement("p");
+  note.className = "hint fit-warning effect-dialog-note";
+  note.hidden = true;
+  head.append(h, tl, ml, al, close, note);
   const body = document.createElement("div");
   body.className = "effect-dialog-body";
   dlg.append(head, body);
   const len = Math.min(Math.max(length, 1), 6);
 
   const choice = (effect, preset, label, active) => {
-    const b = button("", () => { dlg.close(); app.paletteEffect = effect; onPick(effect, preset); }, active ? "active" : "");
+    let blocked = null;
+    const b = button("", () => {
+      if (blocked) { note.textContent = `⚠ ${label} won't work here. ${blocked}`; note.hidden = false; return; }
+      dlg.close(); app.paletteEffect = effect; onPick(effect, preset);
+    }, active ? "active" : "");
     const strip = document.createElement("canvas");
     strip.className = "fx-strip";
     const span = document.createElement("span");
     span.textContent = label;
     b.append(strip, span);
-    pickerPreview.items.push({ canvas: strip, clip: { effect, start: 0, end: len, ...chosenParams(effect, preset, from) }, dev });
+    const params = chosenParams(effect, preset, from);
+    pickerPreview.items.push({ canvas: strip, clip: { effect, start: 0, end: len, ...params }, dev });
+    const mark = (r) => {
+      if (!r || r.level === "ok") return;
+      if (r.level === "no" && !allow.checked && effect !== current) blocked = r.reasons.join(" ");
+      b.classList.add(blocked ? "unfit" : "limited");
+      b.title = fitText(r);
+      span.textContent = `⚠ ${label}`;
+    };
+    if (fit) mark(fit({ effect, start: 0, end: Math.max(length, 0.05), ...params }, mark));
     return b;
   };
   const render = () => {
     pickerPreview.items = [];
     pickerPreview.started = performance.now();
     body.replaceChildren();
+    note.hidden = true;
     ml.hidden = !toggle.checked;
     const onlyMine = toggle.checked && mineOnly.checked;
     if (suggested?.looks.length) {
@@ -1421,6 +1548,7 @@ function chooseEffect({ title, groups, dev = null, length = 3, from = null, curr
       body.append(grid);
     }
   };
+  allow.addEventListener("change", () => { prefs.set(ALLOW_UNFIT, allow.checked); render(); });
   for (const [box, key] of [[toggle, SHOW_PRESETS_KEY], [mineOnly, MINE_ONLY_KEY]]) {
     box.addEventListener("change", () => {
       try { localStorage.setItem(key, box.checked ? "1" : "0"); } catch { /* not remembered */ }
@@ -1444,7 +1572,7 @@ function drawPickerPreviews() {
     const secs = (performance.now() - set.started) / 1000;
     for (const { canvas, clip, dev } of items) {
       const n = dev?.segments || 15;
-      drawStrip(canvas, renderTrack([clip], secs % clip.end, n), n, (dev?.brightness ?? 100) / 100);
+      drawStrip(canvas, asShown(dev, secs % clip.end, (t) => renderTrack([clip], t, n)), n, (dev?.brightness ?? 100) / 100);
     }
   }
 }
@@ -1470,12 +1598,11 @@ function renderInspector() {
   const h = document.createElement("h3");
   h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${trackName(sel.track)}`;
   box.append(h, clipPreviewRow(clip, dev));
-  const pace = clipPace(clip, dev);
-  if (pace?.tooFast) {
+  const fit = clipFitOn(clip, sel.track);
+  if (fit.level !== "ok") {
     const warn = document.createElement("p");
-    warn.className = "hint pace-warning";
-    warn.textContent = `⚠ Too fast for this light. On ${pace.label} it changes about ${Math.max(1, Math.round(pace.can))} ` +
-      "times a second, so this will look steppy. Slow it down, or use a fade, pulse or colour change.";
+    warn.className = "hint fit-warning";
+    warn.textContent = fitText(fit);
     box.append(warn);
   }
 
@@ -1508,6 +1635,7 @@ function renderInspector() {
     title: `Change the effect on ${trackName(sel.track)}`,
     groups: [[null, isHouse(sel.track)]],
     dev, length: clip.end - clip.start, from: clip, current: clip.effect, currentPreset,
+    fit: (c, then) => clipFitOn(c, sel.track, then),
     onPick: (key, preset) => {
       const params = chosenParams(key, preset, clip);
       if (key === clip.effect) {
@@ -1664,21 +1792,29 @@ function paste() {
       : "House effects can only go on the House lane", true);
     return;
   }
-  const pasted = fits.map((c) => ({ ...clone(c), start: c.start + shift, end: c.end + shift }));
+  const pasted = fits.map((c) => ({ ...clone(c), start: c.start + shift, end: c.end + shift }))
+    .filter((c) => !unfit(c, sel.track));
+  const left = fits.length - pasted.length;
+  if (!pasted.length) { status(`${left === 1 ? "That effect won't" : "Those effects won't"} work on ${trackName(sel.track)}`, true); return; }
   app.show.tracks[sel.track].clips.push(...pasted);
   app.selected = pasted.length === 1 ? { track: sel.track, clip: pasted[0] } : { track: sel.track, clip: null };
-  status(`Pasted ${pasted.length} effect${pasted.length > 1 ? "s" : ""} onto ${trackName(sel.track)}`);
+  status(`Pasted ${pasted.length} effect${pasted.length > 1 ? "s" : ""} onto ${trackName(sel.track)}`
+    + (left ? `, leaving out ${left} that won't work there` : ""));
   app.changed();
 }
 
 function copyClipsTo(clips, from, targets, replace = false) {
   if (!targets.length) { status("There are no other lights", true); return; }
+  let left = 0;
   for (const t of targets) {
+    const fits = clips.filter((c) => !unfit(c, t));
+    left += clips.length - fits.length;
     if (replace) app.show.tracks[t].clips = [];
-    app.show.tracks[t].clips.push(...clips.map(clone));
+    app.show.tracks[t].clips.push(...fits.map(clone));
   }
   status(`Copied ${clips.length} effect${clips.length > 1 ? "s" : ""} from ${trackName(from)} to `
-    + (targets.length === 1 ? trackName(targets[0]) : `${targets.length} lights`));
+    + (targets.length === 1 ? trackName(targets[0]) : `${targets.length} lights`)
+    + (left ? `, leaving out ${left} where ${left === 1 ? "it" : "they"} won't work` : ""));
   app.changed();
 }
 
@@ -1689,6 +1825,13 @@ function renderTrackInspector(i) {
   const h = document.createElement("h3");
   h.textContent = `${isHouse(i) ? "House lane" : trackName(i)}: ${clips.length} effect${clips.length === 1 ? "" : "s"}`;
   box.append(h);
+  const reach = !isHouse(i) && trackNote(app.devices[app.show.tracks[i].device]);
+  if (reach) {
+    const p = document.createElement("p");
+    p.className = "hint fit-warning";
+    p.textContent = `⚠ ${reach.text}`;
+    box.append(p);
+  }
   if (isHouse(i)) {
     const p = document.createElement("p");
     p.className = "hint";
@@ -2264,6 +2407,7 @@ function renderRangeInspector(r) {
     title: `Add an effect to ${h.textContent.replace(/^Selected /, "")}`,
     groups, dev: app.devices[app.show.tracks[lights[0] ?? tracks[0]]?.device], length: r.end - r.start,
     current: null, suggested: lights.length ? suggestionsFor(r, lights) : null,
+    fit: (c, then) => fitAcross(c, tracks, then),
     onPick: (key, preset) => { app.lastAdd = { key, preset }; addToRange(key, preset); },
   }), "primary");
   actions.append(choose);
@@ -2298,15 +2442,23 @@ function suggestionsFor(r, lights) {
 }
 
 function addToRange(effect, preset = null) {
-  const r = app.selected.range, tracks = rangeTracks(r).filter((t) => fitsTrack(effect, t));
+  const r = app.selected.range;
+  const clipFor = () => ({ effect, start: r.start, end: r.end, ...chosenParams(effect, preset) });
+  const kind = rangeTracks(r).filter((t) => fitsTrack(effect, t));
+  // Left off the lights it won't work on, unless that's allowed.
+  const tracks = kind.filter((t) => !unfit(clipFor(), t));
+  const left = kind.filter((t) => !tracks.includes(t));
+  const label = `${EFFECTS[effect].label}${preset ? ` (${preset.label})` : ""}`;
+  if (!tracks.length) { status(`${label} won't work on ${left.map(trackName).join(", ")}`, true); return; }
   const added = tracks.map((t) => {
-    const clip = { effect, start: r.start, end: r.end, ...chosenParams(effect, preset) };
+    const clip = clipFor();
     app.show.tracks[t].clips.push(clip);
     return { track: t, clip };
   });
   // One light: edit the new clip straight away. Several: keep the selection to add more.
   if (added.length === 1) app.selected = added[0];
-  status(`Added ${EFFECTS[effect].label}${preset ? ` (${preset.label})` : ""} to ${added.length === 1 ? trackName(tracks[0]) : `${added.length} lights`}`);
+  status(`Added ${label} to ${added.length === 1 ? trackName(tracks[0]) : `${added.length} lights`}`
+    + (left.length ? `, not ${left.map(trackName).join(", ")}, where it won't work` : ""));
   app.changed();
 }
 
@@ -2434,6 +2586,25 @@ async function openShow(id) {
   await refreshShows();
   layoutPreview();
   timeline.layout();
+  reportUnfit();
+}
+
+// Once a show is open, says how many of its clips won't work on their lights (worked out in the
+// background). They stay in the show and play as they always did; the timeline marks them.
+function reportUnfit() {
+  const show = app.show, clips = [];
+  show.tracks.forEach((tr, i) => tr.clips.forEach((c) => clips.push([c, i])));
+  let left = clips.length, count = 0;
+  const done = (fit) => {
+    if (fit.level === "no") count++;
+    if (--left || !count || show !== app.show) return;
+    status(`⚠ ${count} clip${count === 1 ? " won't" : "s won't"} work on ${count === 1 ? "its light" : "their lights"}. `
+      + "They're hatched on the timeline: select one to see why.", true);
+  };
+  for (const [c, i] of clips) {
+    const fit = clipFitOn(c, i, done);
+    if (fit) done(fit);
+  }
 }
 
 async function save() {
@@ -3003,7 +3174,10 @@ function generateDialog() {
 async function generate({ colors, style, house }) {
   // A split light gets effects on its parts; its own track (all the parts at once) is left for you.
   const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && playingDev(tr) && !playingDev(tr).light)
-    .map((tr) => ({ id: tr.device, segments: app.devices[tr.device].segments, slow: isSlow(app.devices[tr.device]) }));
+    .map((tr) => {
+      const dev = app.devices[tr.device];
+      return { id: tr.device, segments: dev.segments, slow: isSlow(dev), fits: (c) => fitFor(c, dev).level !== "no" };
+    });
   if (!lights.length) { status("Add your lights under Setup → Devices first", true); return; }
   // Listen to the song first if that hasn't been done yet.
   if (songBuffer && !app.show.beats.length && !app.show.sections?.length && !(await analyseSong())) return;
@@ -3155,7 +3329,13 @@ async function describe(request, selectionFor, { replaceAll = false, what = "you
     return;
   }
   if (show !== app.show) { done(""); return; } // another show was opened meanwhile
-  const { placed, skipped } = checkClips(reply, lights, duration);
+  const checked = checkClips(reply, lights, duration), skipped = checked.skipped;
+  // The AI can't see what each light can show, so clips that won't work on theirs are left out.
+  const placed = checked.placed.filter(({ trackIndex, clip }) => {
+    if (clipFitOn(clip, trackIndex).level !== "no") return true;
+    skipped.push(`${EFFECTS[clip.effect].label} won't work on ${trackName(trackIndex)}`);
+    return false;
+  });
   if (placed.length) {
     if (replaceAll) for (const l of lights) show.tracks[l.trackIndex].clips = [];
     placeClips(show, placed);

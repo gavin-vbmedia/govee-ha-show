@@ -21,6 +21,11 @@ KNOWN_SEGMENTS = {
     "H70C5": 44,  # tested on a real light (issue #74)
 }
 
+# Lights whose realtime mode stops short of the end of the string: how many bulbs it reaches.
+KNOWN_REACH = {
+    "H70C5": 44,  # docs/govee-protocols.md
+}
+
 # Realtime confirmed on real lights where Govee's product list says otherwise.
 KNOWN_REALTIME = {
     "H706A", "H706B", "H706C",  # Permanent Outdoor Lights Pro: the owner's, and signalrgb-govee
@@ -47,6 +52,8 @@ def main():
         entry = {"sku": sku, "name": name.group(1).strip(), "realtime": razer.group(1) == "1" or sku in KNOWN_REALTIME}
         if sku in KNOWN_SEGMENTS:
             entry["segments"] = KNOWN_SEGMENTS[sku]
+        if sku in KNOWN_REACH:
+            entry["reach"] = KNOWN_REACH[sku]
         if sku in KNOWN_NOTES:
             entry["note"] = KNOWN_NOTES[sku]
         models[sku] = entry

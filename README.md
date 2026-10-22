@@ -118,6 +118,9 @@ entities in automations, also set up the Mosquitto broker add-on and the MQTT in
 - Colour palettes for holidays and moods, plus your own, to recolour an effect, a light or the
   whole show in one click
 - Copy and paste effects between lights, play and loop just a region, undo and redo
+- Knows what each light can show: effects that won't work on a light (a chase on a light that shows one
+  colour at a time) are greyed out in the chooser, such clips in older shows are marked on the timeline,
+  and previews step at a slow light's own pace so they look like the real thing
 - Cut, trim and splice songs on the **Music** tab, with crossfades
 - Arrange the editor your way: pick a page layout, then drag, collapse or hide any panel
 - Experimental: hand a light to one of Govee's built-in scenes for part of the show
@@ -228,9 +231,10 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/analysis.js                      Song analysis: tempo, beats, bars and sections
     js/analysis-worker.js               Runs the analysis off the main thread
     js/autogen.js                       Generates a draft show from the analysis
-    js/lightspeed.js                    Which protocols can only change a light a few times a second
+    js/lightspeed.js                    How fast each protocol can change a light, and previews at that pace
+    js/compat.js                        Whether a clip's effect can show on its light, for marking and blocking
     js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
-    models.json                         Govee model names and segment counts
+    models.json                         Govee model names, segment counts and realtime reach
 tools/build_models.py                   Regenerates models.json
 tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traffic from an Android log
 docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions

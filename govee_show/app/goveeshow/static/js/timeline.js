@@ -4,6 +4,7 @@
 // so long songs at high zoom never hit browser canvas size limits.
 
 import { EFFECTS, HOUSE, renderTrack } from "./effects.js";
+import { asShown } from "./lightspeed.js";
 
 const HEADER_W = 150;
 const RULER_H = 22;
@@ -14,6 +15,7 @@ const TOP = RULER_H + WAVE_H + BEAT_H;
 const EDGE_PX = 6;
 const SNAP_PX = 8;
 const MIN_LEN = 0.05;
+const WARN = "#d97706";
 
 // One tint per section name unless a colour was picked on the Music tab, shared with that tab so
 // a song looks the same in both.
@@ -23,7 +25,8 @@ export const sectionTint = (names, label, color) => color || `hsl(${sectionHue(n
 
 export class Timeline {
   // app provides: show, devices (by id), pps, time, selected, paletteEffect, snap,
-  // peaks, duration(), and callbacks seek(t), select(sel), changed({live}).
+  // peaks, duration(), and callbacks seek(t), select(sel), changed({live}), clipFit(clip, track) (whether
+  // a clip suits its light, or null while that's worked out) and trackNote(device) (a short warning or null).
   constructor(app) {
     this.app = app;
     this.scroll = document.getElementById("timeline-scroll");
@@ -104,7 +107,7 @@ export class Timeline {
       ctx.fillStyle = col(i % 2 ? "--track-alt" : "--track");
       ctx.fillRect(HEADER_W, y, w - HEADER_W, TRACK_H);
       const dev = this.app.devices[tr.device];
-      tr.clips.forEach((clip) => this.drawClip(clip, y, dev ? dev.segments : 10, col));
+      tr.clips.forEach((clip) => this.drawClip(clip, y, dev, col, this.app.clipFit?.(clip, i)));
     });
 
     // beats, with the first beat of each bar drawn stronger
@@ -188,7 +191,9 @@ export class Timeline {
         : dev.light ? (dev.light.whole === false ? "Not played: parts only" : `All parts · ${dev.segments} segments`)
         : dev.parent ? `Segments ${dev.from}–${dev.to}`
         : `${dev.segments} segments${dev.ip ? "" : " · planned"}`;
-      ctx.fillText(clipText(ctx, sub, HEADER_W - x - 6), x, y + 36);
+      const note = !house && dev && this.app.trackNote?.(dev);
+      if (note) ctx.fillStyle = WARN;
+      ctx.fillText(clipText(ctx, note ? `⚠ ${note}` : sub, HEADER_W - x - 6), x, y + 36);
     });
     this.drawRange(col);
     ctx.strokeStyle = col("--line");
@@ -205,8 +210,11 @@ export class Timeline {
     this.drawPlayhead();
   }
 
-  // A clip shows its own animation: time runs left to right, segments top to bottom.
-  drawClip(clip, y, n, col) {
+  // A clip shows its own animation as its light shows it (stepped on a slow light, see asShown): time
+  // runs left to right, segments top to bottom. One that won't work on its light is hatched, and one
+  // that only partly works gets a corner; both get a ⚠.
+  drawClip(clip, y, dev, col, fit = null) {
+    const n = dev ? dev.segments : 10;
     const { ctx, w } = this;
     const x0 = this.x(clip.start), x1 = this.x(clip.end);
     if (x1 < HEADER_W || x0 > w) return;
@@ -216,11 +224,29 @@ export class Timeline {
     const buf = new Uint8Array(n * 3);
     for (let x = left; x < right; x += step) {
       const t = this.t(x + step / 2);
-      renderTrack([clip], Math.min(Math.max(t, clip.start), clip.end - 1e-6), n, buf);
+      const rgb = asShown(dev, Math.min(Math.max(t, clip.start), clip.end - 1e-6),
+        (tt) => renderTrack([clip], Math.max(tt, clip.start), n, buf));
       for (let i = 0; i < n; i++) {
-        ctx.fillStyle = `rgb(${buf[i * 3]},${buf[i * 3 + 1]},${buf[i * 3 + 2]})`;
+        ctx.fillStyle = `rgb(${rgb[i * 3]},${rgb[i * 3 + 1]},${rgb[i * 3 + 2]})`;
         ctx.fillRect(x, top + i * segH, Math.min(step, right - x), segH + 0.5);
       }
+    }
+    const level = fit?.level || "ok";
+    if (level === "no") {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(left, top, right - left, height); ctx.clip();
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(left, top, right - left, height);
+      ctx.strokeStyle = "rgba(255,255,255,0.45)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let hx = left - height - ((left - x0) % 10); hx < right; hx += 10) { ctx.moveTo(hx, top + height); ctx.lineTo(hx + height, top); }
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (level !== "ok" && right - left > 10) {
+      ctx.fillStyle = level === "no" ? col("--danger") || "#dc2626" : WARN;
+      ctx.beginPath(); ctx.moveTo(right - 12, top); ctx.lineTo(right, top); ctx.lineTo(right, top + 12); ctx.fill();
     }
     const selected = this.app.selected?.clip === clip;
     ctx.lineWidth = selected ? 2 : 1;
@@ -229,7 +255,7 @@ export class Timeline {
     ctx.lineWidth = 1;
     if (x1 - x0 > 40) {
       ctx.font = "600 11px system-ui, sans-serif";
-      const label = EFFECTS[clip.effect]?.label || clip.effect;
+      const label = `${level === "ok" ? "" : "⚠ "}${EFFECTS[clip.effect]?.label || clip.effect}`;
       const tx = Math.max(x0, HEADER_W) + 4;
       ctx.fillStyle = "rgba(0,0,0,0.55)";
       ctx.fillRect(tx - 2, top + 2, ctx.measureText(label).width + 6, 15);
