@@ -19,7 +19,7 @@ from aiohttp import web
 from . import __version__, ai, commands, discovery, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
-from .lab import KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, Lab, LabError, build as lab_build
+from .lab import KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError, Step as LabStep, build as lab_build
 from .listen import Listener
 from .mqtt import MqttBridge
 from .output import PROBE_MAX, LivePreview, Output, run_hold, run_probe, run_test_pattern
@@ -127,15 +127,9 @@ async def listening_status(request):
                               "count": len(listener.records), "summary": listener.summary()[:30]})
 
 
-async def lab_send(request):
-    """Packet lab: send a hand-made message to one of your lights, `repeat` times."""
-    body = await request.json()
+def _lab_step(body: dict) -> LabStep:
     if not isinstance(body, dict):
-        raise web.HTTPBadRequest(text="expected an object")
-    app = request.app
-    ip = str(body.get("ip", ""))
-    if not ip or ip not in {d["ip"] for d in app[STORAGE].load_devices()}:
-        raise web.HTTPBadRequest(text="pick one of your lights")
+        raise web.HTTPBadRequest(text="each step must be an object")
     kind = body.get("kind")
     if kind not in LAB_KINDS:
         raise web.HTTPBadRequest(text=f"kind must be one of {', '.join(LAB_KINDS)}")
@@ -155,13 +149,29 @@ async def lab_send(request):
         payload = lab_build(kind, str(body.get("text", "")), length)
     except LabError as e:
         raise web.HTTPBadRequest(text=str(e))
+    return LabStep(payload, repeat, interval, bool(body.get("realtime_on")), str(body.get("label", ""))[:120])
+
+
+async def lab_send(request):
+    """Packet lab: send a hand-made message to one of your lights, or a sweep of several in turn."""
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise web.HTTPBadRequest(text="expected an object")
+    app = request.app
+    ip = str(body.get("ip", ""))
+    if not ip or ip not in {d["ip"] for d in app[STORAGE].load_devices()}:
+        raise web.HTTPBadRequest(text="pick one of your lights")
+    raw_steps = body["steps"] if "steps" in body else [body]
+    if not isinstance(raw_steps, list) or not 1 <= len(raw_steps) <= LAB_MAX_STEPS:
+        raise web.HTTPBadRequest(text=f"steps must be a list of 1-{LAB_MAX_STEPS}")
+    steps = [_lab_step(s) for s in raw_steps]
     # Nothing else may talk to the light meanwhile, or the results mean nothing.
     await app[RUNNER].stop()
     if (old := app[TESTS].pop(ip, None)):
         old.cancel()
     app[OUTPUT].release(ip)
-    app[LAB].start(ip, payload, repeat, interval, bool(body.get("realtime_on")))
-    return web.json_response({"ok": True, "bytes": len(payload)})
+    app[LAB].start(ip, steps)
+    return web.json_response({"ok": True, "steps": len(steps)})
 
 
 async def lab_stop(request):

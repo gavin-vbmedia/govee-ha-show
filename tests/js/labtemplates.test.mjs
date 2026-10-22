@@ -25,3 +25,17 @@ test("app segments mask covers every segment", () => {
 test("json templates are valid JSON", () => {
   for (const t of Object.values(LAB_TEMPLATES).filter((t) => t.kind === "json")) JSON.parse(t.text(5, [1, 2, 3]));
 });
+
+import { windowSweep } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+
+test("window sweep: one colour per guess, each asking for the next w bulbs", () => {
+  const steps = windowSweep(44);
+  assert.equal(new Set(steps.map((s) => s.colour)).size, steps.length);
+  assert.ok(steps.every((s) => s.kind === "razer" && s.realtime_on && s.repeat === 30));
+  const twoByte = bytes(steps[0].text);
+  assert.deepEqual(twoByte.slice(0, 4), [0xb0, 1, 0, 88]);
+  assert.equal(twoByte.length, 4 + 88 * 3);
+  assert.deepEqual(twoByte.slice(4 + 44 * 3, 4 + 44 * 3 + 3), [255, 0, 0]);
+  assert.deepEqual(bytes(steps[1].text).slice(0, 4), [0xb0, 1, 44, 44]);
+  assert.equal(bytes(steps[7].text).length, 3 + 44 * 4);
+});

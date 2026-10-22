@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.74
+
+- **Packet lab** has a **Run sweep** button for lights whose realtime mode only reaches their first few
+  dozen bulbs, like the Christmas String Lights 2 and the icicle lights. It tries nine ways of reaching
+  the rest, each in its own colour, so a short video of the light shows whether any of them works.
+
 ## 0.2.73
 
 - **Setup → Settings → Packet lab**: send one of your lights a message you choose and see what it sends

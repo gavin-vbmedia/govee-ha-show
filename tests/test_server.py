@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 
 import pytest
@@ -439,3 +440,36 @@ async def test_packet_lab_sends_only_to_your_lights(client):
     for bad in ({**ok, "ip": "192.0.2.99"}, {**ok, "kind": "dmx"}, {**ok, "text": "zz"}, {**ok, "repeat": 0},
                 {**ok, "repeat": 99999}, {**ok, "interval_ms": 1}, {**ok, "length": -1}):
         assert (await client.post("/api/lab/send", json=bad)).status == 400
+
+
+async def test_packet_lab_runs_a_sweep_step_by_step(client):
+    import socket
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind(("127.0.0.1", 4003))
+    rx.setblocking(False)
+    try:
+        await client.put("/api/devices", json=[{"ip": "127.0.0.1", "name": "Tree", "segments": 10}])
+        steps = [{"kind": "razer", "text": "b0 01 01 ff0000", "repeat": 1, "label": "red: first"},
+                 {"kind": "razer", "text": "b2 01 01 00ff00", "repeat": 1, "label": "green: second"}]
+        import goveeshow.lab as lab
+        old, lab.STEP_GAP_S = lab.STEP_GAP_S, 0.05  # the sweep pauses between steps
+        try:
+            assert (await client.post("/api/lab/send", json={"ip": "127.0.0.1", "steps": steps})).status == 200
+            await asyncio.sleep(0.3)
+        finally:
+            lab.STEP_GAP_S = old
+        pts = []
+        while True:
+            try:
+                pts.append(base64.b64decode(json.loads(rx.recv(4096))["msg"]["data"]["pt"]))
+            except BlockingIOError:
+                break
+        assert [p[3] for p in pts] == [0xB0, 0xB1, 0xB2]  # first step, realtime off between, second step
+        status = await (await client.get("/api/lab")).json()
+        assert status["steps"] == 2 and status["step"] == 2 and status["label"] == "green: second"
+        assert [e["text"] for e in status["log"] if e["dir"] == "step"] == ["1 of 2: red: first", "2 of 2: green: second"]
+    finally:
+        rx.close()
+    bad = {"ip": "127.0.0.1", "steps": []}
+    assert (await client.post("/api/lab/send", json=bad)).status == 400
+    assert (await client.post("/api/lab/send", json={**bad, "steps": [{"kind": "razer", "text": "b1 01"}] * 21})).status == 400
