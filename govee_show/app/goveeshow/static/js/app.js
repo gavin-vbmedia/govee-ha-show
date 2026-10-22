@@ -8,7 +8,7 @@ import {
   renderTrack, showDuration,
 } from "./effects.js";
 import { partsFrame } from "./devicetest.js";
-import { isSlow } from "./lightspeed.js";
+import { clipPace, isSlow } from "./lightspeed.js";
 import { LAB_TEMPLATES, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
@@ -1470,6 +1470,14 @@ function renderInspector() {
   const h = document.createElement("h3");
   h.textContent = `${EFFECTS[clip.effect]?.label || clip.effect} on ${trackName(sel.track)}`;
   box.append(h, clipPreviewRow(clip, dev));
+  const pace = clipPace(clip, dev);
+  if (pace?.tooFast) {
+    const warn = document.createElement("p");
+    warn.className = "hint pace-warning";
+    warn.textContent = `⚠ Too fast for this light. On ${pace.label} it changes about ${Math.max(1, Math.round(pace.can))} ` +
+      "times a second, so this will look steppy. Slow it down, or use a fade, pulse or colour change.";
+    box.append(warn);
+  }
 
   // Settings are grouped so a clip with many of them stays readable.
   const group = (title) => {
