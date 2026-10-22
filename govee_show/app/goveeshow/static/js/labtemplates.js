@@ -10,6 +10,11 @@ const rainbow = (n) => Array.from({ length: n }, (_, i) => {
 // Keeps a realtime frame on the light for about 5 seconds, as the lights drop back to their own scene.
 const STREAM = { repeat: 50, interval: 100, realtimeOn: true };
 
+// The window the sweeps work on: the light's model's known realtime reach (44 on the H70C5), else
+// Segments. Picking a light sets Segments to its full length (300 on a Per bulb H70C5), and a realtime
+// frame longer than the window makes such a light ignore it, so the known reach wins.
+export const sweepWindow = (model, segments) => model?.reach || segments || 44;
+
 export const LAB_TEMPLATES = {
   status: { label: "Ask for its status", kind: "json",
     text: () => '{"msg":{"cmd":"devStatus","data":{}}}' },

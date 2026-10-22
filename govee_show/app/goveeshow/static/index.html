@@ -464,20 +464,20 @@
     <h3>Reaching past the realtime window</h3>
     <p class="hint">Some lights, like the 30 m Christmas String Lights 2, only take realtime colours for their first
       few dozen bulbs. <b>Run sweep</b> tries nine guesses at how the rest might be reached, one after another,
-      each in its own colour, using <b>Segments</b> above as the size of the window (44 on the H70C5). Film the whole
+      each in its own colour, using the size of the window (44 on the H70C5, or <b>Segments</b> above for a light whose window isn't known). Film the whole
       light while it runs: a colour showing up past the window means that guess works. It takes about 45 seconds.</p>
     <p><button id="btn-lab-sweep">Run sweep</button></p>
     <p class="hint">A TV sync box does get colour onto the whole of these lights, so it may switch them into a
       different mode first. <b>Try ways to switch on</b> tries seven guesses at that, one after another, each
-      followed by a rainbow over <b>Segments</b> colours. Watch for the rainbow spreading past the window or along
+      followed by a rainbow over the window. Watch for the rainbow spreading past the window or along
       the whole light, and note the number shown below when it does. It takes about 50 seconds.</p>
     <p><button id="btn-lab-start-sweep">Try ways to switch on</button></p>
-    <p class="hint"><b>Try other flags</b> sends a whole frame of <b>Segments</b> bulbs in one colour, nine times,
+    <p class="hint"><b>Try other flags</b> sends a whole frame of the window in one colour, nine times,
       each with a different value in the byte that switches crisp or blended colours (only 00, 01 and 02 have been
       tried). A colour lighting more than the first bulbs means that value reaches further. It takes about 45 seconds.</p>
     <p><button id="btn-lab-flag-sweep">Try other flags</button></p>
     <p class="hint"><b>Try app modes first</b> switches the light into each of twenty Govee app modes in turn, then
-      sends the usual realtime frame of <b>Segments</b> bulbs in that step's colour. Between steps the light goes plain
+      sends the usual realtime frame of the window in that step's colour. Between steps the light goes plain
       white. Watch for a colour reaching past the window, or anything other than the first bulbs lighting up. It takes
       about a minute and a half.</p>
     <p><button id="btn-lab-mode-sweep">Try app modes first</button></p>

@@ -86,3 +86,11 @@ test("mode sweep: each app mode but 00 and 0a first, then a frame, then back to 
   }
   assert.equal(JSON.parse(SETTLE).msg.cmd, "colorwc");
 });
+
+import { sweepWindow } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+
+test("sweeps use the model's known realtime window over Segments", () => {
+  assert.equal(sweepWindow({ sku: "H70C5", reach: 44 }, 300), 44); // Pillars on Per bulb shows 300
+  assert.equal(sweepWindow({ sku: "H6199" }, 20), 20);
+  assert.equal(sweepWindow(undefined, 0), 44);
+});

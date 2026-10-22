@@ -32,9 +32,11 @@ pictures kind `03`.
 The 30 m Christmas String Lights 2 (**H70C5**, 300 bulbs, `Pillars` on the owner's network) in razer
 mode, tested from the packet lab:
 
-- It lights one bulb per segment and only ever the **first 44 bulbs**. A frame of n ≤ 44 colours is
-  spread over bulbs 1–44; it lights `min(length field, 44)` bulbs. More than 44 colours (true length) is
-  **rejected**: the whole light goes off.
+- It only ever lights the **first 44 bulbs**. The count byte splits bulbs 1–44 into that many equal
+  slots, and each colour in the frame (as many as the length field holds) fills the next slot; slots with
+  no colour stay off. Owner's tests, Oct 2026: count `0a` with 10 colours lit all 44; with 1 colour about
+  5 bulbs; with 2 colours about 10 (flag `01` or `02` alike). More than 44 colours (true length) is
+  **rejected**: the light ignores the frame.
 - The flag byte (byte after `B0`) only switches crisp/blend (`01`, `02` both lit the same 44 bulbs).
   LeoSko/GoveeDreamView documents it as `00` per segment, `01` stretch across all LEDs; `00` with 10
   colours on the H70C5 still only lit the first 44 bulbs.
@@ -45,6 +47,12 @@ mode, tested from the packet lab:
 - **Try ways to switch on** (`startSweep`: `b1 01` with extra bytes, gradient switch `33 14 01`, video
   mode `33 05 00 …` before the usual frame) was also run on the H70C5: **none of the seven changed
   anything**; the rainbow stayed on the first 44 bulbs.
+- **Try other flags** (`flagSweep`, 0.2.84): flags `03 04 05 08 10 20 40 80 ff` with a 44-colour frame,
+  run on the H70C5: each lit the first 44 bulbs in its colour, as `01` does; **none got past bulb 44**.
+- **Try app modes first** (`modeSweep`, 0.2.84): a bare `33 05 <mode>` for modes `01`–`15` (not `00`,
+  `0a`), then the usual frame, run on the H70C5: every step showed its colour on the first 44 bulbs only;
+  **none got past bulb 44**. (A first run with Segments at 300 sent 255-colour frames, which the light
+  ignored entirely, so both sweeps now use the model's known `reach` as the window.)
 - The Govee app has no setting for the window, and Govee Desktop doesn't offer screen sync for it.
 - The newer icicle lights (H70D1/H70D2) behave the same way ("only part of the string").
 
