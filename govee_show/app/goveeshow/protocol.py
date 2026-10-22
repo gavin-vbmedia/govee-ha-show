@@ -19,6 +19,8 @@ Lights differ in which form they accept, so each device picks a protocol:
   whole     no realtime mode, the official colorwc command with the average colour
   segments  no realtime mode: the Govee app's own segment colour command (experimental, see
             segment_colour_packets), for lights whose realtime mode doesn't reach every bulb
+  pixels    no realtime mode: the Govee app's Finger sketch picture, one colour per bulb
+            (experimental, see pixel_packets)
 """
 import base64
 import json
@@ -31,7 +33,9 @@ CMD_COLORS = 0xB0
 CMD_ENABLE = 0xB1
 CMD_COLORS_V2 = 0xB4
 
-PROTOCOLS = ("standard", "razer", "v2", "whole", "segments")
+PROTOCOLS = ("standard", "razer", "v2", "whole", "segments", "pixels")
+# Protocols that don't pack the segment count into one byte, so a light can have more segments.
+LONG_PROTOCOLS = ("whole", "segments", "pixels")
 
 
 def frame(cmd: int, data: bytes) -> bytes:
@@ -96,9 +100,10 @@ def _ble_packet(data: bytes) -> bytes:
     return bytes(data).ljust(19, b"\0") + bytes([cs])
 
 
-def scene_packets(code: int, param: str) -> list[bytes]:
-    raw = base64.b64decode(param) if param else b""
-    data = bytearray([0xA3, 0x00, 0x01, 0x00, 0x02])
+def multi_packets(raw: bytes, kind: int) -> list[bytes]:
+    """A payload too big for one packet, split into "a3" lines: a3 00 01 <lines> <kind> ..., then
+    a3 01, a3 02 ... with the last one numbered ff."""
+    data = bytearray([0xA3, 0x00, 0x01, 0x00, kind])
     lines, last_marker = 0, 1
     for b in raw:
         if len(data) % 19 == 0:
@@ -109,7 +114,11 @@ def scene_packets(code: int, param: str) -> list[bytes]:
         data.append(b)
     data[last_marker] = 0xFF  # the last line is marked ff instead of its number
     data[3] = lines + 1
-    packets = [_ble_packet(data[i: i + 19]) for i in range(0, len(data), 19)]
+    return [_ble_packet(data[i: i + 19]) for i in range(0, len(data), 19)]
+
+
+def scene_packets(code: int, param: str) -> list[bytes]:
+    packets = multi_packets(base64.b64decode(param) if param else b"", 0x02)
     packets.append(_ble_packet(bytes([0x33, 0x05, 0x04, code & 0xFF, (code >> 8) & 0xFF])))
     return packets
 
@@ -154,3 +163,52 @@ def segment_colour_packets(rgb: bytes, previous: bytes | None = None) -> list[by
     """One packet per colour in the frame, covering every segment that colour. With `previous`
     (the last frame sent, the same length), segments that haven't changed are left out."""
     return [segment_colour_packet(c, segs) for c, segs in segment_changes(rgb, previous)]
+
+
+# The Govee app's Finger sketch (Christmas String Lights 2, icicles and similar): a picture with a
+# colour for any bulb, worked out from a Bluetooth capture of the app (issue #74). It goes as "a3"
+# lines of kind 03, then 33 05 0a 20 03 to show it. The picture is
+#   <effect> <speed> <brightness> <background r g b> <groups, 2 bytes LE>
+#   per group: <bulbs, 2 LE> <r g b> <bulbs from 256 up, 2 LE> <the bulbs below 256, a byte each>
+#              <the rest, 2 bytes LE each>
+# Effect 0f is the app's Gradient, which with speed 0 holds the picture still (13 twinkles, 14
+# breathes). Bulbs not in a group show the background, here black. Bulbs count from 0 at the plug.
+PIXEL_EFFECT_STILL = 0x0F
+PIXEL_SHOW = bytes([0x33, 0x05, 0x0A, 0x20, 0x03])
+PIXEL_MAX_COLOURS = 24  # more colours mean more packets per picture; nearby colours are merged
+
+
+def _palette(colours: list[bytes], limit: int) -> dict[bytes, bytes]:
+    """Map each colour to one of at most `limit` colours: exact if there are few enough, otherwise
+    the most used colours (rounded) with the rest moved to the nearest of them."""
+    distinct = set(colours)
+    if len(distinct) <= limit:
+        return {c: c for c in distinct}
+    rounded = {c: bytes(v & 0xF0 | 0x08 if v > 8 else 0 for v in c) for c in distinct}
+    counts: dict[bytes, int] = {}
+    for c in colours:
+        counts[rounded[c]] = counts.get(rounded[c], 0) + 1
+    keep = sorted(counts, key=lambda k: -counts[k])[:limit]
+    def nearest(c):
+        return min(keep, key=lambda k: sum((a - b) ** 2 for a, b in zip(c, k)))
+    return {c: (rounded[c] if rounded[c] in keep else nearest(rounded[c])) for c in distinct}
+
+
+def pixel_picture(rgb: bytes, max_colours: int = PIXEL_MAX_COLOURS) -> bytes:
+    n = len(rgb) // 3
+    colours = [bytes(rgb[i * 3: i * 3 + 3]) for i in range(n)]
+    palette = _palette([c for c in colours if any(c)], max_colours)
+    groups: dict[bytes, list[int]] = {}
+    for i, c in enumerate(colours):
+        if any(c) and any(palette[c]):
+            groups.setdefault(palette[c], []).append(i)
+    out = bytearray([PIXEL_EFFECT_STILL, 0, 100, 0, 0, 0]) + len(groups).to_bytes(2, "little")
+    for colour, bulbs in groups.items():
+        high = [b for b in bulbs if b > 255]
+        out += len(bulbs).to_bytes(2, "little") + colour + len(high).to_bytes(2, "little")
+        out += bytes(b for b in bulbs if b <= 255) + b"".join(b.to_bytes(2, "little") for b in high)
+    return bytes(out)
+
+
+def pixel_packets(rgb: bytes, max_colours: int = PIXEL_MAX_COLOURS) -> list[bytes]:
+    return multi_packets(pixel_picture(rgb, max_colours), 0x03) + [_ble_packet(PIXEL_SHOW)]

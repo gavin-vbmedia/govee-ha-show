@@ -98,6 +98,7 @@ Lights accept different forms of the realtime command. Change
 | Realtime (Razer) | The fixed-size packet Razer Chroma sends. Try it next. |
 | Realtime v2 | The newer DreamView form some recent lights use. |
 | Whole light only | For lights with no realtime mode. The whole light shows the average colour of its segments, at up to 10 changes a second, and each change fades a little. |
+| Per bulb (experimental) | For lights whose app has **Finger sketch**, such as the Christmas String Lights 2 and the icicle lights, when their realtime mode doesn't reach every bulb. Sends a picture with a colour for every bulb, as Finger sketch does, so set **Segments** to the number of bulbs (300 on the 30 m Christmas String Lights 2). Up to about 4 pictures a second, with similar colours merged when a picture has a lot of them, so it suits slower looks. **Find** doesn't work with it. |
 | App segments (experimental) | For lights whose realtime mode doesn't reach every bulb. Colours the light the way the Govee Home app does, in the app's own segments, so set **Segments** to the number the app shows. It sends a few segments at a time, the biggest changes first, so the light keeps up rather than lagging behind; slow looks suit it better than fast chases. **Find** doesn't work with it. |
 
 ### Lights not delivered yet?
@@ -693,7 +694,7 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 | --- | --- |
 | Scan finds nothing | Check **LAN Control** is on for each light in the Govee Home app, and that Home Assistant and the lights are on the same network with multicast allowed. Add the light by IP instead. |
 | Test only turns the light on | Change **Protocol** on the Devices tab and test again. |
-| Only the first part of a light lights up | Some lights only accept a few segments in realtime mode, one bulb each. The 30 m Christmas String Lights 2 (H70C5) stops at 44 bulbs. Set **Protocol** to **App segments (experimental)** and **Segments** to the number the Govee Home app shows (10 for the H70C5), or to **Whole light only** to light the whole string one colour at a time. |
+| Only the first part of a light lights up | Some lights only accept a few segments in realtime mode. The 30 m Christmas String Lights 2 (H70C5) stops at 44 bulbs. Set **Protocol** to **Per bulb (experimental)** and **Segments** to the number of bulbs (300 for the H70C5). **App segments (experimental)** and **Whole light only** also light the whole string, more coarsely. |
 | Effects run from the wrong end | Tick **Reverse** on the Devices tab. |
 | Lights run ahead of or behind the music | In the browser, adjust **Light offset** under **Setup → Speakers**. On a speaker, adjust its **Delay ms** in the same place. |
 | A speaker can't be added | The test shows Home Assistant's reason. Some integrations can't play files from the media folder; use another media player for the song. |

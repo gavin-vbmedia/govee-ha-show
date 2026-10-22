@@ -89,3 +89,31 @@ def test_segment_colour_packets_skip_unchanged_segments():
     assert only[4:7] == b"\x00\xff\x00" and only[12] == 0b010
     assert protocol.segment_colour_packets(after, after) == []
     assert len(protocol.segment_colour_packets(after, before[:3])) == 2  # a resized frame is sent whole
+
+
+def test_pixel_packets_match_test_k():
+    # Five blocks of eight bulbs, ten apart, as sent from the packet lab: the colours held still.
+    rgb = bytearray(50 * 3)
+    for i, c in enumerate(["ff0000", "00ff00", "0000ff", "ffff00", "ffffff"]):
+        for b in range(i * 10, i * 10 + 8):
+            rgb[b * 3: b * 3 + 3] = bytes.fromhex(c)
+    lines = """
+a3 00 01 06 03 0f 00 64 00 00 00 05 00 08 00 ff 00 00 00 3e
+a3 01 00 00 01 02 03 04 05 06 07 08 00 00 ff 00 00 00 0a 5f
+a3 02 0b 0c 0d 0e 0f 10 11 08 00 00 00 ff 00 00 14 15 16 4b
+a3 03 17 18 19 1a 1b 08 00 ff ff 00 00 00 1e 1f 20 21 22 9d
+a3 04 23 24 25 08 00 ff ff ff 00 00 28 29 2a 2b 2c 2d 2e 5d
+a3 ff 2f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 73
+33 05 0a 20 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 1f
+"""
+    assert [p.hex(" ") for p in protocol.pixel_packets(bytes(rgb))] == lines.strip().splitlines()
+
+
+def test_pixel_picture_reaches_past_bulb_255_and_limits_colours():
+    rgb = bytearray(300 * 3)
+    rgb[299 * 3: 300 * 3] = b"\x00\x00\xff"
+    pic = protocol.pixel_picture(bytes(rgb))
+    assert pic[6:8] == b"\x01\x00" and pic[8:15] == b"\x01\x00\x00\x00\xff\x01\x00" and pic[15:] == b"\x2b\x01"
+    rainbow = bytes(v for i in range(300) for v in (i % 256, (i * 7) % 256, 255 - i % 256))
+    pic = protocol.pixel_picture(rainbow, max_colours=8)
+    assert int.from_bytes(pic[6:8], "little") <= 8

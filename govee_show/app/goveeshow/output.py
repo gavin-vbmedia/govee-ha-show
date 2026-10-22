@@ -11,7 +11,8 @@ import socket
 import time
 
 from .protocol import (CMD_PORT, average, colorwc_msg, ptreal_msg, razer_colors, razer_enable, razer_msg,
-                       scene_packets, segment_changes, segment_colour_packet, segment_colour_packets, wrap)
+                       pixel_packets, scene_packets, segment_changes, segment_colour_packet, segment_colour_packets,
+                       wrap)
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +36,13 @@ SEGMENTS_FPS = 10
 SEGMENTS_PER_SEND = 3
 SEGMENTS_CLOSE = 12  # out of 255, per channel
 SEGMENTS_RESEND_S = 1.0
+# Per-bulb pictures (Finger sketch) run to a few dozen packets. Lights drop a ptReal message with
+# too many in it (govee-lan-bridge found 24 dropped, 18 fine), so a picture goes as several
+# messages a little apart. How many pictures a second a light takes is still being found out.
+PIXELS_FPS = 4
+PIXELS_PER_MESSAGE = 12
+PIXELS_GAP_S = 0.04
+PIXELS_RESEND_S = 5.0
 
 
 class OutputDevice:
@@ -44,10 +52,11 @@ class OutputDevice:
         self.ip = ip
         self.brightness = brightness  # per-light cap, 1-100, applied to every frame
         self.protocol = protocol
-        self.realtime = protocol not in ("whole", "segments")
+        self.realtime = protocol not in ("whole", "segments", "pixels")
         if not self.realtime:
-            max_fps = min(max_fps, SEGMENTS_FPS if protocol == "segments" else WHOLE_FPS)
-        self.keepalive = SEGMENTS_RESEND_S if protocol == "segments" else KEEPALIVE_S
+            max_fps = min(max_fps, {"segments": SEGMENTS_FPS, "pixels": PIXELS_FPS}.get(protocol, WHOLE_FPS))
+        self.keepalive = {"segments": SEGMENTS_RESEND_S, "pixels": PIXELS_RESEND_S}.get(protocol, KEEPALIVE_S)
+        self.queue: list[bytes] = []  # per-bulb pictures: the messages still to send, PIXELS_GAP_S apart
         self.shown: bytearray | None = None  # app segments: what the light should be showing now
         self.segments = segments
         self.reverse = reverse
@@ -82,6 +91,7 @@ class OutputDevice:
         self.enabled = False
         self.scene = None
         self.pending = self.last_frame = self.shown = None
+        self.queue = []
 
     def play_scene(self, code: int, param: str):
         """Experimental: hand the light to one of Govee's built-in scenes until end_scene()."""
@@ -114,6 +124,8 @@ class OutputDevice:
     def packet(self, frame: bytes, previous: bytes | None = None) -> bytes:
         if self.protocol == "segments":
             return ptreal_msg(segment_colour_packets(frame, previous))
+        if self.protocol == "pixels":  # only logged; _tick_pixels sends the whole picture
+            return ptreal_msg(pixel_packets(frame)[:PIXELS_PER_MESSAGE])
         if not self.realtime:
             return colorwc_msg(*average(frame))
         return razer_msg(razer_colors(frame, self.gradient, self.protocol))
@@ -123,6 +135,8 @@ class OutputDevice:
             return
         if self.protocol == "segments":
             return self._tick_segments(now)
+        if self.protocol == "pixels":
+            return self._tick_pixels(now)
         starting = now - self.enabled_at < STARTUP_S
         if self.realtime and starting and now - self.last_enable > STARTUP_REENABLE_S:
             self._send(razer_msg(razer_enable(True)))
@@ -133,6 +147,23 @@ class OutputDevice:
             return  # rate limited; latest pending frame wins
         if frame != self.last_frame or now - self.last_sent > self.keepalive:
             self._send(self.packet(frame, self.last_frame if frame != self.last_frame else None))
+            self.last_frame, self.last_sent = frame, now
+        self.pending = None
+
+    def _tick_pixels(self, now: float):
+        if self.queue:
+            if now - self.last_sent >= PIXELS_GAP_S:
+                self._send(self.queue.pop(0))
+                self.last_sent = now
+            return
+        frame = self.pending if self.pending is not None else self.last_frame
+        if frame is None or now - self.last_sent < self.min_interval:
+            return
+        if frame != self.last_frame or now - self.last_sent > self.keepalive:
+            packets = pixel_packets(frame)
+            self.queue = [ptreal_msg(packets[i: i + PIXELS_PER_MESSAGE])
+                          for i in range(0, len(packets), PIXELS_PER_MESSAGE)]
+            self._send(self.queue.pop(0))
             self.last_frame, self.last_sent = frame, now
         self.pending = None
 

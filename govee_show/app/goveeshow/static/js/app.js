@@ -336,9 +336,9 @@ function renderDevices() {
     cell(model);
     const segs = document.createElement("span");
     const find = button("Find", () => findSegments(d), "ghost");
-    find.disabled = !d.ip || ["whole", "segments"].includes(d.protocol);
+    find.disabled = !d.ip || ["whole", "segments", "pixels"].includes(d.protocol);
     find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
-    segs.append(input("number", "segments", { min: 1, max: 255 }), " ", find);
+    segs.append(input("number", "segments", { min: 1, max: ["whole", "segments", "pixels"].includes(d.protocol) ? 1000 : 255 }), " ", find);
     cell(segs);
     const bulbs = document.createElement("input");
     Object.assign(bulbs, { type: "number", min: 1, max: 2000, value: d.bulbs ?? "", placeholder: `${d.segments * 4}?`,
@@ -667,6 +667,7 @@ const PROTOCOLS = {
   v2: "Realtime v2",
   whole: "Whole light only",
   segments: "App segments (experimental)",
+  pixels: "Per bulb (experimental)",
 };
 
 const skuOf = (text) => (text || "").trim().split(/\s+/)[0].toUpperCase();
