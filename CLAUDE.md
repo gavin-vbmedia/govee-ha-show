@@ -3,7 +3,10 @@
 A Home Assistant add-on for making and playing music-synchronised Govee light shows. One Python
 service (aiohttp) in `govee_show/app/goveeshow/` serves a browser editor (plain ES modules in
 `static/`, no build step) and streams baked frames to the lights over Govee's LAN "razer" protocol.
-README.md has the architecture and a map of every file.
+README.md has the architecture and a map of every file. **Before changing how lights are driven
+(protocols, `output.py`, `protocol.py`), read `docs/govee-protocols.md`**: what's known about each
+protocol, measurements from the owner's real lights, what was tried and didn't work, and open questions.
+Add to it when you learn something new about the lights.
 
 The owner (Gavin) uses this at home and wants Claude to run the project with as little input from
 them as possible. How much to decide alone is in `.claude/skills/steward/SKILL.md`.
@@ -26,6 +29,10 @@ version numbers match, builds the Docker image and checks it serves `/api/info`.
 No real lights are reachable from a cloud session. To see a UI change working, run the service
 locally, add **planned lights** (devices with no IP, `PUT /api/devices`) and drive the editor with
 Playwright (Chromium is at `/opt/pw-browsers`; `pip install playwright`, never `playwright install`).
+To check what goes on the wire, give a light the IP `127.0.0.1` and listen on UDP port 4003.
+
+Questions only the real lights can answer go to the owner one simple step at a time, ideally through
+the packet lab (Setup → Settings): give the exact thing to paste or press and what to look for.
 
 ## Every user-facing change is a release
 
