@@ -39,3 +39,18 @@ test("window sweep: one colour per guess, each asking for the next w bulbs", () 
   assert.deepEqual(bytes(steps[1].text).slice(0, 4), [0xb0, 1, 44, 44]);
   assert.equal(bytes(steps[7].text).length, 3 + 44 * 4);
 });
+
+import { startSweep } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+
+test("switch-on sweep: each guess sends its set-up, then the usual rainbow", () => {
+  const steps = startSweep(44);
+  assert.equal(steps.length, 7);
+  for (const s of steps) {
+    assert.ok(s.before.length >= 1 && s.before.every((b) => ["razer", "ptreal"].includes(b.kind)));
+    assert.equal(bytes(s.text).length, 3 + 44 * 3);
+  }
+  // Guesses that replace "realtime on" send their own enable; the others switch realtime on as usual.
+  assert.deepEqual(bytes(steps[2].before[0].text), [0xb1, 1, 44]);
+  assert.equal(steps[2].realtime_on, false);
+  assert.ok(steps[4].realtime_on && steps[4].before[0].kind === "ptreal");
+});

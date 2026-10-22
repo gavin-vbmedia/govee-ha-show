@@ -145,7 +145,9 @@ All under Setup → Settings:
 
 - **Packet lab** (`lab.py`, `static/js/labtemplates.js`): send JSON, razer or `ptReal` to one of the
   configured lights, repeated on a timer, and see replies. Has the **Run sweep** (past the realtime
-  window) and the **Per bulb speed test**.
+  window), **Try ways to switch on** (`startSweep`: razer enable with extra bytes, the app's gradient
+  switch `33 14 01`, video mode `33 05 00 …`, each then a 44-colour rainbow; a step's `before` messages go
+  out ahead of it) and the **Per bulb speed test**.
 - **Listen for Govee traffic** (`listen.py`): records Govee packets the HA host can hear.
 
 ## Open questions

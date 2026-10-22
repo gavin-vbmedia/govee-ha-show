@@ -77,15 +77,16 @@ def build(kind: str, text: str, length: int | None = None) -> bytes:
 
 
 class Step:
-    """`more`: further messages sent after the payload, PIXELS_GAP_S apart (a per-bulb picture too big
+    """`before`: set-up messages sent once, 0.1 s apart, ahead of everything else in the step. `more`: further messages sent after the payload, PIXELS_GAP_S apart (a per-bulb picture too big
     for one). `every`: start the next step this long after this one started, without switching
     realtime off in between (the per-bulb speed test)."""
 
     def __init__(self, payload: bytes, repeat: int = 1, interval: float = 0.1, realtime_on: bool = False,
-                 label: str = "", more: list[bytes] | None = None, every: float | None = None):
+                 label: str = "", more: list[bytes] | None = None, every: float | None = None,
+                 before: list[bytes] | None = None):
         self.payload, self.repeat, self.interval = payload, repeat, interval
         self.realtime_on, self.label = realtime_on, label
-        self.more, self.every = more or [], every
+        self.more, self.every, self.before = more or [], every, before or []
 
 
 def pixel_speed_steps(bulbs: int, small: bool, per_second: float, seconds: float = 6) -> list[Step]:
@@ -170,6 +171,10 @@ class Lab:
                 started = time.monotonic()
                 if len(self.steps) > 1 and step.every is None:
                     self._note("step", f"{k + 1} of {len(self.steps)}: {step.label}")
+                for msg in step.before:
+                    tx.sendto(msg, (self.ip, CMD_PORT))
+                    self._note("sent", msg)
+                    await asyncio.sleep(0.1)
                 if step.realtime_on:
                     on = razer_msg(razer_enable(True))
                     tx.sendto(on, (self.ip, CMD_PORT))
