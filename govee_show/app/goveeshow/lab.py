@@ -89,18 +89,21 @@ class Step:
 
 
 def pixel_speed_steps(bulbs: int, small: bool, per_second: float, seconds: float = 6) -> list[Step]:
-    """Two per-bulb pictures in turn, red then blue, `per_second` pictures a second: just the first
-    10 bulbs, or every bulb. Whether the light keeps up shows how fast it takes pictures, and whether
-    the size of a picture matters."""
-    lit = min(bulbs, 10) if small else bulbs
+    """Per-bulb pictures in turn, `per_second` a second: the first 10 bulbs red then blue, or a red,
+    green and blue pattern along every bulb that moves one bulb each time (a single colour would fit
+    in one packet, as the most common colour is sent as the background). Whether the light keeps up
+    shows how fast it takes pictures, and how much their size matters."""
+    rgb = (b"\xff\x00\x00", b"\x00\xff\x00", b"\x00\x00\xff")
     steps = []
     for k in range(max(1, round(per_second * seconds))):
-        colour = b"\xff\x00\x00" if k % 2 == 0 else b"\x00\x00\xff"
-        frame = colour * lit + bytes(3 * (bulbs - lit))
+        if small:
+            frame = rgb[0 if k % 2 == 0 else 2] * min(bulbs, 10) + bytes(3 * max(0, bulbs - 10))
+        else:
+            frame = b"".join(rgb[(i + k) % 3] for i in range(bulbs))
         packets = pixel_packets(frame)
         msgs = [ptreal_msg(packets[i: i + PIXELS_PER_MESSAGE]) for i in range(0, len(packets), PIXELS_PER_MESSAGE)]
         steps.append(Step(msgs[0], more=msgs[1:], every=1 / per_second,
-                          label=f"{'red' if k % 2 == 0 else 'blue'}, {len(packets)} packets"))
+                          label=f"picture {k + 1}, {len(packets)} packets"))
     return steps
 
 

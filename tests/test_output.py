@@ -232,3 +232,29 @@ def test_per_bulb_lights_can_have_more_than_255_segments():
     dev = output.OutputDevice("10.0.0.7", 300, FakeSock(), protocol="pixels")
     dev.update(b"\xff\x00\x00" * 300)
     assert len(dev.pending) == 900
+
+
+def test_per_bulb_pictures_wait_as_long_as_the_light_needs_for_them():
+    sock = FakeSock()
+    dev = output.OutputDevice("10.0.0.7", 300, sock, protocol="pixels")
+    dev.enable()
+    t = dev.last_enable
+    pictures = lambda: sum(any(base64.b64decode(p)[:5] == bytes.fromhex("33050a2003") for p in m["data"]["command"])
+                           for m, _ in sock.sent if m["cmd"] == "ptReal")
+    dev.update(b"\xff\x00\x00" * 300)  # one colour: a 2-packet picture
+    dev.tick(t + 1)
+    dev.update(b"\x00\x00\xff" * 300)
+    dev.tick(t + 1.1)  # too soon even for a small picture
+    assert pictures() == 1
+    dev.tick(t + 1 + output.PIXELS_PICTURE_S + 2 * output.PIXELS_PACKET_S + 0.005)
+    assert pictures() == 2
+    # A busy picture (every bulb different) holds the next one back for much longer.
+    dev.update(bytes(v for i in range(300) for v in (i % 256, (i * 5) % 256, (i * 9) % 256)))
+    start = t + 2
+    for k in range(40):
+        dev.tick(start + k * 0.01)
+    dev.update(b"\x00\xff\x00" * 300)
+    dev.tick(start + 0.5)
+    assert pictures() == 3
+    dev.tick(start + 1.0)
+    assert pictures() == 4

@@ -117,3 +117,15 @@ def test_pixel_picture_reaches_past_bulb_255_and_limits_colours():
     rainbow = bytes(v for i in range(300) for v in (i % 256, (i * 7) % 256, 255 - i % 256))
     pic = protocol.pixel_picture(rainbow, max_colours=8)
     assert int.from_bytes(pic[6:8], "little") <= 8
+
+
+def test_pixel_picture_sends_the_most_common_colour_as_the_background():
+    solid = protocol.pixel_picture(b"\xff\x00\x00" * 300)
+    assert solid == bytes([0x0F, 0, 100, 0xFF, 0, 0, 0, 0])  # no groups: every bulb is the background
+    # Mostly blue with three red bulbs: only the red ones are listed.
+    rgb = bytearray(b"\x00\x00\xff" * 300)
+    for b in (0, 1, 299):
+        rgb[b * 3: b * 3 + 3] = b"\xff\x00\x00"
+    pic = protocol.pixel_picture(bytes(rgb))
+    assert pic[3:6] == b"\x00\x00\xff" and pic[6:8] == b"\x01\x00"
+    assert pic[8:] == b"\x03\x00\xff\x00\x00\x01\x00\x00\x01\x2b\x01"
