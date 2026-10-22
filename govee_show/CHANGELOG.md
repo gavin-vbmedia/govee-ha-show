@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.78
+
+- **Generate**, **Describe it** and the effect ideas in the **Selection** panel now pick looks that suit
+  lights on **Per bulb**, **App segments** or **Whole light only**, which can only change a few times a
+  second: colour changes, fades, pulses and still blocks rather than fast chases and sparkles.
+
 ## 0.2.77
 
 - **Per bulb (experimental)** no longer drops pictures. Each picture now waits as long as the light

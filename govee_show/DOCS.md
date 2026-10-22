@@ -343,6 +343,11 @@ hasn't been analysed. It replaces the lights' effects, so Ctrl+Z brings them bac
 different take, then edit whatever you like. The colours start on the palette for the time of year
 (Halloween in October, Christmas in December…) when there is one.
 
+Lights on **Per bulb**, **App segments** or **Whole light only** can only change a few times a second,
+so Generate gives them looks that suit that: colour changes, fades and pulses of the whole light, still
+blocks and slow gradients, never faster than once a beat. The AI is told the same, and the effect ideas
+in the **Selection** panel follow suit for those lights.
+
 With an AI set up (see [Setting up the AI](#setting-up-the-ai)), **Made by** picks who makes it:
 **Rules** is instant, as above; **AI** sends the whole song to the AI with the same colours and style,
 and it follows the **notes** you've written on the song's sections on the **Music** tab ("the guitar

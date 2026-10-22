@@ -8,6 +8,7 @@ import {
   renderTrack, showDuration,
 } from "./effects.js";
 import { partsFrame } from "./devicetest.js";
+import { isSlow } from "./lightspeed.js";
 import { LAB_TEMPLATES, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
@@ -2274,9 +2275,9 @@ function renderRangeInspector(r) {
 // Looks that suit the selected part of the song, in the current palette's colours.
 function suggestionsFor(r, lights) {
   if (!app.show.sections?.length && !app.show.tempo) return null;
-  const segments = app.devices[app.show.tracks[lights[0]].device]?.segments || 15;
-  const { section, tier, looks } = suggestLooks({ ...app.show, duration: app.duration() }, r.start, r.end, segments,
-    prefs.get("genStyle", "balanced"));
+  const dev = app.devices[app.show.tracks[lights[0]].device];
+  const { section, tier, looks } = suggestLooks({ ...app.show, duration: app.duration() }, r.start, r.end,
+    dev?.segments || 15, prefs.get("genStyle", "balanced"), isSlow(dev));
   const colors = currentPalette().colors;
   for (const look of looks) {
     const tmp = { effect: look.effect };
@@ -2994,7 +2995,7 @@ function generateDialog() {
 async function generate({ colors, style, house }) {
   // A split light gets effects on its parts; its own track (all the parts at once) is left for you.
   const lights = app.show.tracks.filter((tr) => tr.device !== HOUSE && playingDev(tr) && !playingDev(tr).light)
-    .map((tr) => ({ id: tr.device, segments: app.devices[tr.device].segments }));
+    .map((tr) => ({ id: tr.device, segments: app.devices[tr.device].segments, slow: isSlow(app.devices[tr.device]) }));
   if (!lights.length) { status("Add your lights under Setup → Devices first", true); return; }
   // Listen to the song first if that hasn't been done yet.
   if (songBuffer && !app.show.beats.length && !app.show.sections?.length && !(await analyseSong())) return;
@@ -3110,7 +3111,7 @@ function aiLights() {
     let name = dev.name || tr.device;
     for (let k = 2; seen.has(name.toLowerCase()); k++) name = `${dev.name || tr.device} (${k})`;
     seen.add(name.toLowerCase());
-    lights.push({ name, trackIndex: i, segments: dev.segments });
+    lights.push({ name, trackIndex: i, segments: dev.segments, ...(isSlow(dev) ? { slow: true } : {}) });
   });
   return lights;
 }
