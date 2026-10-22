@@ -194,6 +194,7 @@ table.devices td input[type="number"] { width: 5em; }
 .lab-grid { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
 .lab-grid input[type="number"] { width: 6em; }
 #lab-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 12px; }
+.pace-warning { color: #d97706; }
 .lab-now { font-size: 18px; font-weight: 600; }
 .lab-log { max-height: 320px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 

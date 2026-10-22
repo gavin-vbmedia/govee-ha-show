@@ -380,6 +380,11 @@ straight away. To swap the effect, press the **Effect** button: it opens the sam
 chooser used to add one, playing on that light for the clip's length, with the current effect
 outlined. Changing effect keeps the clip's colours and brightness.
 
+On a light using **Per bulb**, **App segments** or **Whole light only**, which can only change a few
+times a second, the Selection panel warns **⚠ Too fast for this light** when a clip's effect changes
+faster than that, such as a quick chase, sparkle or strobe. It would look steppy on the real light.
+Slow the effect down, or use a fade, pulse or colour change instead.
+
 ### Presets
 
 Most effects can look very different depending on their settings (Three colours can sit

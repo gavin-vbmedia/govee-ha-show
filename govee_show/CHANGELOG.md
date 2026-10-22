@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.79
+
+- On lights using **Per bulb**, **App segments** or **Whole light only**, the **Selection** panel now warns
+  **⚠ Too fast for this light** when a clip's effect changes faster than the light can follow (a quick
+  chase, sparkle or strobe), as it would look steppy on the real light.
+
 ## 0.2.78
 
 - **Generate**, **Describe it** and the effect ideas in the **Selection** panel now pick looks that suit

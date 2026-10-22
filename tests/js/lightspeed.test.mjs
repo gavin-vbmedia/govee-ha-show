@@ -9,3 +9,31 @@ test("only the non-realtime protocols are slow", () => {
   for (const p of ["standard", "razer", "v2", undefined]) assert.equal(isSlow({ protocol: p }), false);
   assert.equal(isSlow(undefined), false);
 });
+
+import { clipPace } from "../../govee_show/app/goveeshow/static/js/lightspeed.js";
+import { newClip } from "../../govee_show/app/goveeshow/static/js/effects.js";
+
+const pixels = { protocol: "pixels", segments: 300 };
+const clip = (effect, params) => ({ ...newClip(effect, 0, 10), ...params });
+
+test("fast chases and sparkles are too fast for a Per bulb light, slow fades are not", () => {
+  assert.equal(clipPace(clip("chase", { speed: 2 }), pixels).tooFast, true);
+  assert.equal(clipPace(clip("twinkle", { density: 60, rate: 10 }), pixels).tooFast, true);
+  assert.equal(clipPace(clip("cycle", { rate: 0.25, blend: "fade" }), pixels).tooFast, false);
+  assert.equal(clipPace(clip("pulse", { rate: 0.5 }), pixels).tooFast, false);
+  assert.equal(clipPace(clip("solid", {}), pixels).needed, 0);
+});
+
+test("only slow protocols are checked, and Whole light only judges the average colour", () => {
+  assert.equal(clipPace(clip("chase", { speed: 2 }), { protocol: "standard", segments: 30 }), null);
+  // A chase barely moves the average colour, so it's fine on Whole light only.
+  assert.equal(clipPace(clip("chase", { speed: 2 }), { protocol: "whole", segments: 30 }).tooFast, false);
+  assert.equal(clipPace(clip("strobe", { rate: 10 }), { protocol: "whole", segments: 30 }).tooFast, true);
+});
+
+test("colour changes are fine up to what the light manages, and smooth drifts only if slow enough", () => {
+  assert.equal(clipPace(clip("cycle", { rate: 2, blend: "step" }), pixels).tooFast, false);
+  assert.equal(clipPace(clip("cycle", { rate: 8, blend: "step" }), pixels).tooFast, true);
+  assert.equal(clipPace(clip("gradient", { speed: 0.05 }), pixels).tooFast, false);
+  assert.equal(clipPace(clip("gradient", { speed: 0.5 }), pixels).tooFast, true);
+});
