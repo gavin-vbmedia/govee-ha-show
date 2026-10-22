@@ -172,7 +172,8 @@ def segment_colour_packets(rgb: bytes, previous: bytes | None = None) -> list[by
 #   per group: <bulbs, 2 LE> <r g b> <bulbs from 256 up, 2 LE> <the bulbs below 256, a byte each>
 #              <the rest, 2 bytes LE each>
 # Effect 0f is the app's Gradient, which with speed 0 holds the picture still (13 twinkles, 14
-# breathes). Bulbs not in a group show the background, here black. Bulbs count from 0 at the plug.
+# breathes). Bulbs not in a group show the background colour, so the most common colour is made the
+# background and only the other bulbs are listed. Bulbs count from 0 at the plug.
 PIXEL_EFFECT_STILL = 0x0F
 PIXEL_SHOW = bytes([0x33, 0x05, 0x0A, 0x20, 0x03])
 PIXEL_MAX_COLOURS = 24  # more colours mean more packets per picture; nearby colours are merged
@@ -197,12 +198,13 @@ def _palette(colours: list[bytes], limit: int) -> dict[bytes, bytes]:
 def pixel_picture(rgb: bytes, max_colours: int = PIXEL_MAX_COLOURS) -> bytes:
     n = len(rgb) // 3
     colours = [bytes(rgb[i * 3: i * 3 + 3]) for i in range(n)]
-    palette = _palette([c for c in colours if any(c)], max_colours)
+    palette = _palette(colours, max_colours)
     groups: dict[bytes, list[int]] = {}
     for i, c in enumerate(colours):
-        if any(c) and any(palette[c]):
-            groups.setdefault(palette[c], []).append(i)
-    out = bytearray([PIXEL_EFFECT_STILL, 0, 100, 0, 0, 0]) + len(groups).to_bytes(2, "little")
+        groups.setdefault(palette[c], []).append(i)
+    background = max(groups, key=lambda c: (len(groups[c]), not any(c)), default=bytes(3))
+    groups.pop(background, None)
+    out = bytearray([PIXEL_EFFECT_STILL, 0, 100, *background]) + len(groups).to_bytes(2, "little")
     for colour, bulbs in groups.items():
         high = [b for b in bulbs if b > 255]
         out += len(bulbs).to_bytes(2, "little") + colour + len(high).to_bytes(2, "little")

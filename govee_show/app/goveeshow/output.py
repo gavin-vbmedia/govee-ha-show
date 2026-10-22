@@ -38,8 +38,12 @@ SEGMENTS_CLOSE = 12  # out of 255, per channel
 SEGMENTS_RESEND_S = 1.0
 # Per-bulb pictures (Finger sketch) run to a few dozen packets. Lights drop a ptReal message with
 # too many in it (govee-lan-bridge found 24 dropped, 18 fine), so a picture goes as several
-# messages a little apart. How many pictures a second a light takes is still being found out.
-PIXELS_FPS = 4
+# messages a little apart. The H70C5 needs about 0.12 s per picture plus 0.018 s per packet (speed
+# tests: 3-packet pictures kept up at 2 a second but not 8, 23-packet ones at 2 but not 4); send
+# faster and it drops pictures, so each picture waits that long, with a little to spare.
+PIXELS_FPS = 6
+PIXELS_PICTURE_S = 0.13
+PIXELS_PACKET_S = 0.02
 PIXELS_PER_MESSAGE = 12
 PIXELS_GAP_S = 0.04
 PIXELS_RESEND_S = 5.0
@@ -57,6 +61,7 @@ class OutputDevice:
             max_fps = min(max_fps, {"segments": SEGMENTS_FPS, "pixels": PIXELS_FPS}.get(protocol, WHOLE_FPS))
         self.keepalive = {"segments": SEGMENTS_RESEND_S, "pixels": PIXELS_RESEND_S}.get(protocol, KEEPALIVE_S)
         self.queue: list[bytes] = []  # per-bulb pictures: the messages still to send, PIXELS_GAP_S apart
+        self.picture_at = self.picture_s = 0.0  # when the last picture started, and how long it needs
         self.shown: bytearray | None = None  # app segments: what the light should be showing now
         self.segments = segments
         self.reverse = reverse
@@ -157,14 +162,16 @@ class OutputDevice:
                 self.last_sent = now
             return
         frame = self.pending if self.pending is not None else self.last_frame
-        if frame is None or now - self.last_sent < self.min_interval:
-            return
-        if frame != self.last_frame or now - self.last_sent > self.keepalive:
+        since = now - self.picture_at
+        if frame is None or since < max(self.min_interval, self.picture_s):
+            return  # the light is still taking in the last picture; the latest frame waits
+        if frame != self.last_frame or since > self.keepalive:
             packets = pixel_packets(frame)
             self.queue = [ptreal_msg(packets[i: i + PIXELS_PER_MESSAGE])
                           for i in range(0, len(packets), PIXELS_PER_MESSAGE)]
             self._send(self.queue.pop(0))
-            self.last_frame, self.last_sent = frame, now
+            self.last_frame, self.last_sent, self.picture_at = frame, now, now
+            self.picture_s = PIXELS_PICTURE_S + PIXELS_PACKET_S * len(packets)
         self.pending = None
 
     def _tick_segments(self, now: float):

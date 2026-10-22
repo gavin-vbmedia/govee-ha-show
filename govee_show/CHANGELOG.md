@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.77
+
+- **Per bulb (experimental)** no longer drops pictures. Each picture now waits as long as the light
+  needs to take it in, and the colour covering most of the light is sent as the background, so looks
+  where most of the string is one colour (fades, flashes, a few bulbs moving) change up to about 6 times
+  a second. Busy looks like a full rainbow still change only once or twice a second.
+
 ## 0.2.76
 
 - **Packet lab** has a **Per bulb speed test**: it flips a light between red and blue pictures at a rate

@@ -98,7 +98,7 @@ Lights accept different forms of the realtime command. Change
 | Realtime (Razer) | The fixed-size packet Razer Chroma sends. Try it next. |
 | Realtime v2 | The newer DreamView form some recent lights use. |
 | Whole light only | For lights with no realtime mode. The whole light shows the average colour of its segments, at up to 10 changes a second, and each change fades a little. |
-| Per bulb (experimental) | For lights whose app has **Finger sketch**, such as the Christmas String Lights 2 and the icicle lights, when their realtime mode doesn't reach every bulb. Sends a picture with a colour for every bulb, as Finger sketch does, so set **Segments** to the number of bulbs (300 on the 30 m Christmas String Lights 2). Up to about 4 pictures a second, with similar colours merged when a picture has a lot of them, so it suits slower looks. **Find** doesn't work with it. |
+| Per bulb (experimental) | For lights whose app has **Finger sketch**, such as the Christmas String Lights 2 and the icicle lights, when their realtime mode doesn't reach every bulb. Sends a picture with a colour for every bulb, as Finger sketch does, so set **Segments** to the number of bulbs (300 on the 30 m Christmas String Lights 2). How fast it changes depends on the picture: about 6 times a second when most of the light is one colour (fades, flashes, a few bulbs moving over a background), down to about once or twice a second when every bulb is different (a rainbow). Similar colours are merged when a picture has a lot of them. **Find** doesn't work with it. |
 | App segments (experimental) | For lights whose realtime mode doesn't reach every bulb. Colours the light the way the Govee Home app does, in the app's own segments, so set **Segments** to the number the app shows. It sends a few segments at a time, the biggest changes first, so the light keeps up rather than lagging behind; slow looks suit it better than fast chases. **Find** doesn't work with it. |
 
 ### Lights not delivered yet?
@@ -663,10 +663,11 @@ works; the list under the button says which colour is which.
 
 ### Per bulb speed test
 
-For lights on **Per bulb (experimental)**: **Run speed test** flips the light between a red and a
-blue picture for six seconds, at the number of **Pictures a second** you pick. Choose **First 10
-bulbs** or **Every bulb**, and set **Segments** to the light's number of bulbs. If the light swaps
-colour every time, it keeps up at that rate; if it skips, it doesn't.
+For lights on **Per bulb (experimental)**: **Run speed test** changes the picture for six seconds,
+at the number of **Pictures a second** you pick. **First 10 bulbs** flips them between red and blue;
+**Every bulb** moves a red, green and blue pattern along the whole light one bulb at a time. Set
+**Segments** to the light's number of bulbs. If the light changes every time, it keeps up at that
+rate; if it skips or stalls, it doesn't.
 
 ## Listen for Govee traffic
 
