@@ -71,7 +71,7 @@ then the packet 33 05 0a 20 03 to show it.
 ```
 
 - Bulbs count from 0 at the plug. Bulbs in no group show the background colour.
-- Effect `13` = Twinkle, `14` = Breathe, `0f` = Gradient. `00`, `01`, `02`, `10`, `12`, `15` turn the
+- Effect `13` = Twinkle, `14` = Breathe, `0f` = Gradient. `00`, `01`, `02`, `10`, `11`, `12`, `15` turn the
   light off (invalid). **Gradient at speed 0 holds still**: that's what `pixels` sends. Speed `32`/`64`
   animate (Gradient at `64` flashes). Brightness `64` = 100%.
 - The app's background colour is the header's rgb (white by default). We send the **most common colour**
@@ -82,6 +82,10 @@ then the packet 33 05 0a 20 03 to show it.
   Oct 2026: red with bulb 0 blue showed exactly that; all black with bulb 0 listed black went dark at
   once). So a frame all one colour lists bulb 0 in that colour too: 3 packets.
 - Colours are plain RGB. When a frame has more than 24 colours they're merged (`_palette`).
+- **Breathe (`14`) animates only the listed bulbs**; the background holds still (all-background red
+  stayed steady). Breaths a second by speed byte, H70C5: `32` ≈ 0.1, `4b` ≈ 0.5, `64` ≈ 2 (×4–5 per 25).
+  **Twinkle (`13`) didn't animate** at `4b` or `64`, listed bulbs or background. Handing Pulse clips to
+  Breathe was considered and parked: issue #103 (owner's packet lab tests, Oct 2026).
 
 **Speed (H70C5, measured with the packet lab's Per bulb speed test):**
 
