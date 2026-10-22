@@ -651,6 +651,15 @@ The three types are a whole **JSON message**, a **Realtime (razer) packet** (typ
 and its data in hex; the header, length and checksum are added, and **Length field** overrides the
 length), and an **App command (ptReal)**: one Govee app command per line, in hex.
 
+### Reaching past the realtime window
+
+Some lights, like the 30 m Christmas String Lights 2 (H70C5) and the icicle lights, only take
+realtime colours for their first few dozen bulbs (44 on the H70C5). **Run sweep** tries nine guesses
+at how the rest of the bulbs might be reached, one after another for about 45 seconds. Each guess
+asks for the bulbs just past the window in its own colour. Set **Segments** to the size of the window
+first, then film the whole light while it runs. A colour appearing past the window means that guess
+works; the list under the button says which colour is which.
+
 ## Listen for Govee traffic
 
 Some Govee features drive lights in more detail than the add-on can. In **Scene Stage**, for example,

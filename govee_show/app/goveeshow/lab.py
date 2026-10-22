@@ -13,6 +13,8 @@ from .protocol import CMD_PORT, REPLY_PORT, _ble_packet, frame, razer_enable, ra
 KINDS = ("json", "razer", "ptreal")
 MAX_REPEAT = 1200
 MAX_LOG = 200
+MAX_STEPS = 20
+STEP_GAP_S = 1.5  # realtime off between sweep steps, so each starts from the light's own scene
 
 
 class LabError(ValueError):
@@ -72,15 +74,25 @@ def build(kind: str, text: str, length: int | None = None) -> bytes:
     raise LabError(f"type must be one of {', '.join(KINDS)}")
 
 
+class Step:
+    def __init__(self, payload: bytes, repeat: int = 1, interval: float = 0.1, realtime_on: bool = False,
+                 label: str = ""):
+        self.payload, self.repeat, self.interval = payload, repeat, interval
+        self.realtime_on, self.label = realtime_on, label
+
+
 class Lab:
-    """One send run at a time: the message `repeat` times, `interval` seconds apart, with replies
-    from the light logged as they arrive (and for a couple of seconds after)."""
+    """One run at a time: each step's message `repeat` times, `interval` seconds apart, with replies
+    from the light logged as they arrive (and for a couple of seconds after). Several steps make a
+    sweep: variations tried in turn, with realtime switched off between them."""
 
     def __init__(self):
         self.log: list[dict] = []
         self.sent = 0
         self.task: asyncio.Task | None = None
         self.ip = ""
+        self.steps: list[Step] = []
+        self.step = 0
 
     @property
     def running(self) -> bool:
@@ -90,14 +102,18 @@ class Lab:
         if self.task:
             self.task.cancel()
 
-    def start(self, ip: str, payload: bytes, repeat: int, interval: float, realtime_on: bool):
+    def start(self, ip: str, steps: list[Step]):
         self.stop()
         self.log, self.sent, self.ip, self.t0 = [], 0, ip, time.monotonic()
-        self.task = asyncio.create_task(self._run(payload, repeat, interval, realtime_on))
+        self.steps, self.step = steps, 0
+        self.task = asyncio.create_task(self._run())
 
-    def _note(self, direction: str, data: bytes):
+    def _note(self, direction: str, data: bytes | str):
         if len(self.log) >= MAX_LOG:
             self.log.pop(1)  # keep the first send for reference
+        if isinstance(data, str):
+            self.log.append({"t": round(time.monotonic() - self.t0, 3), "dir": "step", "text": data})
+            return
         d = describe(data)
         if "decoded" in d:  # razer and ptReal: show the packets, not their base64
             text = f'{d["json"]["msg"]["cmd"]}: ' + " | ".join(d["decoded"])
@@ -105,7 +121,7 @@ class Lab:
             text = json.dumps(d["json"]) if "json" in d else d["hex"]
         self.log.append({"t": round(time.monotonic() - self.t0, 3), "dir": direction, "text": text[:2000]})
 
-    async def _run(self, payload: bytes, repeat: int, interval: float, realtime_on: bool):
+    async def _run(self):
         loop = asyncio.get_running_loop()
         tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -123,18 +139,25 @@ class Lab:
             rx = None
         loop.add_reader(tx, self._receive, tx)
         try:
-            if realtime_on:
-                on = razer_msg(razer_enable(True))
-                tx.sendto(on, (self.ip, CMD_PORT))
-                self._note("sent", on)
-                await asyncio.sleep(0.1)
-            for i in range(repeat):
-                tx.sendto(payload, (self.ip, CMD_PORT))
-                self.sent += 1
-                if i < 3 or i == repeat - 1:
-                    self._note("sent", payload)
-                if i < repeat - 1:
-                    await asyncio.sleep(interval)
+            for k, step in enumerate(self.steps):
+                self.step = k
+                if len(self.steps) > 1:
+                    self._note("step", f"{k + 1} of {len(self.steps)}: {step.label}")
+                if step.realtime_on:
+                    on = razer_msg(razer_enable(True))
+                    tx.sendto(on, (self.ip, CMD_PORT))
+                    self._note("sent", on)
+                    await asyncio.sleep(0.1)
+                for i in range(step.repeat):
+                    tx.sendto(step.payload, (self.ip, CMD_PORT))
+                    self.sent += 1
+                    if i < 2 or i == step.repeat - 1:
+                        self._note("sent", step.payload)
+                    if i < step.repeat - 1:
+                        await asyncio.sleep(step.interval)
+                if k < len(self.steps) - 1:
+                    tx.sendto(razer_msg(razer_enable(False)), (self.ip, CMD_PORT))
+                    await asyncio.sleep(STEP_GAP_S)
             await asyncio.sleep(2)  # replies can lag
         finally:
             for s in (tx, rx):
@@ -151,4 +174,6 @@ class Lab:
             self._note("received", data)
 
     def status(self) -> dict:
-        return {"running": self.running, "ip": self.ip, "sent": self.sent, "log": self.log}
+        label = self.steps[self.step].label if self.steps else ""
+        return {"running": self.running, "ip": self.ip, "sent": self.sent, "log": self.log,
+                "step": self.step + 1, "steps": len(self.steps), "label": label}

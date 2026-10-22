@@ -8,7 +8,7 @@ import {
   renderTrack, showDuration,
 } from "./effects.js";
 import { partsFrame } from "./devicetest.js";
-import { LAB_TEMPLATES } from "./labtemplates.js";
+import { LAB_TEMPLATES, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { Layout } from "./layout.js";
 import { MusicEditor } from "./music.js";
@@ -3398,7 +3398,7 @@ function renderLab() {
   const lights = $("lab-light"), keep = lights.value;
   lights.replaceChildren(...app.deviceList.filter((d) => d.ip).map((d) => new Option(`${d.name} (${d.ip})`, d.ip)));
   if (keep) lights.value = keep;
-  $("btn-lab-send").disabled = !lights.options.length;
+  $("btn-lab-send").disabled = $("btn-lab-sweep").disabled = !lights.options.length;
 }
 
 function fillLab() {
@@ -3414,8 +3414,8 @@ function fillLab() {
   $("lab-help").textContent = LAB_HELP[t.kind];
 }
 
-async function labSend() {
-  const json = {
+async function labSend(sweep = null) {
+  const json = sweep ? { ip: $("lab-light").value, steps: sweep } : {
     ip: $("lab-light").value, kind: $("lab-kind").value, text: $("lab-text").value,
     length: $("lab-length").value, repeat: Number($("lab-repeat").value),
     interval_ms: Number($("lab-interval").value), realtime_on: $("lab-on").checked,
@@ -3423,13 +3423,18 @@ async function labSend() {
   try {
     await api("api/lab/send", { method: "POST", json });
   } catch (e) { status(`Not sent: ${e.message}`, true); return; }
+  const legend = $("lab-legend");
+  legend.hidden = !sweep;
+  if (sweep) legend.replaceChildren(...sweep.map((s) => Object.assign(document.createElement("li"), { textContent: s.label })));
   const poll = async () => {
     let s;
     try { s = await api("api/lab"); } catch { return; }
+    $("lab-now").hidden = !(sweep && s.steps > 1);
+    $("lab-now").textContent = s.running ? `Now ${s.step} of ${s.steps}: ${s.label}` : "Sweep finished";
     const log = $("lab-log");
     log.hidden = false;
     log.textContent = [`${s.running ? "Sending" : "Done"}: ${s.sent} sent to ${s.ip}`,
-      ...s.log.map((e) => `${e.t.toFixed(2).padStart(7)}s ${e.dir === "sent" ? "→" : "←"} ${e.text}`)].join("\n");
+      ...s.log.map((e) => `${e.t.toFixed(2).padStart(7)}s ${{ sent: "→", received: "←", step: "▶" }[e.dir]} ${e.text}`)].join("\n");
     if (s.running) setTimeout(poll, 500);
   };
   poll();
@@ -3443,7 +3448,8 @@ function wireLab() {
     const d = app.deviceList.find((x) => x.ip === $("lab-light").value);
     if (d) { $("lab-n").value = d.segments; fillLab(); }
   });
-  $("btn-lab-send").addEventListener("click", labSend);
+  $("btn-lab-send").addEventListener("click", () => labSend());
+  $("btn-lab-sweep").addEventListener("click", () => labSend(windowSweep(Number($("lab-n").value) || 44)));
   $("btn-lab-stop").addEventListener("click", () => api("api/lab/stop", { method: "POST", json: {} }).catch(() => {}));
   fillLab();
 }

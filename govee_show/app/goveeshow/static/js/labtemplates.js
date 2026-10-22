@@ -34,3 +34,34 @@ export const LAB_TEMPLATES = {
       return `33 05 15 01 ${hex(rgb)} 00 00 00 00 00 ${hex(bytes)}`;
     } },
 };
+
+// The "past the window" sweep: lights like the H70C5 and the icicles only take colours for their first
+// `w` bulbs (44 on the H70C5) in realtime mode. Each step is one guess at how the bulbs after that might
+// be addressed, asking for bulbs w+1 to 2w in its own colour, so a video of the light shows which guess
+// (if any) reaches further. A guess the light reads the normal way lights the first bulbs instead.
+const SWEEP_COLOURS = [
+  ["red", [255, 0, 0]], ["green", [0, 255, 0]], ["blue", [0, 0, 255]], ["yellow", [255, 200, 0]],
+  ["cyan", [0, 255, 255]], ["magenta", [255, 0, 255]], ["white", [255, 255, 255]], ["orange", [255, 80, 0]],
+  ["pink", [255, 100, 150]],
+];
+
+export function windowSweep(w = 44) {
+  w = Math.max(1, Math.min(127, w));
+  const n = hex([w]), two = (v) => hex([(v >> 8) & 255, v & 255]);
+  const guesses = [
+    ["count as two bytes, the first window off", (c) => `b0 01 ${two(2 * w)}  ${repeatRgb(w, [0, 0, 0])}  ${repeatRgb(w, c)}`],
+    ["start position after the count", (c) => `b0 01 ${n} ${n}  ${repeatRgb(w, c)}`],
+    ["start position (two bytes) before the count", (c) => `b0 01 ${two(w)} ${n}  ${repeatRgb(w, c)}`],
+    ["start position (two bytes) after the count", (c) => `b0 01 ${n} ${two(w)}  ${repeatRgb(w, c)}`],
+    ["command b2", (c) => `b2 01 ${n}  ${repeatRgb(w, c)}`],
+    ["command b3", (c) => `b3 01 ${n}  ${repeatRgb(w, c)}`],
+    ["command b5", (c) => `b5 01 ${n}  ${repeatRgb(w, c)}`],
+    ["v2 form, every colour in zone 2", (c) => `b4 01 ${n}  ` + Array.from({ length: w }, () => `${hex(c)} 02`).join("  ")],
+    ["zone 2 byte after the count", (c) => `b0 01 ${n} 02  ${repeatRgb(w, c)}`],
+  ];
+  return guesses.map(([what, text], i) => {
+    const [name, rgb] = SWEEP_COLOURS[i];
+    return { label: `${name}: ${what}`, colour: name, kind: "razer", text: text(rgb),
+      repeat: 30, interval_ms: 100, realtime_on: true };
+  });
+}

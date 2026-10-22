@@ -461,6 +461,14 @@
     <textarea id="lab-text" rows="4" spellcheck="false"></textarea>
     <p class="hint" id="lab-help"></p>
     <p><button id="btn-lab-send" class="primary">Send</button> <button id="btn-lab-stop" class="ghost">Stop</button></p>
+    <h3>Reaching past the realtime window</h3>
+    <p class="hint">Some lights, like the 30 m Christmas String Lights 2, only take realtime colours for their first
+      few dozen bulbs. <b>Run sweep</b> tries nine guesses at how the rest might be reached, one after another,
+      each in its own colour, using <b>Segments</b> above as the size of the window (44 on the H70C5). Film the whole
+      light while it runs: a colour showing up past the window means that guess works. It takes about 45 seconds.</p>
+    <p><button id="btn-lab-sweep">Run sweep</button></p>
+    <p id="lab-now" class="lab-now" hidden></p>
+    <ol id="lab-legend" class="hint" hidden></ol>
     <pre id="lab-log" class="lab-log" hidden></pre>
   </section>
   <section class="card">
