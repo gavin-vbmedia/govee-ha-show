@@ -87,3 +87,42 @@ export function startSweep(w = 44) {
     before: [...setup, ...enable].map(([kind, text]) => ({ kind, text })),
   }));
 }
+
+// The "flag" sweep: the byte after b0 switches crisp/blend, and 00, 01 and 02 all stayed on the first 44
+// bulbs of the H70C5. Each step streams a whole frame of its own colour with another flag value, so a
+// colour reaching past the window means that flag changes how far realtime goes.
+const FLAGS = [0x03, 0x04, 0x05, 0x08, 0x10, 0x20, 0x40, 0x80, 0xff];
+
+export function flagSweep(w = 44) {
+  w = Math.max(1, Math.min(255, w));
+  return FLAGS.map((flag, i) => {
+    const [name, rgb] = SWEEP_COLOURS[i];
+    return { label: `${name}: flag ${hex([flag])}`, colour: name, kind: "razer",
+      text: `b0 ${hex([flag])} ${hex([w])}  ${repeatRgb(w, rgb)}`, repeat: 30, interval_ms: 100, realtime_on: true };
+  });
+}
+
+// The "app mode" sweep: 33 05 <mode> picks what the Govee app shows (00 video, 0a Finger sketch). Each
+// step sends a bare mode packet, then the usual realtime frame in its own colour; one reaching past the
+// window, or lighting anything but the first bulbs, means that mode matters. Afterwards realtime goes
+// off and the light gets a plain white (colorwc), so it isn't left in an odd mode; white isn't used for a step.
+const MODE_COLOURS = [
+  ["red", [255, 0, 0]], ["green", [0, 255, 0]], ["blue", [0, 0, 255]], ["yellow", [255, 200, 0]],
+  ["cyan", [0, 255, 255]], ["magenta", [255, 0, 255]], ["orange", [255, 80, 0]], ["pink", [255, 100, 150]],
+  ["purple", [120, 0, 255]], ["lime", [150, 255, 0]], ["teal", [0, 150, 120]], ["sky blue", [60, 160, 255]],
+  ["gold", [255, 150, 0]], ["violet", [200, 80, 255]], ["mint", [100, 255, 160]], ["rose", [255, 40, 90]],
+  ["amber", [255, 110, 0]], ["navy", [0, 0, 120]], ["olive", [120, 140, 0]], ["coral", [255, 90, 60]],
+];
+const MODES = Array.from({ length: 0x15 }, (_, i) => i + 1).filter((m) => m !== 0x0a);
+export const SETTLE = JSON.stringify({ msg: { cmd: "colorwc", data: { color: { r: 255, g: 255, b: 255 }, colorTemInKelvin: 0 } } });
+
+export function modeSweep(w = 44) {
+  w = Math.max(1, Math.min(255, w));
+  return MODES.map((mode, i) => {
+    const [name, rgb] = MODE_COLOURS[i];
+    return { label: `${name}: app mode ${hex([mode])}`, colour: name, kind: "razer",
+      text: `b0 01 ${hex([w])}  ${repeatRgb(w, rgb)}`, repeat: 30, interval_ms: 100, realtime_on: true,
+      before: [{ kind: "ptreal", text: `33 05 ${hex([mode])}` }],
+      after: [{ kind: "razer", text: "b1 00" }, { kind: "json", text: SETTLE }] };
+  });
+}

@@ -537,3 +537,29 @@ async def test_per_bulb_speed_test_alternates_pictures_at_the_rate_asked(client)
         rx.close()
     for bad in ({**ok, "per_second": 100}, {**ok, "bulbs": 0}, {**ok, "ip": "192.0.2.1"}):
         assert (await client.post("/api/lab/speed", json=bad)).status == 400
+
+
+async def test_packet_lab_sends_a_steps_after_messages_once_it_is_done(client):
+    import socket
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind(("127.0.0.1", 4003))
+    rx.setblocking(False)
+    try:
+        await client.put("/api/devices", json=[{"ip": "127.0.0.1", "name": "Tree", "segments": 10}])
+        settle = '{"msg":{"cmd":"colorwc","data":{"color":{"r":255,"g":255,"b":255},"colorTemInKelvin":0}}}'
+        step = {"kind": "razer", "text": "b0 01 01 ff0000", "repeat": 2, "interval_ms": 20,
+                "after": [{"kind": "razer", "text": "b1 00"}, {"kind": "json", "text": settle}]}
+        assert (await client.post("/api/lab/send", json={"ip": "127.0.0.1", "steps": [step]})).status == 200
+        await asyncio.sleep(0.4)
+        msgs = []
+        while True:
+            try:
+                msgs.append(json.loads(rx.recv(4096))["msg"])
+            except BlockingIOError:
+                break
+        kinds = [base64.b64decode(m["data"]["pt"])[3] if m["cmd"] == "razer" else m["cmd"] for m in msgs]
+        assert kinds == [0xB0, 0xB0, 0xB1, "colorwc"]  # the frames, then realtime off and a plain colour
+    finally:
+        rx.close()
+    bad = {"kind": "razer", "text": "b1 01", "after": [{"kind": "nope", "text": ""}]}
+    assert (await client.post("/api/lab/send", json={"ip": "127.0.0.1", "steps": [bad]})).status == 400
