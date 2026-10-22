@@ -133,7 +133,10 @@ nothing useful.
   doesn't offer screen sync for the H70C5. A TV sync box does drive the String Lights 2 (a UK Amazon
   review of the 20 m set, Dec 2025: "the tree follows the colours of the tele" with the camera kit), and
   owners in the Govee Facebook group describe the set-up as "add the string lights to DreamView… then set
-  the segments" (Nov 2024). So it works at the app's segment level, not per bulb, and isn't worth chasing. Testing it
+  the segments" (Nov 2024). The owner has seen video of the **whole** string following the TV, so the sync
+  box gets colour onto all the bulbs live, which our razer frames can't (first 44 only). Unknown whether
+  that's per bulb or the 44 live colours spread along the string (about 7 bulbs each), but either way the
+  box sends something we haven't found: likely a set-up message when the light joins DreamView. Open. Testing it
   would mean buying one and capturing on the UniFi access point; not done.
 
 ## Tools in the add-on for this kind of work
@@ -147,5 +150,6 @@ All under Setup → Settings:
 
 ## Open questions
 
+- What does a DreamView sync box send to make the H70C5 show live colour along the whole string?
 - Is the Per bulb picture rate the same on the icicles? Do other lights with Finger sketch accept it?
 - App segments after the 0.2.71 lag fix: does it keep up now?
