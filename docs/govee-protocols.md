@@ -59,7 +59,11 @@ mode, tested from the packet lab:
 Govee's product data (SignalRGB's copy) marks **none** of the 54 Scene Stage models as
 realtime-capable, including the Permanent Outdoor Lights Pro (H706A/B/C) that do work (owner's, and
 signalrgb-govee's 60/90/108 LEDs). Since 0.2.82 that flag isn't used at all: `static/models.json` is our
-own list. Names came from SignalRGB's data (`tools/build_models.py` only adds new light models' names);
+own list. Since 0.2.86 names come from Govee's own list of lights with LAN Control (the API behind
+app-h5.govee.com/user-manual/wlan-guide, `app2.govee.com/bff-app/v1/user/guide/device/info?market=US`,
+280 models in Oct 2026; `tools/build_models.py` adds new ones and marks listed ones `lan: true`). That list
+isn't complete (the DreamView T1, H6199, isn't on it), so a missing model isn't marked unsupported. Older
+names came from SignalRGB's data;
 `status` (`works` / `limited`, else untested), the default `protocol`, `segments`, `bulbs`, `reach` and
 `note` are only what real lights showed, and are edited by hand. New lights start with a model's
 defaults (`static/js/models.js`); `reach` (bulbs its realtime mode lights) drives the timeline warning

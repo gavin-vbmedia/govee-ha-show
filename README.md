@@ -235,7 +235,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/compat.js                        Whether a clip's effect can show on its light, for marking and blocking
     js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
     models.json                         Our list of Govee lights: tested status and default settings
-tools/build_models.py                   Adds new Govee lights to models.json, by name
+tools/build_models.py                   Adds new lights from Govee's LAN Control list to models.json
 tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traffic from an Android log
 docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions
 tests/                                  pytest and node tests (tests/js)

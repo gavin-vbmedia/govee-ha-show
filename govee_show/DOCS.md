@@ -107,7 +107,8 @@ Pick the model (for example `H706A`), give it a name and press **Add
 planned light**, then build shows with it straight away. The badge next to a model says what we've
 found on real lights: **✓ works** (tested, works on Realtime), **⚠ limited** (tested, only partly works;
 point at the badge to see what it can do) or **? untested** (not tried with this add-on yet: most
-Govee lights with LAN Control work, so add one and press **Test** before buying more). A tested model
+Govee lights with LAN Control work, so add one and press **Test** before buying more; the badge's
+tooltip says whether Govee lists the model as having LAN Control). A tested model
 starts with the settings that suit it, such as **Per bulb** with 300 segments for the 30 m Christmas
 String Lights 2, both when you plan it and when you add it from **Scan network**. Lights you've already
 added keep their settings. Otherwise 15 segments is a guess until you test the real

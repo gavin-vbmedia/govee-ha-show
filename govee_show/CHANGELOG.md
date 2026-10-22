@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.86
+
+- The model list under **Setup → Devices** now comes from Govee's own list of lights with LAN Control,
+  so it has over 100 newer lights, such as the Permanent Outdoor Lights 2 Pro and Prism, the Curtain
+  Lights Pro and the Christmas Sparkle String Lights. Point at a model's **? untested** badge to see
+  whether Govee lists it as having LAN Control, which the add-on needs.
+
 ## 0.2.85
 
 - The four sweeps in **Setup → Settings → Packet lab** now work over the right number of bulbs on their
