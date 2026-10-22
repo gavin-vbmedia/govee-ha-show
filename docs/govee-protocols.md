@@ -125,7 +125,8 @@ nothing useful.
 
 - **Listening for Scene Stage** (Setup → Settings → Listen): a sync centre (Curtain Lights 2, not the
   Permanent Pro) drives other lights per bulb, but almost certainly unicast to each light, which the HA
-  host can't hear. Not run; the Finger sketch route made it unnecessary.
+  host can't hear. Not run; the Finger sketch route made it unnecessary. The owner doesn't have a
+  sync centre: the Permanent Outdoor Lights Pro can't be one (checked in the app).
 - **Wireshark on a laptop**: can't see phone ↔ light unicast. A UniFi access point can `tcpdump` its
   bridge (SSH), but the app used the cloud, not the LAN.
 - **HA Bluetooth proxies**: only relay advertisements; can't sniff connections, and add-ons can't use
@@ -145,6 +146,17 @@ nothing useful.
   at a set-up message found nothing (see above); only a capture of a sync box would settle it. Testing it
   would mean buying one and capturing on the UniFi access point; not done.
 
+## Where this stands (Oct 2026)
+
+For the H70C5 and the icicles (H70D1/H70D2) the add-on offers three ways, each a trade-off:
+**Per bulb** (every bulb, a few pictures a second), **App segments** (about 10 bands, faster) and
+**Realtime** (smooth, first 44 bulbs only). Everything we can send from the LAN to get past bulb 44 live
+has been tried. The two leads left, Scene Stage and TV DreamView, both need a device the owner doesn't
+have (a sync centre such as the Curtain Lights 2, or a DreamView sync box) and might still turn out to
+be segments only or to go over Bluetooth or the cloud. Agreed with the owner to stop here unless one
+turns up; if it does, capture its traffic (Listen first, then `tcpdump` on the UniFi access point) and
+walk the owner through it one step at a time.
+
 ## Tools in the add-on for this kind of work
 
 All under Setup → Settings:
@@ -158,6 +170,7 @@ All under Setup → Settings:
 
 ## Open questions
 
-- What does a DreamView sync box send to make the H70C5 show live colour along the whole string?
+- What does a DreamView sync box, or a Scene Stage sync centre, send to make the H70C5 show live colour
+  along the whole string? (Needs one of those devices; see "Where this stands".)
 - Is the Per bulb picture rate the same on the icicles? Do other lights with Finger sketch accept it?
 - App segments after the 0.2.71 lag fix: does it keep up now?
