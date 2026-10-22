@@ -41,6 +41,29 @@ const LOOKS = {
   ],
 };
 
+// Looks for slow lights (see lightspeed.js): the whole light changing at once, or blocks and gradients
+// that hardly move, so they look right at a few changes a second. Nothing faster than once a beat.
+const SLOW_LOOKS = {
+  low: [
+    { effect: "gradient", label: "Slow drift", params: () => ({ count: "3", speed: 0.05 }) },
+    { effect: "pulse", label: "Breathe each bar", params: (bps) => ({ rate: bps / 4, background: "#000000" }) },
+    { effect: "duo", label: "Still blocks", params: () => ({ layout: "split", speed: 0 }) },
+    { effect: "cycle", label: "Slow colour fade", params: (bps) => ({ rate: bps / 8, blend: "fade" }) },
+  ],
+  mid: [
+    { effect: "cycle", label: "Colour change each beat", params: (bps) => ({ rate: bps, blend: "step" }) },
+    { effect: "pulse", label: "Pulse each bar", params: (bps) => ({ rate: bps / 4, background: "#000000" }) },
+    { effect: "cycle", label: "Colour fade each bar", params: (bps) => ({ rate: bps / 4, blend: "fade" }) },
+    { effect: "duo", label: "Blocks, still", params: () => ({ layout: "split", speed: 0 }) },
+  ],
+  high: [
+    { effect: "cycle", label: "Colour flash each beat", params: (bps) => ({ rate: bps, blend: "step" }) },
+    { effect: "pulse", label: "Pulse each beat", params: (bps) => ({ rate: bps, background: "#000000" }) },
+    { effect: "cycle", label: "Colour flash every two beats", params: (bps) => ({ rate: bps / 2, blend: "step" }) },
+    { effect: "pulse", label: "Pulse every two beats", params: (bps) => ({ rate: bps / 2, background: "#000000" }) },
+  ],
+};
+
 // A repeatable pseudo-random number in [0, 1) from any number of integers.
 function hash(...xs) {
   let h = 2166136261;
@@ -79,7 +102,8 @@ function clipFor(look, start, end, bps, n, colors, offset) {
   return clip;
 }
 
-// analysis: {beats, bars, sections, tempo, duration}; lights: [{id, segments}];
+// analysis: {beats, bars, sections, tempo, duration}; lights: [{id, segments, slow}], slow for lights
+// that can only change a few times a second (they get SLOW_LOOKS);
 // colors: the palette's colours. Returns {clips: {deviceId: [clip]}, house: [clip]}.
 export function generateShow(analysis, lights, colors, { style = "balanced", seed = 1, house = false } = {}) {
   const duration = analysis.duration;
@@ -94,11 +118,13 @@ export function generateShow(analysis, lights, colors, { style = "balanced", see
   sections.forEach((sec, si) => {
     const t = tier(sec.energy ?? 0.5, style);
     // Two looks per section, picked by its name so a repeated chorus looks the same each time.
-    const set = LOOKS[t];
     const key = textHash(sec.label || `s${si}`);
-    const a = Math.floor(hash(key, seed) * set.length);
-    const b = (a + 1 + Math.floor(hash(key, seed, 7) * (set.length - 1))) % set.length;
-    const looks = [set[a], set[b]];
+    const pick = (set) => {
+      const a = Math.floor(hash(key, seed) * set.length);
+      const b = (a + 1 + Math.floor(hash(key, seed, 7) * (set.length - 1))) % set.length;
+      return [set[a], set[b]];
+    };
+    const fast = pick(LOOKS[t]), slow = pick(SLOW_LOOKS[t]);
     // Loud sections and the chorus move together on every light; the rest alternate across lights.
     const unison = t === "high" || sec.label === "Chorus";
     const bars = grid.filter((g) => g >= sec.start - 0.05 && g <= sec.end + 0.05);
@@ -108,7 +134,7 @@ export function generateShow(analysis, lights, colors, { style = "balanced", see
     for (let k = 0, phrase = 0; k < bars.length - 1; k += step, phrase++) {
       const start = bars[k], end = bars[Math.min(k + step, bars.length - 1)];
       lights.forEach((light, li) => {
-        const look = looks[(phrase + (unison ? 0 : li)) % 2];
+        const look = (light.slow ? slow : fast)[(phrase + (unison ? 0 : li)) % 2];
         clips[light.id].push(clipFor(look, start, end, bps, light.segments, colors, unison ? li : phrase));
       });
     }
@@ -147,14 +173,15 @@ export function generateShow(analysis, lights, colors, { style = "balanced", see
 }
 
 // Looks that suit a stretch of the song, for the effect chooser: the ones Generate would pick from
-// for the section it falls in, with speeds set from the tempo. Returns the section (or null) and
+// for the section it falls in, with speeds set from the tempo (slow-light looks for a slow light).
+// Returns the section (or null) and
 // [{effect, label, params}].
-export function suggestLooks(analysis, start, end, segments = 15, style = "balanced") {
+export function suggestLooks(analysis, start, end, segments = 15, style = "balanced", slow = false) {
   const overlap = (s) => Math.min(s.end, end) - Math.max(s.start, start);
   const section = (analysis.sections || []).reduce((best, s) => (overlap(s) > 0 && (!best || overlap(s) > overlap(best)) ? s : best), null);
   const t = tier(section?.energy ?? 0.5, style);
   const bps = beatsPerSecond(analysis);
-  return { section, tier: t, looks: LOOKS[t].map((look) => ({ effect: look.effect, label: look.label, params: tidy(look.params(bps, segments)) })) };
+  return { section, tier: t, looks: (slow ? SLOW_LOOKS : LOOKS)[t].map((look) => ({ effect: look.effect, label: look.label, params: tidy(look.params(bps, segments)) })) };
 }
 
 // Puts generated clips on the show's tracks, replacing what the lights (and, with house clips,

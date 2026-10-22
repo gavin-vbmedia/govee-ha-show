@@ -228,6 +228,7 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/analysis.js                      Song analysis: tempo, beats, bars and sections
     js/analysis-worker.js               Runs the analysis off the main thread
     js/autogen.js                       Generates a draft show from the analysis
+    js/lightspeed.js                    Which protocols can only change a light a few times a second
     js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
     models.json                         Govee model names and segment counts
 tools/build_models.py                   Regenerates models.json

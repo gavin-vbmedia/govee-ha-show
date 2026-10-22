@@ -45,7 +45,10 @@ start time to an end time in seconds. Clips you add replace what that light had 
 Turn the user's request into clips, using the context below:
 - "lights": each light's name and segment count. "House" is a special lane whose effects (the ones marked \
 "house") run across every light by where it sits on the house photo; use it only if it is listed, and only \
-with house effects. Other lights take only the other effects.
+with house effects. Other lights take only the other effects. A light marked "slow" can only change a few \
+times a second: give it effects that change the whole light at once or barely move (fades, colour cycles, \
+pulses, still blocks, slow gradients), at most once a beat, and never fast chases, comets, scanners, \
+marquees, twinkles, strobes, flicker or rainbows.
 - "effects": every effect, with its settings (key, type, range or options, and default). Leave out settings \
 the default suits. Colours are "#rrggbb"; LEDs wash out pastels and dark shades, so use strong colours, and \
 "#000000" for off.

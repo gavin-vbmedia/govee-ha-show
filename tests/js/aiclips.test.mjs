@@ -98,3 +98,10 @@ test("section notes go to the AI; section colours don't", () => {
   const ctx = buildContext({ show: sh, lights, duration: 30 });
   assert.deepEqual(ctx.song.sections, [{ start: 0, end: 30, label: "Chorus", energy: 0.9, notes: "big drop, everything flashes" }]);
 });
+
+test("slow lights are marked for the AI", () => {
+  const ctx = buildContext({ show: show(), lights: [...lights, { name: "Pillars", trackIndex: 2, segments: 300, slow: true }],
+    duration: 30 });
+  assert.equal(ctx.lights.find((l) => l.name === "Pillars").slow, true);
+  assert.equal(ctx.lights.find((l) => l.name === "Roof").slow, undefined);
+});

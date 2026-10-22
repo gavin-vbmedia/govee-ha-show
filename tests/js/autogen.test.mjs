@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { generateShow, barGrid, tier } from "../../govee_show/app/goveeshow/static/js/autogen.js";
+import { generateShow, barGrid, suggestLooks, tier } from "../../govee_show/app/goveeshow/static/js/autogen.js";
 import { EFFECTS, HOUSE } from "../../govee_show/app/goveeshow/static/js/effects.js";
 import { applyGenerated } from "../../govee_show/app/goveeshow/static/js/autogen.js";
 
@@ -106,4 +106,20 @@ test("picks a palette for the time of year", async () => {
   assert.equal(seasonalPalette(new Date(2026, 11, 1)).name, "Christmas");
   assert.equal(seasonalPalette(new Date(2026, 10, 5)).name, "Bonfire Night");
   assert.equal(seasonalPalette(new Date(2026, 5, 1)), null);
+});
+
+test("slow lights get looks that change the whole light, never faster than the beat", () => {
+  const analysis = { duration: 60, tempo: 120, beats: [], bars: [],
+    sections: [{ start: 0, end: 20, label: "Verse", energy: 0.2 }, { start: 20, end: 40, label: "Chorus", energy: 0.9 },
+      { start: 40, end: 60, label: "Bridge", energy: 0.5 }] };
+  const lights = [{ id: "fast", segments: 30 }, { id: "slow", segments: 300, slow: true }];
+  for (let seed = 1; seed <= 20; seed++) {
+    const { clips } = generateShow(analysis, lights, ["#ff0000", "#00ff00", "#0000ff"], { seed });
+    for (const c of clips.slow) {
+      assert.ok(["gradient", "pulse", "duo", "cycle", "fade"].includes(c.effect), c.effect);
+      for (const k of ["rate", "speed"]) if (c[k] != null) assert.ok(c[k] <= 2, `${c.effect} ${k} ${c[k]}`);
+    }
+  }
+  const { looks } = suggestLooks(analysis, 20, 30, 300, "balanced", true);
+  assert.ok(looks.every((l) => !["chase", "twinkle", "comet", "trio"].includes(l.effect)));
 });
