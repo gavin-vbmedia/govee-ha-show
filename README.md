@@ -231,6 +231,8 @@ govee_show/                             The add-on (config, Dockerfile, docs, ch
     js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
     models.json                         Govee model names and segment counts
 tools/build_models.py                   Regenerates models.json
+tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traffic from an Android log
+docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions
 tests/                                  pytest and node tests (tests/js)
 ```
 
