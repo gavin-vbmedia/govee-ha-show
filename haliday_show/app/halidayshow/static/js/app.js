@@ -45,6 +45,15 @@ const prefs = {
   },
 };
 
+// "How to…" folds keep the longer help out of the way, open or shut as you last left each one.
+function restoreHowTo(root = document) {
+  for (const d of root.querySelectorAll("details.howto[data-howto]")) d.open = prefs.get(`howto.${d.dataset.howto}`, false);
+}
+document.addEventListener("toggle", (e) => {
+  const d = e.target;
+  if (d instanceof HTMLDetailsElement && d.matches(".howto[data-howto]")) prefs.set(`howto.${d.dataset.howto}`, d.open);
+}, true);
+
 function status(msg, error = false) {
   const el = $("status");
   el.textContent = msg;
@@ -2078,11 +2087,17 @@ function renderInspector() {
   if (track && !sel.clip) { renderTrackInspector(sel.track); return; }
   if (!sel || !track || !track.clips.includes(sel.clip)) {
     app.selected = null;
-    box.innerHTML = `<p class="hint">Drag across a light (or several) to select a stretch of time, then pick an
-      effect to add it there, or press Delete to clear it (hold Alt to start a selection on top of a clip). Click a clip to edit it: drag it to move, drag its
-      edges to resize, D duplicates, Ctrl+C / Ctrl+V copy and paste, Ctrl+Z undoes. Click a light's name to copy or
-      recolour all its effects. Drag along the time ruler to set a play region, and tick Loop to repeat it. Click the beat lane to add or
-      remove a beat; hold Shift to drag without snapping.</p>`;
+    box.innerHTML = `<p class="hint">Drag across a light, or the House lane, to select a stretch of time, then pick
+      an effect to add it there.</p>
+      <details class="howto" data-howto="selection"><summary>How to…</summary><ul>
+        <li>Press Delete to clear the stretch. Hold Alt to start a selection on top of a clip.</li>
+        <li>Click a clip to edit it: drag it to move, or drag its edges to resize. D duplicates, Ctrl+C and Ctrl+V
+          copy and paste, and Ctrl+Z undoes.</li>
+        <li>Click a light's name to copy or recolour all its effects.</li>
+        <li>Drag along the time ruler to set a play region, and tick Loop to repeat it.</li>
+        <li>Click the beat lane to add or remove a beat. Hold Shift to drag without snapping.</li>
+      </ul></details>`;
+    restoreHowTo(box);
     return;
   }
   const clip = sel.clip;
@@ -4587,6 +4602,7 @@ async function listenForTraffic() {
 }
 
 async function init() {
+  restoreHowTo();
   wire();
   $("btn-listen").addEventListener("click", listenForTraffic);
   wireLab();

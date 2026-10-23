@@ -66,7 +66,7 @@
       <div class="group">
         <select id="show-select" title="Open a show"></select>
         <button id="btn-save" class="primary" title="Save and bake (Ctrl+S)">Save</button>
-        <button id="btn-show-settings" title="Name, show speaker, auto save, delete">⚙ Settings…</button>
+        <button id="btn-show-settings" title="Name, show speaker, auto save, delete">⚙ Show settings…</button>
         <button id="btn-generate" title="Fill every light with effects that follow the song">✨ Generate</button>
         <span id="save-state" class="save-state"></span>
       </div>
@@ -199,10 +199,18 @@
 
 <main id="view-music" class="view music" hidden>
   <p class="hint">Cut, shorten and splice songs here, then <b>Save as new file</b> and pick it under <b>Song</b> in the
-    editor. The original file isn't changed. <b>Detect</b> finds the beats and sections and keeps them with the
-    song, so a show that picks it gets them straight away. Drag across the waveform to select (edges snap to bars once the song is detected; hold Shift to place
-    freely), click a section in the lane to select it (Shift-click to add the next), click to move the playhead, and use the
-    wheel to zoom (Shift + wheel scrolls). Space plays, Delete cuts the selection, Ctrl+Z undoes.</p>
+    editor. The original file isn't changed.</p>
+  <details class="howto" data-howto="music"><summary>How to…</summary>
+    <ul>
+      <li><b>Detect</b> finds the beats and sections and keeps them with the song, so a show that picks it gets
+        them straight away.</li>
+      <li>Drag across the waveform to select. The edges snap to bars once the song is detected; hold Shift to place
+        them freely.</li>
+      <li>Click a section in the lane to select it, and Shift-click to add the next one.</li>
+      <li>Click to move the playhead. Use the wheel to zoom, and Shift + wheel to scroll.</li>
+      <li>Space plays, Delete cuts the selection, and Ctrl+Z undoes.</li>
+    </ul>
+  </details>
   <section class="toolbar">
     <label>Song <select id="music-src"></select></label>
     <label class="button ghost" title="Upload a song to HA-liday Show and start editing it">Upload<input id="music-upload" type="file" accept="audio/*" hidden></label>
@@ -485,7 +493,7 @@
     <p class="hint">To play <b id="automation-show">this show</b> from an automation, use the <b>HA-liday Show</b> MQTT
       entities (pick the show, then press Play), or the <code>hassio.app_stdin</code> action with input
       <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the show's
-      <b>Show speaker</b> (in the editor's <b>⚙ Settings…</b> for the show), or on the <b>Default show speaker</b> above when a show
+      <b>Show speaker</b> (in the editor's <b>⚙ Show settings…</b>), or on the <b>Default show speaker</b> above when a show
       doesn't pick one. The
       speaker in the Playback panel is only for editing, so you can design on a speaker indoors without changing
       where the real show plays.</p>
@@ -517,10 +525,15 @@
 <main id="view-settings" class="view settings" hidden>
   <section class="card">
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-layout"/></svg>Layout</h2>
-    <p class="hint">Pick a page layout to set how the five areas fit together, then choose where each editor
-      panel sits: along the top or bottom, down the left or right, or in the middle. Choose <b>Hidden</b> to tuck a panel away and bring it back here. In the editor you can also
-      drag a panel by its title to move it or change its order, or use the ⋯ button on it. The layout is saved
-      in this browser.</p>
+    <p class="hint">Pick a page layout, then choose where each editor panel sits. It's saved in this browser.</p>
+    <details class="howto" data-howto="layout"><summary>How to…</summary>
+      <ul>
+        <li>Each panel can go along the top or bottom, down the left or right, or in the middle.</li>
+        <li>Choose <b>Hidden</b> to tuck a panel away, and bring it back here.</li>
+        <li>In the editor you can also drag a panel by its title to move it or change its order, or use the ⋯
+          button on it.</li>
+      </ul>
+    </details>
     <div id="layout-frames"></div>
     <div id="layout-rows" class="layout-rows"></div>
     <p><button id="btn-reset-layout" class="ghost">Reset layout</button></p>
