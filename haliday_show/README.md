@@ -2,7 +2,9 @@
 
 ![HA-liday Show](https://raw.githubusercontent.com/gavin-vbmedia/ha-liday-show/main/haliday_show/logo.png)
 
-Music-synchronised light shows for Govee lights, built right inside Home Assistant.
+Music-synchronised light shows for the lights you already have, built right inside Home Assistant:
+Govee, WLED, pixel controllers (DDP or E1.31), Twinkly (experimental), and any Home Assistant light or
+smart plug.
 
 ![The editor: a generated show on five lights, playing on the house preview](https://raw.githubusercontent.com/gavin-vbmedia/ha-liday-show/main/docs/images/editor.webp)
 
@@ -14,7 +16,8 @@ Music-synchronised light shows for Govee lights, built right inside Home Assista
 - ⏯️ Play the song on any Home Assistant speaker and start shows from automations (MQTT or
   `hassio.addon_stdin`)
 
-Needs Govee lights with **LAN Control** switched on in the Govee Home app. After starting the add-on,
-open **HA-liday Show** from the sidebar. The **Documentation** tab has the full guide.
+Works with any mix of those lights on your network; Govee lights need **LAN Control** switched on in the
+Govee Home app. After starting the add-on, open **HA-liday Show** from the sidebar and press
+**+ Add a light** under **Setup → Devices**. The **Documentation** tab has the full guide.
 
 [Source, issues and screenshots on GitHub](https://github.com/gavin-vbmedia/ha-liday-show)

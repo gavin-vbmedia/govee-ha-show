@@ -1,7 +1,9 @@
 # 🎄 HA-liday Show
 
-Build music-synchronised light shows for Govee lights, preview them on a photo of your house, and
-play them from Home Assistant. Open **HA-liday Show** from the Home Assistant sidebar.
+Build music-synchronised light shows for your Christmas lights, preview them on a photo of your house,
+and play them from Home Assistant. It drives Govee lights, WLED strips, pixel controllers (DDP or E1.31),
+any Home Assistant light or switch, and Twinkly (experimental), in any mix. Open **HA-liday Show** from
+the Home Assistant sidebar.
 
 **Getting started:** [Finding your way](#finding-your-way) · [Requirements](#requirements) ·
 [Quick start](#quick-start) · [Moving from Govee Light Show](#moving-from-govee-light-show)
@@ -34,9 +36,15 @@ page you last had open. Below, "the House tab" and so on mean that page.
 
 - Home Assistant OS or Supervised (anything with **Settings → Add-ons**). No add-ons? You can
   [run it without them](#running-without-home-assistant), with Docker or Python.
-- Govee lights with **LAN Control** switched on in the Govee Home app, on the same network as
-  Home Assistant, with multicast allowed. The model needs Govee's per-segment realtime mode (the
-  Devices tab tells you whether a model is known to have it).
+- Lights on the same network as Home Assistant, any of:
+  - **Govee** lights with **LAN Control** switched on in the Govee Home app, with multicast allowed. The
+    model needs Govee's per-segment realtime mode (the Devices tab tells you whether a model is known
+    to have it).
+  - **WLED** strips.
+  - **Pixel controllers** that take **DDP** (Falcon Player, ESPixelStick, ESPHome, Tasmota, an ESP32) or
+    **E1.31**, also called sACN (Falcon, Kulp, xLights set-ups).
+  - Any **Home Assistant** light or switch, such as Zigbee or Hue bulbs, or a smart plug for a prop.
+  - **Twinkly** lights (experimental).
 - Optional: a Home Assistant media player for the music. Without one, songs play in your browser
   while you edit, and shows started from automations play the lights only.
 - Optional: the Mosquitto broker add-on and MQTT integration, for show entities in automations.
@@ -44,7 +52,7 @@ page you last had open. Below, "the House tab" and so on mean that page.
 ## Quick start
 
 1. **Setup → Devices**: press **+ Add a light**, pick what kind it is and follow the steps, then press
-   **Find** or **Test** to set its segment count.
+   **Test** to check it. For a Govee light, **Find** or **Test** sets its segment count.
 2. **Setup → Speakers** (optional): press **+ Add a speaker**, **Test and add** your speaker, and pick it as the default show
    speaker.
 3. **Setup → House** (optional): upload a photo of your house and trace each light on it.
@@ -88,16 +96,53 @@ for the next one, or **Done**. Each light has a row of settings:
 | Setting | What it does |
 | --- | --- |
 | Name | How the light is labelled in the editor and on the House tab. |
-| Segments | How many separately controllable sections it has. Govee doesn't report this, so set it with **Find** or **Test** (below). Most strips and outdoor lights have 10 to 15. |
+| Segments | How many separately controllable sections it has. For WLED, Twinkly and pixel controllers it's the number of LEDs, filled in or typed when you add it; a Home Assistant light has one. Govee doesn't report it, so set it with **Find** or **Test** (see [Govee lights](#govee-lights)); most Govee strips and outdoor lights have 10 to 15. |
 | Bulbs | The real number of bulbs, so the House view draws each one. Leave blank to draw 4 per segment. |
 | Brightness % | Caps the light in every show, handy when one string is much brighter than the rest. It applies straight away, to previews too, without re-saving shows. |
 | Reverse | Tick it if effects run from the wrong end. |
-| Blend | Asks the light to blend smoothly between neighbouring segments. |
-| Protocol | How colours are sent (see below). |
+| Blend | Govee only: asks the light to blend smoothly between neighbouring segments. |
+| Protocol | Govee only: how colours are sent (see [Govee lights](#govee-lights)). Other kinds show how they're driven, such as **DDP** or **E1.31**. |
+
+Some kinds have a little more in their row: **first LED** for a pixel controller over DDP, **universe**
+and **channel** for one over E1.31, and the light or switch for a Home Assistant one.
+
+### Govee lights
+
+Switch on **LAN Control** for each light in the Govee Home app first. Then press **+ Add a light**, pick
+**Govee light**, press **Scan network** and **Add** each light it finds, or type its IP if it doesn't show
+up. Govee lights need a little more setting up than the others, because Govee doesn't report how many
+segments a light has, and different models take colours in different ways.
+
+#### Setting the segment count
+
+Press **Test**: a rainbow runs along the light with a white dot
+stepping from segment to segment. Set **Segments** so the dot visits every segment once per lap,
+and tick **Reverse** if it runs the wrong way. If the light is still on its reel, press **Find**
+next to **Segments** instead: a window opens, lights one segment and asks whether anything is lit.
+Each answer halves the possible range, so after about 7 answers the count is filled in and the
+window says what it found. **Cancel** stops it and lets the light go back to normal. Set **Reverse** later,
+once the light is hung up.
+
+While the test is running you can change **Segments**, **Reverse** or **Protocol** and the light
+picks up the change straight away, so you don't need to press **Test** again after each one.
+
+#### Test only turns the light on?
+
+Lights accept different forms of the realtime command. Change
+**Protocol** and press **Test** again:
+
+| Protocol | When to use it |
+| --- | --- |
+| Realtime | The default, the same packets OpenRGB sends. Works for most strips and outdoor lights. |
+| Realtime (Razer) | The fixed-size packet Razer Chroma sends. Try it next. |
+| Realtime v2 | The newer DreamView form some recent lights use. |
+| Whole light only | For lights with no realtime mode. The whole light shows the average colour of its segments, at up to 10 changes a second, and each change fades a little. |
+| Per bulb (experimental) | For lights whose app has **Finger sketch**, such as the Christmas String Lights 2 and the icicle lights, when their realtime mode doesn't reach every bulb. Sends a picture with a colour for every bulb, as Finger sketch does, so set **Segments** to the number of bulbs (300 on the 30 m Christmas String Lights 2). How fast it changes depends on the picture: about 6 times a second when most of the light is one colour (fades, flashes, a few bulbs moving over a background), down to about once or twice a second when every bulb is different (a rainbow). Similar colours are merged when a picture has a lot of them. **Find** doesn't work with it. |
+| App segments (experimental) | For lights whose realtime mode doesn't reach every bulb. Colours the light the way the Govee Home app does, in the app's own segments, so set **Segments** to the number the app shows. It sends a few segments at a time, the biggest changes first, so the light keeps up rather than lagging behind; slow looks suit it better than fast chases. **Find** doesn't work with it. |
 
 ### WLED strips
 
-WLED strips work alongside your Govee lights. Press **+ Add a light**, pick **WLED strip** and press
+WLED strips work like any other light. Press **+ Add a light**, pick **WLED strip** and press
 **Scan network** to find it, or type its IP address (it's on the WLED app's **Info** page) and press **Add**. The add-on asks the
 strip for its name and number of LEDs, so there's nothing to work out: every LED is its own segment,
 up to 1000 a strip. **Find**, **Blend** and **Protocol** don't apply to WLED, so they're not shown.
@@ -189,37 +234,12 @@ Drag a light by its ⠿ handle, or use its ↑ and ↓ buttons. Every
 show's timeline, the editor's preview and the House tab list lights in this order, with a split
 light's parts kept together under it.
 
-### Setting the segment count
-
-Press **Test**: a rainbow runs along the light with a white dot
-stepping from segment to segment. Set **Segments** so the dot visits every segment once per lap,
-and tick **Reverse** if it runs the wrong way. If the light is still on its reel, press **Find**
-next to **Segments** instead: a window opens, lights one segment and asks whether anything is lit.
-Each answer halves the possible range, so after about 7 answers the count is filled in and the
-window says what it found. **Cancel** stops it and lets the light go back to normal. Set **Reverse** later,
-once the light is hung up.
-
-While the test is running you can change **Segments**, **Reverse** or **Protocol** and the light
-picks up the change straight away, so you don't need to press **Test** again after each one.
-
-### Test only turns the light on?
-
-Lights accept different forms of the realtime command. Change
-**Protocol** and press **Test** again:
-
-| Protocol | When to use it |
-| --- | --- |
-| Realtime | The default, the same packets OpenRGB sends. Works for most strips and outdoor lights. |
-| Realtime (Razer) | The fixed-size packet Razer Chroma sends. Try it next. |
-| Realtime v2 | The newer DreamView form some recent lights use. |
-| Whole light only | For lights with no realtime mode. The whole light shows the average colour of its segments, at up to 10 changes a second, and each change fades a little. |
-| Per bulb (experimental) | For lights whose app has **Finger sketch**, such as the Christmas String Lights 2 and the icicle lights, when their realtime mode doesn't reach every bulb. Sends a picture with a colour for every bulb, as Finger sketch does, so set **Segments** to the number of bulbs (300 on the 30 m Christmas String Lights 2). How fast it changes depends on the picture: about 6 times a second when most of the light is one colour (fades, flashes, a few bulbs moving over a background), down to about once or twice a second when every bulb is different (a rainbow). Similar colours are merged when a picture has a lot of them. **Find** doesn't work with it. |
-| App segments (experimental) | For lights whose realtime mode doesn't reach every bulb. Colours the light the way the Govee Home app does, in the app's own segments, so set **Segments** to the number the app shows. It sends a few segments at a time, the biggest changes first, so the light keeps up rather than lagging behind; slow looks suit it better than fast chases. **Find** doesn't work with it. |
-
 ### Lights not delivered yet?
 
-Press **+ Add a light** and pick **Plan a light**. Pick the model (for example `H706A`),
-give it a name and press **Add planned light**, then build shows with it straight away. The badge next to a model says what we've
+Press **+ Add a light** and pick **Plan a light**. Pick the model, give it a name and press **Add planned
+light**, then build shows with it straight away. The model can be a Govee one (for example `H706A`), or
+**WLED**, **DDP**, **E1.31**, **HA** or **Twinkly** for the other kinds, with **Segments** set to the
+number of LEDs. For Govee models, the badge next to a model says what we've
 found on real lights: **✓ works** (tested, works on Realtime), **⚠ limited** (tested, only partly works;
 point at the badge to see what it can do) or **? untested** (not tried with this add-on yet: most
 Govee lights with LAN Control work, so add one and press **Test** before buying more; the badge's
@@ -227,9 +247,9 @@ tooltip says whether Govee lists the model as having LAN Control). A tested mode
 starts with the settings that suit it, such as **Per bulb** with 300 segments for the 30 m Christmas
 String Lights 2, both when you plan it and when you add it from **Scan network** (under **+ Add a light → Govee light**). Lights you've already
 added keep their settings. Otherwise 15 segments is a guess until you test the real
-light. Planned lights appear in the previews but nothing is sent to them. When the light arrives,
-press **+ Add a light → Govee light → Scan network** and choose **Link to** next to it, or type its IP into the planned light's
-row. Its shows carry over, and if the real segment count differs, just change it: effects scale
+light. Planned lights appear in the previews but nothing is sent to them. When the light arrives, type
+its IP into the planned light's row (or pick it, for a Home Assistant light). For a Govee light you can
+also press **+ Add a light → Govee light → Scan network** and choose **Link to** next to it. Its shows carry over, and if the real segment count differs, just change it: effects scale
 to any number of segments.
 
 ### Splitting a light into parts
@@ -770,8 +790,8 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 | AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
 | Experimental | **Govee scenes** (below). |
-| Packet lab | Sends hand-made messages to one light, for trying out new ways of driving it (below). |
-| Listen for Govee traffic | Records what your lights say to each other, to help support new ways of driving them (below). |
+| Packet lab | Sends hand-made messages to one Govee light, for trying out new ways of driving it (below). |
+| Listen for Govee traffic | Records what your Govee lights say to each other, to help support new ways of driving them (below). |
 
 ## Setting up the AI
 
@@ -792,10 +812,10 @@ already on the lights. It's never sent the song itself.
 
 ## Packet lab
 
-**Setup → Settings → Packet lab** is for experiments: it sends one light a message you choose and
-lists anything the light sends back. You won't need it to make shows.
+**Setup → Settings → Packet lab** is for experiments with Govee lights: it sends one light a message you
+choose and lists anything the light sends back. You won't need it to make shows.
 
-1. Pick the **Light** (only lights on the Devices tab with an IP address are offered).
+1. Pick the **Light** (only Govee lights on the Devices tab with an IP address are offered).
 2. Pick a starting point under **Start from**, such as **Ask for its status** or **Realtime: rainbow**,
    and set **Segments** and **Colour** for it. The message appears in the box, where you can change it.
 3. Choose how many times to send it and how often. Realtime messages are sent 50 times, a tenth of a
@@ -854,8 +874,8 @@ If it hears nothing, the lights are talking to each other directly, where Home A
 
 ## Experimental: Govee scenes
 
-Turn on **Settings → Experimental → Govee scenes** to add a **Govee scene** effect. Its clip hands
-the light to one of the scenes built into the Govee app (the app's Scenes list, not your own saved
+For Govee lights only. Turn on **Settings → Experimental → Govee scenes** to add a **Govee scene**
+effect. Its clip hands the light to one of the scenes built into the Govee app (the app's Scenes list, not your own saved
 snapshots or DIYs) for as long as the clip lasts, then the show takes the light back.
 
 - Pick the scene in the clip's settings. The list comes from Govee's public scene library for the
@@ -870,9 +890,14 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 
 | Problem | Try |
 | --- | --- |
-| Scan finds nothing | Check **LAN Control** is on for each light in the Govee Home app, and that Home Assistant and the lights are on the same network with multicast allowed. Add the light by IP instead. |
-| Test only turns the light on | Change **Protocol** on the Devices tab and test again. |
-| Only the first part of a light lights up | Some lights only accept a few segments in realtime mode. The 30 m Christmas String Lights 2 (H70C5) stops at 44 bulbs. Set **Protocol** to **Per bulb (experimental)** and **Segments** to the number of bulbs (300 for the H70C5). **App segments (experimental)** and **Whole light only** also light the whole string, more coarsely. |
+| Scan finds no Govee lights | Check **LAN Control** is on for each light in the Govee Home app, and that Home Assistant and the lights are on the same network with multicast allowed. Add the light by IP instead. |
+| Scan finds no WLED strips | Check they're switched on and on the same network. Add the strip by IP instead (it's on the WLED app's **Info** page). |
+| Test only turns a Govee light on | Change **Protocol** on the Devices tab and test again. |
+| Only the first part of a Govee light lights up | Some Govee lights only accept a few segments in realtime mode. The 30 m Christmas String Lights 2 (H70C5) stops at 44 bulbs. Set **Protocol** to **Per bulb (experimental)** and **Segments** to the number of bulbs (300 for the H70C5). **App segments (experimental)** and **Whole light only** also light the whole string, more coarsely. |
+| Only part of a WLED strip lights up | In WLED, open **Config → Sync Interfaces** and untick **Use main segment only**. |
+| A pixel controller doesn't light | For DDP, check DDP is switched on in the controller's settings. For E1.31, check it takes E1.31 as **unicast** and that **universe** and **channel** in the light's row match the controller's set-up. Then check **Segments** matches the number of LEDs. |
+| A Home Assistant light lags behind the music | They change at most 4 times a second (a switch once a second), so fast effects look steppy. Use fades, colour changes and pulses on them. |
+| A Twinkly light doesn't light | Twinkly support is experimental and hasn't been tried on a real Twinkly yet. Please say what happens on GitHub. |
 | Effects run from the wrong end | Tick **Reverse** on the Devices tab. |
 | Lights run ahead of or behind the music | In the browser, adjust **Light offset** under **Setup → Speakers**. On a speaker, adjust its **Delay ms** in the same place. |
 | A speaker can't be added | The test shows Home Assistant's reason. Some integrations can't play files from the media folder; use another media player for the song. |
@@ -964,8 +989,10 @@ To update, run `pipx upgrade haliday-show`.
 
 ## Notes
 
-- Lights are driven with Govee's realtime ("razer") protocol, which the Govee app's own LAN API
-  doesn't document. While a show plays, the lights ignore other commands; they go back to their
-  previous state when it stops.
-- The add-on uses the host network for Govee discovery, but its web server only answers Home
-  Assistant's ingress proxy, so the editor isn't reachable directly on your LAN.
+- Each kind of light is driven its own way: Govee lights with Govee's realtime ("razer") protocol, which
+  the Govee app's own LAN API doesn't document; WLED strips and DDP pixel controllers with DDP; E1.31
+  controllers with E1.31 sent straight to their IP; Home Assistant lights and switches through Home
+  Assistant; and Twinkly lights with Twinkly's own realtime mode. While a show plays, the lights ignore
+  other commands; they go back to what they were doing when it stops.
+- The add-on uses the host network to find Govee and WLED lights and to send to every light, but its web
+  server only answers Home Assistant's ingress proxy, so the editor isn't reachable directly on your LAN.

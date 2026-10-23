@@ -2,10 +2,11 @@
 
 <img src="docs/brand/banner.svg" alt="HA-liday Show" width="600">
 
-**Music-synchronised light shows for Govee and WLED lights, made for Home Assistant.**
+**Music-synchronised light shows for the lights you already have, made for Home Assistant.**
 
-A simple alternative to xLights, made for Govee: design a show in your browser, watch it play on a
-photo of your house, then run it from an automation. Install it as a Home Assistant add-on, or run it on
+A simple alternative to xLights for Govee lights, WLED strips, pixel controllers, Twinkly and any Home
+Assistant light: design a show in your browser, watch it play on a photo of your house, then run it from
+an automation. Install it as a Home Assistant add-on, or run it on
 its own with Docker or Python.
 
 <sub>A hobby project, written almost entirely by AI. See [How this is made](#-how-this-is-made).</sub>
@@ -35,6 +36,8 @@ its own with Docker or Python.
   using Claude or any AI you've set up in Home Assistant, local models included.
 - 🏠 **See it on your house.** Trace your lights on a photo and the editor plays the show there,
   bulb by bulb, so you can design without standing in the garden.
+- 🔌 **Works with the lights you have.** Govee, WLED, pixel controllers over DDP or E1.31, Twinkly, and
+  any Home Assistant light or smart plug, all in one show.
 - 📦 **Plan before you buy.** Add lights that haven't arrived yet and link them to the real ones later.
 - ⏯️ **Runs itself.** Shows play on any Home Assistant speaker and start from automations through MQTT
   entities or the `hassio.addon_stdin` action.
@@ -57,9 +60,15 @@ its own with Docker or Python.
 
 ## 🚀 Installation
 
-**Lights:** Govee lights with **LAN Control** turned on in the
-Govee Home app, WLED strips, or pixel controllers that take DDP or E1.31, in any mix, on the same
-network as wherever HA-liday Show runs.
+**Lights**, in any mix, on the same network as wherever HA-liday Show runs:
+
+| Kind | What you need |
+| --- | --- |
+| Govee | **LAN Control** turned on in the Govee Home app, and a model with Govee's per-segment realtime mode |
+| WLED | Any WLED strip |
+| Pixel controllers | DDP (Falcon Player, ESPixelStick, ESPHome, Tasmota, ESP32) or E1.31/sACN (Falcon, Kulp, xLights set-ups) |
+| Home Assistant | Any light or switch, such as Zigbee or Hue bulbs, or a smart plug for a prop |
+| Twinkly | Experimental: not tried on a real Twinkly yet |
 
 ### As a Home Assistant add-on (recommended)
 
@@ -98,23 +107,25 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
 <details open>
 <summary><b>💡 Lights</b></summary>
 
-- Discover Govee devices on the local network, check each one's segments with a test pattern,
-  and set its segments, bulb count, brightness, direction and blending
-- WLED strips alongside Govee lights: scan for them or add one by IP, and its LED count and WLED segments are filled in
-  for you
-- Pixel controllers over DDP (Falcon Player, ESPixelStick, ESPHome, Tasmota, ESP32) or E1.31/sACN
+- One **Add a light** window for every kind: pick what you're adding and fill in only what it needs
+- **Govee** lights, found on the network, with a test pattern and a few yes or no questions to set
+  their segments
+- **WLED** strips, found on the network or added by IP, with their LED count and WLED segments filled
+  in for you
+- **Pixel controllers** over DDP (Falcon Player, ESPixelStick, ESPHome, Tasmota, ESP32) or E1.31/sACN
   (Falcon, Kulp, xLights set-ups), with several lights on one controller
-- Any Home Assistant light or switch (Zigbee, Hue, LIFX bulbs, smart plugs for inflatables), put back
-  as it was after the show
-- Twinkly lights (experimental), through Twinkly's local realtime mode
+- Any **Home Assistant** light or switch (Zigbee, Hue, LIFX bulbs, smart plugs for inflatables), put
+  back as it was after the show
+- **Twinkly** lights (experimental), through Twinkly's local realtime mode
+- Set each light's segments, bulb count, brightness and direction, and **Test** it on the real light
 - Plan shows before your lights arrive: add planned lights by name and segment count, then link
-  them to the real devices later
+  them to the real lights later
 - Put your lights in any order (drag them on the Devices tab) and every show's timeline follows
 - Split a light into parts (say, the front, side and back of a roof line) that each get their own
   track, while the light's own track still plays across all of them as one; segments in no part
   stay off during the show. **Test** a part to see exactly where it starts and ends on the real light
-- Per-bulb colour for lights whose realtime mode only reaches part of them, such as the Christmas
-  String Lights 2 and icicle lights (experimental), using the Govee app's own Finger sketch pictures
+- For Govee lights whose realtime mode only reaches part of them, such as the Christmas String Lights 2
+  and icicle lights: per-bulb colour (experimental), using the Govee app's own Finger sketch pictures
 
 </details>
 
@@ -154,7 +165,7 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
   and previews step at a slow light's own pace so they look like the real thing
 - Cut, trim and splice songs on the **Music** tab, with crossfades
 - Arrange the editor your way: pick a page layout, then drag, collapse or hide any panel
-- Experimental: hand a light to one of Govee's built-in scenes for part of the show
+- Experimental: hand a Govee light to one of Govee's built-in scenes for part of the show
 
 </details>
 
@@ -196,9 +207,13 @@ One Python service (aiohttp) serves the editor and plays shows. As an add-on it 
 Home Assistant ingress; run on its own (Docker or pipx) it answers its own port, and other devices need
 the password set in `HALIDAY_SHOW_PASSWORD`.
 Effects are written once, in JavaScript: the editor uses them for the live preview and, on save,
-renders every frame of the show into a compact baked file. The player only streams those frames to
-each device over Govee's undocumented per-segment "razer" LAN protocol, with rate limiting,
-keepalive and periodic re-enable. It follows either the browser's audio position or, for a Home
+renders every frame of the show into a compact baked file. The player only streams those frames, each
+light in its own protocol and at the pace it can take: Govee lights over Govee's undocumented
+per-segment "razer" LAN protocol (or its slower app commands, for lights whose realtime mode falls
+short), WLED and DDP controllers over DDP, E1.31 controllers over unicast E1.31, Home Assistant lights
+and switches through Home Assistant's actions, and Twinkly over its realtime mode. Each kind gets its
+own rate limiting and keepalive, and lights set up over HTTP are put back as they were afterwards. It
+follows either the browser's audio position or, for a Home
 Assistant speaker, starts the lights when the speaker reports it is playing (plus that speaker's
 delay) and corrects large drift from its reported position.
 
@@ -250,19 +265,19 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
   icon.png, logo.png                    Pictures shown in the Add-on Store (from docs/brand)
   app/halidayshow/__main__.py             Entry points (add-on and haliday-show) and environment settings
   app/halidayshow/protocol.py             Govee LAN and razer packet encoding
-  app/halidayshow/wled.py                 WLED: DDP packets, and the light's name, LEDs and segments
+  app/halidayshow/wled.py                 WLED and DDP: packets, the light's name, LEDs and segments, and the scan
   app/halidayshow/e131.py                 E1.31 (sACN) packets and each controller's shared universes
   app/halidayshow/twinkly.py              Twinkly (experimental): HTTP login and modes, realtime packets
-  app/halidayshow/discovery.py            Multicast device scan
+  app/halidayshow/discovery.py            Govee multicast scan (WLED's scan is in wled.py)
   app/halidayshow/listen.py               Records other Govee traffic (Settings → Listen)
-  app/halidayshow/lab.py                  Packet lab: hand-made messages to one light
-  app/halidayshow/output.py               Per-device streaming, keepalive, test pattern
+  app/halidayshow/lab.py                  Packet lab: hand-made messages to one Govee light
+  app/halidayshow/output.py               Streaming to each kind of light: pace, keepalive, putting back, test pattern
   app/halidayshow/baked.py                Baked show file format
   app/halidayshow/player.py               Plays baked frames against a movable clock
   app/halidayshow/runner.py               Starts shows on a speaker or for the browser
   app/halidayshow/scenes.py               Govee scene library lookup (experimental scenes)
   app/halidayshow/storage.py              Shows, settings, songs and the house photo on disk
-  app/halidayshow/ha.py                   Home Assistant API (media players, MQTT details)
+  app/halidayshow/ha.py                   Home Assistant API (media players, lights and switches, MQTT details)
   app/halidayshow/commands.py             Automation commands over add-on stdin
   app/halidayshow/mqtt.py                 MQTT discovery entities
   app/halidayshow/server.py               HTTP API for the editor; who may connect (ingress or password)
@@ -288,7 +303,9 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
     models.json                         Our list of Govee lights: tested status and default settings
 tools/build_models.py                   Adds new lights from Govee's LAN Control list to models.json
 tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traffic from an Android log
+docs/README.md                          Index of the notes below, one per kind of light
 docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions
+docs/capture-help.md                    Capturing the Govee app's traffic, for working out new commands
 docs/wled.md                            How WLED strips are driven: DDP, and how WLED segments become parts
 docs/ddp.md                             Pixel controllers over DDP: several lights on one controller
 docs/e131.md                            E1.31 (sACN) controllers: universes, shared universes, stopping
@@ -303,10 +320,12 @@ tests/                                  pytest and node tests (tests/js)
 
 HA-liday Show is a hobby project, and almost all of its code is written by AI (Anthropic's Claude), with
 a person deciding what to build and trying it on real lights. Every change runs through automated tests
-and a test build before it's released. Models with a **✓ works** or **⚠ limited** badge in the add-on's
-model list have been tried on real lights; ones marked **? untested** are best effort. If something doesn't work on yours, please
+and a test build before it's released. Govee models with a **✓ works** or **⚠ limited** badge in the
+add-on's model list have been tried on real lights; ones marked **? untested** are best effort. WLED,
+pixel controllers, Home Assistant lights and Twinkly have so far only been tested against pretend
+devices on the wire, so reports from real ones are especially welcome. If something doesn't work on yours, please
 [open an issue](https://github.com/gavin-vbmedia/ha-liday-show/issues).
 
 ## 📄 Licence
 
-MIT, see [LICENSE](LICENSE). Not affiliated with Govee or Home Assistant.
+MIT, see [LICENSE](LICENSE). Not affiliated with Govee, WLED, Twinkly or Home Assistant.

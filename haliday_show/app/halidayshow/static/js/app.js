@@ -3978,7 +3978,8 @@ const LAB_HELP = {
 
 function renderLab() {
   const lights = $("lab-light"), keep = lights.value;
-  lights.replaceChildren(...app.deviceList.filter((d) => d.ip).map((d) => new Option(`${d.name} (${d.ip})`, d.ip)));
+  // The lab speaks Govee's LAN protocol, so it only offers Govee lights.
+  lights.replaceChildren(...app.deviceList.filter((d) => d.ip && (d.kind || "govee") === "govee").map((d) => new Option(`${d.name} (${d.ip})`, d.ip)));
   if (keep) lights.value = keep;
   for (const id of ["btn-lab-send", "btn-lab-sweep", "btn-lab-start-sweep", "btn-lab-flag-sweep", "btn-lab-mode-sweep", "btn-lab-speed"]) {
     $(id).disabled = !lights.options.length;
