@@ -3018,24 +3018,38 @@ async function tryDemo() {
       Object.assign(house.styles, styles);
       await api("api/house", { method: "PUT", json: { paths: house.paths, styles: house.styles, pins: house.pins, dim: house.dim } });
     }
-    status("Adding the sample song…");
-    const song = await (await fetch(DEMO_SONG)).blob();
-    const form = new FormData();
-    form.append("file", new File([song], DEMO_SONG_NAME, { type: "audio/mpeg" }));
-    const ref = await api("api/audio", { method: "POST", body: form });
-    await openShow(null);
-    app.show.name = DEMO_SHOW;
-    $("show-name").value = DEMO_SHOW;
-    app.show.audio = ref;
-    await loadAudio(ref);
-    if (!songBuffer || !(await analyseSong())) throw new Error("the sample song didn't load");
     const christmas = allPalettes().find((p) => p.name === "Christmas") || currentPalette();
-    await generate({ colors: christmas.colors, style: "balanced", house: true });
-    await save();
+    await makeShow(DEMO_SHOW, await sampleSong(), christmas.colors);
     status("The demo is ready: press ▶ Play");
   } catch (e) {
     status(`Couldn't set up the demo: ${e.message}`, true);
   }
+}
+
+async function sampleSong() {
+  const song = await (await fetch(DEMO_SONG)).blob();
+  return new File([song], DEMO_SONG_NAME, { type: "audio/mpeg" });
+}
+
+// A new show called `name` on the song `file`: uploaded to the songs folder (so speakers can play it),
+// listened to, generated in `colors` (or left blank without them) and saved.
+async function makeShow(name, file, colors) {
+  status(`Adding ${file.name}…`);
+  const form = new FormData();
+  form.append("file", file);
+  const ref = await api("api/audio", { method: "POST", body: form });
+  await openShow(null);
+  app.show.name = name;
+  $("show-name").value = name;
+  app.show.audio = ref;
+  app.changed();
+  await loadAudio(ref);
+  if (!songBuffer) throw new Error("the song didn't load");
+  if (colors) {
+    if (!(await analyseSong())) throw new Error("the song couldn't be listened to");
+    await generate({ colors, style: "balanced", house: true });
+  }
+  await save();
 }
 
 async function removeDemo() {
@@ -3051,6 +3065,216 @@ async function removeDemo() {
   await saveDevices();
   await refreshShows();
   status("Removed the demo");
+}
+
+// setup guide ----------------------------------------------------------------
+// One window that walks a new user from nothing to a show. Each step uses the add-on's own windows
+// (Add a light, Find, Add a speaker), so there's one way of doing each thing.
+const WZ_STEPS = ["welcome", "lights", "check", "speaker", "house", "show"];
+const wz = { step: "welcome", start: "setup", house: "sample", song: "sample", file: null };
+
+function openWizard() {
+  Object.assign(wz, { start: canStartDemo(app.deviceList) ? "demo" : "setup", house: "sample", song: "sample", file: null });
+  $("wz-show-name").value = "My first show";
+  $("wz-song-name").textContent = "An MP3 or other song file from this device.";
+  wizardStep("welcome");
+  if (!$("wizard").open) $("wizard").showModal();
+}
+
+function closeWizard() {
+  prefs.set("wizard.done", true);
+  if ($("wizard").open) $("wizard").close();
+}
+
+function pick(box, attr, value) {
+  for (const b of $(box).querySelectorAll(`[data-${attr}]`)) b.classList.toggle("sel", b.dataset[attr] === value);
+}
+
+function wizardStep(step) {
+  wz.step = step;
+  const n = WZ_STEPS.indexOf(step);
+  for (const sec of $("wizard").querySelectorAll("[data-wz-step]")) sec.hidden = sec.dataset.wzStep !== step;
+  $("wz-dots").replaceChildren(...WZ_STEPS.map((s, i) => Object.assign(document.createElement("span"),
+    { className: i <= n ? "on" : "" })));
+  $("wz-step").textContent = `Step ${n + 1} of ${WZ_STEPS.length}`;
+  $("wz-title").textContent = { welcome: "Welcome to HA-liday Show", lights: "Add your lights", check: "Check each light",
+    speaker: "Where should the music play?", house: "Your house", show: "Make your first show" }[step];
+  const q = (w) => $("wizard").querySelector(`[data-wz="${w}"]`);
+  const back = q("back"), second = q("secondary"), first = q("primary");
+  back.hidden = step === "welcome";
+  second.hidden = step === "lights" || step === "check";
+  $("wz-error").hidden = true;
+  if (step === "welcome") {
+    $("wz-start").querySelector('[data-start="demo"]').hidden = !canStartDemo(app.deviceList);
+    pick("wz-start", "start", wz.start);
+    second.textContent = "Skip, I'll look around";
+    first.textContent = wz.start === "demo" ? "Start the demo" : "Let's start";
+  } else if (step === "lights") {
+    renderWizardLights();
+    first.textContent = "Next";
+  } else if (step === "check") {
+    renderWizardCheck();
+    first.textContent = "Next";
+  } else if (step === "speaker") {
+    renderWizardSpeakers();
+    second.textContent = "Skip";
+    first.textContent = "Next";
+  } else if (step === "house") {
+    const own = house.photo && !house.sample;
+    $("wz-house").hidden = own;
+    if (own) wz.house = "photo";
+    pick("wz-house", "house", wz.house);
+    $("wz-house-note").innerHTML = own ? "Your photo is already up. Trace your lights on it under <b>Setup → House</b>."
+      : wz.house === "photo" && !house.sample ? "Photo saved. Trace your lights on it under <b>Setup → House</b> when you're ready." : "";
+    second.textContent = "Skip";
+    first.textContent = "Next";
+  } else if (step === "show") {
+    pick("wz-song", "song", wz.song);
+    second.textContent = "Start with a blank show";
+    first.textContent = "✨ Generate my show";
+    first.disabled = !app.deviceList.length;
+    first.title = app.deviceList.length ? "" : "Add a light first, so there's something to put effects on";
+    return;
+  }
+  first.disabled = false;
+  first.title = "";
+}
+
+function wizardRow(title, detail, ...end) {
+  const row = document.createElement("div");
+  row.className = "wz-row";
+  const grow = document.createElement("span");
+  grow.className = "grow";
+  grow.append(Object.assign(document.createElement("b"), { textContent: title }),
+    Object.assign(document.createElement("span"), { textContent: detail }));
+  row.append(grow, ...end);
+  return row;
+}
+
+const lightWhere = (d) => isHa(d) ? (d.entity || "Home Assistant") : d.ip || "Planned, no IP yet";
+const lightKind = (d) => isWled(d) ? "WLED" : isHa(d) ? "Home Assistant" : d.kind === "twinkly" ? "Twinkly"
+  : d.kind === "ddp" ? "DDP" : d.kind === "e131" ? "E1.31" : d.sku || "Govee";
+
+function renderWizardLights() {
+  $("wz-lights").replaceChildren(...app.deviceList.map((d) => wizardRow(d.name, `${lightKind(d)} · ${lightWhere(d)}`)));
+  $("wz-add-light").textContent = app.deviceList.length ? "+ Add another light" : "+ Add a light";
+}
+
+function renderWizardCheck() {
+  const box = $("wz-check");
+  if (!app.deviceList.length) {
+    box.replaceChildren(wizardRow("No lights yet", "Go back to add one, or carry on and add them later."));
+    return;
+  }
+  box.replaceChildren(...app.deviceList.map((d) => {
+    const end = [];
+    if (!linked(d)) end.push(Object.assign(document.createElement("span"), { className: "hint", textContent: "Planned: test it when it arrives" }));
+    else if (isPixels(d) || isHa(d)) {
+      end.push(button("Test", () => testLight(d)));
+      end.push(Object.assign(document.createElement("span"), { className: "hint ok", textContent: "✓ Set up" }));
+    } else {
+      end.push(button("Test", async () => { if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`); }));
+      const find = button("Find", () => findSegments(d), "ghost");
+      find.disabled = LONG_PROTOCOLS.includes(d.protocol);
+      end.push(find);
+    }
+    return wizardRow(d.name, isHa(d) ? "One colour at a time" : `${d.segments} segments`, ...end);
+  }));
+}
+
+function renderWizardSpeakers() {
+  const off = app.haAvailable === false;
+  $("wz-speaker-help").innerHTML = off
+    ? "Home Assistant isn't reachable from the add-on, so songs play in this browser for now. You can add a speaker later under <b>Setup → Speakers</b>."
+    : "Add the speaker the music should play on, and the lights follow it. Or skip this and play songs in this browser while you design.";
+  $("wz-add-speaker").hidden = off;
+  $("wz-speakers").replaceChildren(...(off ? [] : app.speakers.map((s) => wizardRow(s.name, s.entity_id,
+    Object.assign(document.createElement("span"), { className: "hint ok", textContent: "✓ Added" })))));
+}
+
+async function wizardNext() {
+  const step = wz.step;
+  if (step === "welcome") {
+    if (wz.start === "demo") { closeWizard(); await tryDemo(); return; }
+    wizardStep("lights");
+  } else if (step === "lights") wizardStep("check");
+  else if (step === "check") wizardStep("speaker");
+  else if (step === "speaker") {
+    // The first speaker added plays shows started from automations, until one is picked in Setup → Speakers.
+    if (app.speakers.length && !app.defaultSpeaker) {
+      try {
+        await api("api/speakers/show", { method: "PUT", json: { entity_id: app.speakers[0].entity_id } });
+        await loadSpeakers();
+      } catch { /* it can be picked under Setup → Speakers */ }
+    }
+    wizardStep("house");
+  } else if (step === "house") {
+    if (wz.house === "sample" && house.sample) {
+      const todo = houseLights().filter((d) => !house.paths[d.id]?.length);
+      if (todo.length) placeLightsOnSample(todo);
+    }
+    wizardStep("show");
+  } else if (step === "show") await wizardMakeShow(true);
+}
+
+async function wizardMakeShow(generated) {
+  const name = $("wz-show-name").value.trim() || "My first show";
+  const file = wz.song === "file" ? wz.file : await sampleSong();
+  if (!file) { $("wz-error").textContent = "Choose a song first, or use the sample song."; $("wz-error").hidden = false; return; }
+  closeWizard();
+  showView("editor");
+  try {
+    await makeShow(name, file, generated ? (seasonalPalette() || allPalettes().find((p) => p.name === "Christmas")).colors : null);
+    status(generated ? `${name} is ready: press ▶ Play` : `${name} is ready for your effects`);
+  } catch (e) {
+    status(`Couldn't make the show: ${e.message}`, true);
+  }
+}
+
+function wireWizard() {
+  const dlg = $("wizard");
+  $("btn-wizard").addEventListener("click", openWizard);
+  dlg.addEventListener("cancel", () => prefs.set("wizard.done", true));
+  dlg.addEventListener("click", (e) => {
+    const what = e.target.closest("[data-wz]")?.dataset.wz;
+    if (what === "close") closeWizard();
+    else if (what === "back") wizardStep(WZ_STEPS[WZ_STEPS.indexOf(wz.step) - 1]);
+    else if (what === "primary") wizardNext();
+    else if (what === "secondary") {
+      if (wz.step === "welcome") closeWizard();
+      else if (wz.step === "show") wizardMakeShow(false);
+      else wizardStep(WZ_STEPS[WZ_STEPS.indexOf(wz.step) + 1]);
+    }
+    const start = e.target.closest("[data-start]")?.dataset.start;
+    if (start) { wz.start = start; wizardStep("welcome"); }
+    const where = e.target.closest("[data-house]")?.dataset.house;
+    if (where === "sample") { wz.house = "sample"; pick("wz-house", "house", "sample"); }
+    const song = e.target.closest("[data-song]")?.dataset.song;
+    if (song === "sample") { wz.song = "sample"; pick("wz-song", "song", "sample"); }
+  });
+  $("wz-photo").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    await house.upload(file);
+    wz.house = "photo";
+    renderHouseLights();
+    wizardStep("house");
+  });
+  $("wz-song-file").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    wz.file = file;
+    wz.song = "file";
+    $("wz-song-name").textContent = file.name;
+    if ($("wz-show-name").value === "My first show") $("wz-show-name").value = file.name.replace(/\.[^.]+$/, "");
+    pick("wz-song", "song", "file");
+  });
+  $("wz-add-light").addEventListener("click", openAddLight);
+  $("add-dialog").addEventListener("close", () => { if (dlg.open) renderWizardLights(); });
+  $("wz-add-speaker").addEventListener("click", openAddSpeaker);
+  $("speaker-dialog").addEventListener("close", () => { if (dlg.open) renderWizardSpeakers(); });
+  $("finder").addEventListener("close", () => { if (dlg.open && wz.step === "check") renderWizardCheck(); });
 }
 
 // shows -----------------------------------------------------------------------
@@ -4016,6 +4240,9 @@ function showView(view) {
 }
 
 function wire() {
+  // Windows live at the top of the page, so they can open over any tab (the setup guide opens
+  // Add a light and Add a speaker from the editor).
+  for (const d of document.querySelectorAll(".view dialog")) document.body.append(d);
   for (const tab of document.querySelectorAll(".tab, .subtab")) tab.addEventListener("click", () => showView(tab.dataset.view));
 
   $("show-select").addEventListener("change", async (e) => {
@@ -4300,6 +4527,7 @@ async function init() {
   $("btn-listen").addEventListener("click", listenForTraffic);
   wireLab();
   wireHouse();
+  wireWizard();
   const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
   $("btn-reset-layout").addEventListener("click", () => layout.reset());
   $("exp-labs").checked = labsOn();
@@ -4327,6 +4555,8 @@ async function init() {
     const last = prefs.get("lastShow", null);
     const id = shows.some((s) => s.id === last) ? last : shows[0]?.id;
     await openShow(id || null);
+    // A fresh install opens the setup guide, once.
+    if (!app.deviceList.length && !shows.length && !prefs.get("wizard.done", false)) openWizard();
   } catch (e) {
     status(`Couldn't reach the add-on: ${e.message}`, true);
   }
