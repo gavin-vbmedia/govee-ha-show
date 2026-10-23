@@ -14,7 +14,7 @@ import time
 from .protocol import (CMD_PORT, average, colorwc_msg, ptreal_msg, razer_colors, razer_enable, razer_msg,
                        pixel_packets, scene_packets, segment_changes, segment_colour_packet, segment_colour_packets,
                        wrap)
-from . import e131
+from . import e131, twinkly
 from .wled import DDP_PORT, ddp_packets
 
 log = logging.getLogger(__name__)
@@ -346,7 +346,36 @@ HA_SWITCH_ON = 128  # a switch is on while the show is at least half bright ther
 HA_COLOUR_MODES = {"hs", "xy", "rgb", "rgbw", "rgbww"}
 
 
-class HaDevice(OutputDevice):
+class Calls:
+    """For lights set up over HTTP: calls run one at a time, in order, in the background, and are kept
+    in `tasks` (Output.calls) so closing can wait for the last ones (putting lights back)."""
+
+    task: asyncio.Task | None = None
+    tasks: set
+
+    def _run(self, make):
+        """Queue a call after the ones already going."""
+        before = self.task
+
+        async def go():
+            if before:
+                with contextlib.suppress(Exception, asyncio.CancelledError):
+                    await before
+            try:
+                await make()
+            except Exception as e:  # unreachable or refused: the show plays on without it
+                log.warning("[%s] call failed: %s", self.ip, e)
+
+        self.task = asyncio.get_event_loop().create_task(go())
+        self.tasks.add(self.task)
+        self.task.add_done_callback(self.tasks.discard)
+
+    @property
+    def busy(self) -> bool:
+        return self.task is not None and not self.task.done()
+
+
+class HaDevice(Calls, OutputDevice):
     """A Home Assistant light or switch, one segment. Calls are made one at a time, in order: the
     snapshot, then each change (only the latest waits while one is going), then putting it back."""
 
@@ -361,28 +390,11 @@ class HaDevice(OutputDevice):
         self.colour = True
         self.saved = False
         self.shown: tuple | None = None
-        self.task: asyncio.Task | None = None
+        self.task = None
 
     @property
     def scene_id(self) -> str:
         return "haliday_show_" + self.entity.replace(".", "_")
-
-    def _run(self, make):
-        """Queue a call after the ones already going."""
-        before = self.task
-
-        async def go():
-            if before:
-                with contextlib.suppress(Exception, asyncio.CancelledError):
-                    await before
-            try:
-                await make()
-            except Exception as e:  # HA unreachable or the entity gone: the show plays on without it
-                log.warning("[%s] Home Assistant call failed: %s", self.entity, e)
-
-        self.task = asyncio.get_event_loop().create_task(go())
-        self.tasks.add(self.task)
-        self.task.add_done_callback(self.tasks.discard)
 
     def enable(self):
         self.enabled_at = time.monotonic()
@@ -447,7 +459,7 @@ class HaDevice(OutputDevice):
     def tick(self, now: float):
         if not self.enabled or self.ha is None:
             return
-        if self.task is not None and not self.task.done():
+        if self.busy:
             return  # a call is still going; the latest frame waits for it
         frame = self.pending if self.pending is not None else self.last_frame
         if frame is None or now - self.last_sent < self.min_interval:
@@ -459,8 +471,83 @@ class HaDevice(OutputDevice):
         self.last_frame, self.pending = frame, None
 
 
+# Twinkly drops out of realtime mode when frames stop for a while, so still frames are repeated
+# often. Its login lasts about 4 hours; a light playing longer than 3 logs in again.
+TWINKLY_RESEND_S = 0.5
+TWINKLY_RELOGIN_S = 3 * 3600
+
+
+class TwinklyDevice(Calls, DdpDevice):
+    """A Twinkly light (experimental). Over HTTP: log in, note its mode, switch to realtime; then frames
+    go to UDP 7777 with the login token; when it's let go, its mode is put back."""
+
+    def __init__(self, ip: str, segments: int, sock: socket.socket, *, tasks=None, **kwargs):
+        super().__init__(ip, segments, sock, **kwargs)
+        self.tasks = tasks if tasks is not None else set()
+        self.keepalive = TWINKLY_RESEND_S
+        self.client = twinkly.Twinkly(self.ip)
+        self.ready = False  # logged in and in realtime mode
+        self.logged_in_at = 0.0
+        self.rgbw, self.v3 = False, True
+        self.before: str | None = None  # the mode it was in
+
+    def _send(self, payload: bytes):
+        try:
+            self.sock.sendto(payload, (self.ip, twinkly.RT_PORT))
+        except OSError as e:
+            log.debug("[%s] send failed: %s", self.ip, e)
+
+    def enable(self):
+        if not self.enabled:
+            self._run(self._start)
+        super().enable()
+
+    async def _start(self):
+        info = await self.client.info()
+        self.rgbw, self.v3 = info["rgbw"], twinkly.is_v3(info["firmware"])
+        await self._login()
+        if self.before is None:
+            self.before = await self.client.mode()
+        await self.client.set_mode("rt")
+        self.ready = True
+
+    async def _login(self):
+        await self.client.login()
+        self.logged_in_at = time.monotonic()
+
+    def disable(self):
+        if self.enabled:
+            self._run(self._stop)
+        self.ready = False
+        super().disable()
+
+    async def _stop(self):
+        if self.before is not None:
+            await self.client.set_mode(self.before if self.before != "rt" else "movie")
+
+    def packet(self, frame: bytes, previous: bytes | None = None) -> bytes:
+        return twinkly.rt_packets(self.client.token or bytes(8), frame, rgbw=self.rgbw, v3=self.v3)[0]
+
+    def tick(self, now: float):
+        if not self.enabled or not self.ready or self.busy:
+            return
+        if now - self.logged_in_at > TWINKLY_RELOGIN_S:
+            self._run(self._login)
+            return
+        frame = self.pending if self.pending is not None else self.last_frame
+        if frame is None or now - self.last_sent < self.min_interval:
+            return
+        if frame != self.last_frame or now - self.last_sent > self.keepalive:
+            for p in twinkly.rt_packets(self.client.token, frame, rgbw=self.rgbw, v3=self.v3):
+                self._send(p)
+            self.last_frame, self.last_sent = frame, now
+        self.pending = None
+
+
 def make_device(ip: str, segments: int, sock: socket.socket, *, universes=None, ha=None, tasks=None,
                 **kwargs) -> OutputDevice:
+    if kwargs.get("protocol") == "twinkly":
+        return TwinklyDevice(ip, segments, sock, tasks=tasks, **kwargs)
     if kwargs.get("protocol") in ("ha_light", "ha_switch"):
         return HaDevice(ip, segments, sock, ha=ha, tasks=tasks, **kwargs)
     if kwargs.get("protocol") == "e131":
@@ -478,7 +565,7 @@ class Output:
         self.devices: dict[str, OutputDevice] = {}
         self.universes: dict[str, e131.Universes] = {}  # E1.31 controller IP -> its universes
         self.ha = None  # the Home Assistant client, for HA lights and switches
-        self.ha_tasks: set[asyncio.Task] = set()  # their calls still going, finished before closing
+        self.calls: set[asyncio.Task] = set()  # HTTP calls still going (HA, Twinkly), finished before closing
         self._task: asyncio.Task | None = None
 
     def start(self):
@@ -486,8 +573,8 @@ class Output:
 
     async def close(self):
         self.release_all()
-        if self.ha_tasks:  # let HA lights be put back as they were before the client closes
-            await asyncio.wait(set(self.ha_tasks), timeout=5)
+        if self.calls:  # let lights be put back as they were before closing
+            await asyncio.wait(set(self.calls), timeout=5)
         if self._task:
             self._task.cancel()
         self.sock.close()
@@ -506,7 +593,8 @@ class Output:
             universes = self.universes.setdefault(ip.partition("#")[0], e131.Universes()) if protocol == "e131" else None
             dev = make_device(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol,
                               brightness=brightness, universes=universes,
-                              **(dict(ha=self.ha, tasks=self.ha_tasks) if protocol.startswith("ha_") else {}))
+                              **(dict(ha=self.ha, tasks=self.calls) if protocol.startswith("ha_") else
+                                 dict(tasks=self.calls) if protocol == "twinkly" else {}))
             self.devices[ip] = dev
         if not dev.enabled:
             dev.enable()
@@ -557,6 +645,8 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
     first = test_frame(segments, 0)
     if dev.realtime:
         packet = razer_colors(first, gradient, protocol).hex(" ")
+    elif isinstance(dev, TwinklyDevice):
+        packet = dev.packet(first)[:16].hex(" ") + " …"
     elif isinstance(dev, HaDevice):
         packet = dev.packet(first).decode()
     elif isinstance(dev, E131Device):

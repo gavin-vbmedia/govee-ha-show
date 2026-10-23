@@ -19,7 +19,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, ai, commands, discovery, e131, migrate, scenes, wled
+from . import __version__, ai, commands, discovery, e131, migrate, scenes, twinkly, wled
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError,
@@ -40,7 +40,7 @@ MAX_UPLOAD = 200 * 1024 * 1024
 MAX_BULBS = 2000  # bulbs on one light
 MAX_SEGMENTS = 1000  # per light; the Christmas String Lights 2 have 300 bulbs
 MAX_FIRST_LED = 100000  # where a light starts on a pixel controller; DDP offsets go far beyond this
-KINDS = ("govee", "wled", "ddp", "e131", "ha")
+KINDS = ("govee", "wled", "ddp", "e131", "ha", "twinkly")
 _HA_ENTITY = re.compile(r"^(light|switch)\.[a-z0-9_]{1,200}$")
 
 OUTPUT = web.AppKey("output", Output)
@@ -301,7 +301,8 @@ def _clean_device(d: dict) -> dict:
         if entity and not _HA_ENTITY.match(entity):
             raise web.HTTPBadRequest(text="entity must be a light or switch, like light.porch")
         ip, segments = "", 1
-    protocol = {"wled": "ddp", "ddp": "ddp", "e131": "e131"}.get(kind) or str(d.get("protocol") or "standard")
+    protocol = {"wled": "ddp", "ddp": "ddp", "e131": "e131", "twinkly": "twinkly"}.get(kind) \
+        or str(d.get("protocol") or "standard")
     if kind == "ha":
         protocol = "ha_switch" if entity.startswith("switch.") else "ha_light"
     if kind == "govee" and protocol not in PROTOCOLS:
@@ -385,6 +386,21 @@ async def wled_info(request):
     try:
         found = await wled.fetch(ip)
     except wled.WledError as e:
+        raise web.HTTPBadGateway(text=str(e))
+    return web.json_response({**found, "max": MAX_SEGMENTS})
+
+
+async def twinkly_info(request):
+    """Ask a Twinkly light (experimental) for its name and LED count, to fill in a new light."""
+    body = await request.json()
+    ip = str(body.get("ip") or "").strip() if isinstance(body, dict) else ""
+    try:
+        ipaddress.IPv4Address(ip)
+    except ValueError:
+        raise web.HTTPBadRequest(text="ip must be an IP address")
+    try:
+        found = await twinkly.fetch(ip)
+    except twinkly.TwinklyError as e:
         raise web.HTTPBadGateway(text=str(e))
     return web.json_response({**found, "max": MAX_SEGMENTS})
 
@@ -1105,6 +1121,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, pass
     r.add_put("/api/devices", put_devices)
     r.add_post("/api/devices/scan", scan_devices)
     r.add_post("/api/wled/info", wled_info)
+    r.add_post("/api/twinkly/info", twinkly_info)
     r.add_get("/api/ha/entities", ha_entities)
     r.add_post("/api/devices/test", test_device)
     r.add_post("/api/devices/probe", probe_device)

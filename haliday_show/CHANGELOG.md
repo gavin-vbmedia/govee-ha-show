@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.99
+
+- **Twinkly** lights, experimental: under **Setup → Devices**, pick **Twinkly (experimental)** next to
+  **Add by IP** and type the light's IP. Its name and number of LEDs are filled in for you, and you can
+  split it into parts like any other light. It uses Twinkly's own realtime mode, which Twinkly doesn't
+  officially support and which hasn't been tried on a real Twinkly yet, so press **Test** first.
+- When a show or test ends, the Twinkly goes back to what it was playing.
+
 ## 0.2.98
 
 - Any **light or switch in Home Assistant** can now be in your shows: Zigbee and Hue bulbs, LIFX, or a

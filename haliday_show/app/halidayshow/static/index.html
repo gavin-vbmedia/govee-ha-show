@@ -319,7 +319,7 @@
   <section class="toolbar">
     <button id="btn-scan" class="primary">Scan network</button>
     <form id="add-form" class="group">
-      <select id="add-kind" title="What kind of light it is"><option value="govee">Govee</option><option value="wled">WLED</option><option value="ddp">Pixel controller (DDP)</option><option value="e131">Pixel controller (E1.31)</option><option value="ha">Home Assistant light or switch</option></select>
+      <select id="add-kind" title="What kind of light it is"><option value="govee">Govee</option><option value="wled">WLED</option><option value="ddp">Pixel controller (DDP)</option><option value="e131">Pixel controller (E1.31)</option><option value="ha">Home Assistant light or switch</option><option value="twinkly">Twinkly (experimental)</option></select>
       <select id="add-entity" hidden title="Your Home Assistant lights and switches"></select>
       <input id="add-ip" placeholder="IP address" pattern="\d+\.\d+\.\d+\.\d+" required size="14">
       <label id="add-leds-label" hidden title="How many LEDs this light has on the controller">LEDs <input id="add-leds" type="number" min="1" max="1000" value="50"></label>
@@ -345,7 +345,8 @@
     For a string on a <b>pixel controller</b> (Falcon Player, ESPixelStick, ESPHome and the like), pick
     <b>Pixel controller (DDP)</b>, type its IP and how many <b>LEDs</b> it has. Falcon, Kulp and xLights set-ups
     usually use <b>Pixel controller (E1.31)</b> instead. Any light or smart plug in Home Assistant can join in
-    too: pick <b>Home Assistant light or switch</b>, then the light or plug.</p>
+    too: pick <b>Home Assistant light or switch</b>, then the light or plug. <b>Twinkly</b> lights are
+    experimental: pick <b>Twinkly (experimental)</b> and type the light's IP.</p>
   <section id="finder" class="finder" hidden>
     <b id="finder-title"></b>
     <p id="finder-question"></p>

@@ -1,5 +1,5 @@
 name: HA-liday Show
-version: "0.2.98"
+version: "0.2.99"
 slug: haliday_show
 description: Create, preview and play music-synchronised light shows (formerly Govee Light Show).
 url: https://github.com/gavin-vbmedia/ha-liday-show
