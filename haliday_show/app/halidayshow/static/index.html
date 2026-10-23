@@ -313,6 +313,7 @@
     <button class="subtab" data-view="speakers"><b>Speakers</b><span>Speakers and timing</span></button>
     <button class="subtab" data-view="house"><b>House</b><span>Photo and tracing</span></button>
     <button class="subtab" data-view="settings"><b>Settings</b><span>Layout, AI and more</span></button>
+    <button class="subtab" data-view="labs" id="tab-labs" hidden><b>Labs</b><span>Packet lab and listening</span></button>
   </nav>
   <div class="section-body">
 <main id="view-devices" class="view" hidden>
@@ -516,7 +517,12 @@
       app (the Scenes list, not your saved snapshots) for the length of the clip. It uses an unofficial command
       and Govee's public scene list, so it may not work on every light. The editor's preview can't show the
       scene itself, and the light may blink as it switches in and out. Saved in this browser.</p>
+    <p><label><input id="exp-labs" type="checkbox"> Show the Labs tab</label></p>
+    <p class="hint">Adds <b>Labs</b> under <b>Setup</b>, with the <b>Packet lab</b> and <b>Listen for Govee
+      traffic</b>: tools for working out new ways to drive Govee lights. Saved in this browser.</p>
   </section>
+</main>
+<main id="view-labs" class="view settings" hidden>
   <section class="card">
     <h2>Packet lab</h2>
     <p class="hint">For trying out commands the add-on doesn't use yet. Pick one of your lights and a starting

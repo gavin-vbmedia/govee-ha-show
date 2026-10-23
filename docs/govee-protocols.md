@@ -153,7 +153,7 @@ nothing useful.
 
 ## Things tried that didn't help
 
-- **Listening for Scene Stage** (Setup → Settings → Listen): a sync centre (Curtain Lights 2, not the
+- **Listening for Scene Stage** (Setup → Labs → Listen): a sync centre (Curtain Lights 2, not the
   Permanent Pro) drives other lights per bulb, but almost certainly unicast to each light, which the HA
   host can't hear. Not run; the Finger sketch route made it unnecessary. The owner doesn't have a
   sync centre: the Permanent Outdoor Lights Pro can't be one (checked in the app).
@@ -191,7 +191,7 @@ video and a router capture from their own sync box or sync centre; record anythi
 
 ## Tools in the add-on for this kind of work
 
-All under Setup → Settings:
+All under Setup → Labs (tick **Show the Labs tab** under Setup → Settings → Experimental first):
 
 - **Packet lab** (`lab.py`, `static/js/labtemplates.js`): send JSON, razer or `ptReal` to one of the
   configured lights, repeated on a timer, and see replies. Has the **Run sweep** (past the realtime

@@ -269,7 +269,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
   app/halidayshow/e131.py                 E1.31 (sACN) packets and each controller's shared universes
   app/halidayshow/twinkly.py              Twinkly (experimental): HTTP login and modes, realtime packets
   app/halidayshow/discovery.py            Govee multicast scan (WLED's scan is in wled.py)
-  app/halidayshow/listen.py               Records other Govee traffic (Settings → Listen)
+  app/halidayshow/listen.py               Records other Govee traffic (Labs → Listen)
   app/halidayshow/lab.py                  Packet lab: hand-made messages to one Govee light
   app/halidayshow/output.py               Streaming to each kind of light: pace, keepalive, putting back, test pattern
   app/halidayshow/baked.py                Baked show file format

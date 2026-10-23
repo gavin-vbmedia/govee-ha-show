@@ -794,7 +794,14 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 | --- | --- |
 | AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
-| Experimental | **Govee scenes** (below). |
+| Experimental | **Govee scenes** (below), and **Show the Labs tab**. |
+
+**Labs** is a tab under **Setup** for working out new ways to drive Govee lights. It's hidden until you
+tick **Show the Labs tab** under **Experimental**; that's saved in this browser, so each computer or
+phone has its own. It holds:
+
+| Section | What's there |
+| --- | --- |
 | Packet lab | Sends hand-made messages to one Govee light, for trying out new ways of driving it (below). |
 | Listen for Govee traffic | Records what your Govee lights say to each other, to help support new ways of driving them (below). |
 
@@ -817,8 +824,9 @@ already on the lights. It's never sent the song itself.
 
 ## Packet lab
 
-**Setup → Settings → Packet lab** is for experiments with Govee lights: it sends one light a message you
-choose and lists anything the light sends back. You won't need it to make shows.
+**Setup → Labs → Packet lab** is for experiments with Govee lights: it sends one light a message you
+choose and lists anything the light sends back. You won't need it to make shows. To see **Labs**, tick
+**Show the Labs tab** under **Setup → Settings → Experimental**.
 
 1. Pick the **Light** (only Govee lights on the Devices tab with an IP address are offered).
 2. Pick a starting point under **Start from**, such as **Ask for its status** or **Realtime: rainbow**,
@@ -867,7 +875,7 @@ rate; if it skips or stalls, it doesn't.
 ## Listen for Govee traffic
 
 Some Govee features drive lights in more detail than the add-on can. In **Scene Stage**, for example,
-one light (the sync centre) plays a picture across all the others. **Setup → Settings → Listen for
+one light (the sync centre) plays a picture across all the others. **Setup → Labs → Listen for
 Govee traffic** helps work out how, so the add-on can learn to do the same:
 
 1. Start Scene Stage (or whatever you want recorded) in the Govee Home app.

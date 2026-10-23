@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.106
+
+- The **Packet lab** and **Listen for Govee traffic** have moved out of **Setup → Settings** into their own
+  **Labs** tab under **Setup**, so Settings is shorter.
+- **Labs** is hidden until you want it: tick **Show the Labs tab** under **Setup → Settings →
+  Experimental**. It's remembered in this browser, so turn it on once on each computer or phone you use.
+
 ## 0.2.105
 
 - **Setup → Devices** is now one tidy line per light: its name, IP, model, and a small bar of its

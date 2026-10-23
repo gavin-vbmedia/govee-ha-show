@@ -1,4 +1,4 @@
-// Starting points for the packet lab (Setup → Settings). Each fills in the message for `n` segments
+// Starting points for the packet lab (Setup → Labs). Each fills in the message for `n` segments
 // of colour `rgb` ([r, g, b]); edit the result by hand to try variations.
 const hex = (bytes) => bytes.map((b) => b.toString(16).padStart(2, "0")).join(" ");
 const repeatRgb = (n, rgb) => Array.from({ length: n }, () => hex(rgb)).join("  ");
