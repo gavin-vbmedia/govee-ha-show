@@ -166,8 +166,8 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
   previews, built-in presets for each, and your own presets saved from any clip
 - A **House** lane for effects that run across all your lights by where they are on the photo, like
   xLights' model effects: sweeps, wipes and rainbow waves in any direction
-- Colour palettes for holidays and moods, plus your own, to recolour an effect, a light or the
-  whole show in one click
+- Colour palettes for holidays and moods, plus your own (or ones the AI makes from a description), to
+  recolour an effect, a light or the whole show in one click
 - Copy and paste effects between lights, play and loop just a region, undo and redo
 - Knows what each light can show: effects that won't work on a light (a chase on a light that shows one
   colour at a time) are greyed out in the chooser, such clips in older shows are marked on the timeline,
@@ -291,7 +291,7 @@ haliday_show/                             The app (config, Dockerfile, docs, cha
   app/halidayshow/commands.py             Automation commands over app stdin
   app/halidayshow/mqtt.py                 MQTT discovery entities
   app/halidayshow/server.py               HTTP API for the editor; who may connect (ingress or password)
-  app/halidayshow/ai.py                   Describe it and AI presets: asks Claude or HA's AI Task
+  app/halidayshow/ai.py                   Describe it, AI presets and palettes: asks Claude or HA's AI Task
   app/halidayshow/static/                 The editor (plain ES modules, no build step)
     index.html, style.css               Page and styles
     js/app.js                           Editor state, panels, inspector and playback

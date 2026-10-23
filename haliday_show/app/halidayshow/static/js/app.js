@@ -1,6 +1,6 @@
 // Editor app: shows, songs, devices, transport and the clip inspector.
 
-import { buildContext, checkClips, checkPresets, effectsForAI, placeClips } from "./aiclips.js";
+import { buildContext, checkClips, checkPalettes, checkPresets, effectsForAI, placeClips } from "./aiclips.js";
 import { analyseInWorker, toMono } from "./analysis.js";
 import { STYLES, applyGenerated, generateShow, suggestLooks } from "./autogen.js";
 import { clipFit, reachNote, worst } from "./compat.js";
@@ -2811,6 +2811,7 @@ function uniqueName(base) {
 
 function renderPalettes() {
   const mine = $("my-palettes"), presets = $("preset-palettes");
+  renderAiPaletteIdeas();
   const addMine = (p) => {
     app.palettes.push(p);
     savePalettes();
@@ -4164,6 +4165,65 @@ function renderAiPresetIdeas() {
   }
 }
 
+// Palettes from a description in words: the AI suggests a few, shown on the Palettes tab until you
+// keep the ones you like.
+let aiPaletteIdeas = [];
+
+async function describePalettes(e) {
+  e.preventDefault();
+  const request = $("ai-palette-request").value.trim();
+  if (!request) { $("ai-palette-request").focus(); return; }
+  const context = { palettes: allPalettes().map((p) => ({ name: p.name, colors: p.colors })) };
+  const done = aiWorking($("btn-ai-palette"), $("ai-palette-request"), $("ai-palette-hint"), "palettes");
+  let reply;
+  try {
+    reply = await api("api/ai/palettes", { method: "POST", json: { request, context } });
+  } catch (err) {
+    done(err.message, true);
+    return;
+  }
+  const { palettes, skipped } = checkPalettes(reply);
+  aiPaletteIdeas = palettes;
+  const extra = skipped.length ? ` (left out ${skipped.length}: ${skipped.slice(0, 2).join("; ")})` : "";
+  const message = `${reply.summary || `Made ${palettes.length} palettes`}${extra}`;
+  done(palettes.length ? `✓ ${message} Keep the ones you like.` : message, !palettes.length);
+  renderPalettes();
+}
+
+function renderAiPaletteIdeas() {
+  const box = $("ai-palette-ideas");
+  box.replaceChildren(...aiPaletteIdeas.map((idea) => {
+    const card = document.createElement("div");
+    card.className = "ai-preset-idea";
+    const bar = document.createElement("div");
+    bar.className = "palette-bar";
+    for (const c of idea.colors) {
+      const el = document.createElement("span");
+      el.style.background = c;
+      bar.append(el);
+    }
+    const name = document.createElement("span");
+    name.className = "ai-preset-idea-name";
+    name.textContent = idea.name;
+    const actions = document.createElement("div");
+    actions.className = "insp-actions";
+    const drop = () => { aiPaletteIdeas = aiPaletteIdeas.filter((x) => x !== idea); };
+    actions.append(
+      button("Keep", () => {
+        const kept = { name: uniqueName(idea.name), colors: [...idea.colors] };
+        app.palettes.push(kept);
+        drop();
+        savePalettes();
+        renderPalettes();
+        status(`Kept ${kept.name} in your palettes`);
+      }, "primary"),
+      button("Dismiss", () => { drop(); renderPalettes(); }, "ghost"),
+    );
+    card.append(bar, name, actions);
+    return card;
+  }));
+}
+
 // Describe it: effects from a request in words, made by the AI the add-on is set up with.
 let aiVia = null; // how AI requests go ("claude" or "ha"), or null when no AI is set up
 
@@ -4179,8 +4239,10 @@ async function loadAiStatus() {
   $("ai-hint").hidden = !!st.via;
   $("ai-preset-hint").textContent = st.via ? "" : $("ai-hint").textContent;
   $("ai-preset-hint").hidden = !!st.via;
+  $("ai-palette-hint").textContent = st.via ? "" : $("ai-hint").textContent;
+  $("ai-palette-hint").hidden = !!st.via;
   // With no AI there's nothing for Create to do, so it shouldn't look ready to press.
-  $("btn-ai").disabled = $("btn-ai-preset").disabled = !st.via;
+  $("btn-ai").disabled = $("btn-ai-preset").disabled = $("btn-ai-palette").disabled = !st.via;
 }
 
 // The lights as the AI knows them: unique names, with the House lane when the house photo is traced.
@@ -4400,6 +4462,7 @@ function wire() {
   $("btn-generate").addEventListener("click", generateDialog);
   $("ai-form").addEventListener("submit", describeIt);
   $("ai-preset-form").addEventListener("submit", describePresets);
+  $("ai-palette-form").addEventListener("submit", describePalettes);
   $("btn-clear-beats").addEventListener("click", () => {
     if ((app.show.beats.length || app.show.sections?.length) && confirm("Remove all beat markers and sections?")) {
       Object.assign(app.show, { beats: [], bars: [], sections: [] });

@@ -1,5 +1,5 @@
-"""Turns a request in words into clips ("red and green chase on the roof in the chorus") or into
-effect presets ("slow icy shimmer").
+"""Turns a request in words into clips ("red and green chase on the roof in the chorus"), into
+effect presets ("slow icy shimmer") or into colour palettes ("frosty winter night").
 
 Two ways to reach a model: Claude directly, when the add-on's Configuration has a Claude API key,
 or else Home Assistant's AI Task action, which uses whichever AI integration the user has set up
@@ -138,6 +138,40 @@ PRESET_SCHEMA = {
 }
 
 
+PALETTE_INSTRUCTIONS = """You design colour palettes for Govee LED lights. A palette is a named set of two to \
+twelve colours that the user drops into effects to colour a show. Turn the user's description into up to three \
+palettes, each a different take on it (for example a bolder and a softer one, or fewer and more colours).
+
+Colours are "#rrggbb". LEDs wash out pastels and dark shades and can't show black, grey or brown, so use strong, \
+saturated colours and white; a hint of a pale colour is fine, but not several. Put the colours in a sensible \
+order, as effects step through them in turn. Most palettes suit three to six colours.
+
+"palettes" in the context are the ones that already exist; don't repeat one of them. Give each palette a short \
+name of one to three words that says what it is, such as "Frosty night" or "Tropical sunset". Give a one-sentence \
+summary of what you made, in plain words."""
+
+PALETTE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "palettes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "colors": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["name", "colors"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["summary", "palettes"],
+    "additionalProperties": False,
+}
+
+
 def prompt(request: str, context: dict) -> str:
     return f"Context:\n{json.dumps(context, separators=(',', ':'))}\n\nRequest: {request}"
 
@@ -246,3 +280,7 @@ async def create_clips(ha: HomeAssistant, request: str, context: dict) -> dict:
 
 async def create_presets(ha: HomeAssistant, request: str, context: dict) -> dict:
     return await _create(ha, request, context, PRESET_INSTRUCTIONS, PRESET_SCHEMA, "presets")
+
+
+async def create_palettes(ha: HomeAssistant, request: str, context: dict) -> dict:
+    return await _create(ha, request, context, PALETTE_INSTRUCTIONS, PALETTE_SCHEMA, "palettes")
