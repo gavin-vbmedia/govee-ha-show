@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/brand/logo.svg" alt="HA-liday Show" width="600">
+<img src="docs/brand/banner.svg" alt="HA-liday Show" width="600">
 
 **Music-synchronised light shows for Govee and WLED lights, made for Home Assistant.**
 
