@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.91
+
+- Nothing changes inside Home Assistant. This is groundwork for running HA-liday Show on its own, on a
+  computer or NAS without Home Assistant add-ons.
+- Run that way, you can open the editor from other devices once you set a password. Your browser asks
+  for it the first time; any user name works.
+- It can still use your Home Assistant speakers, AI and MQTT entities if you tell it where they are. See
+  **Running without Home Assistant** in the documentation.
+
 ## 0.2.90
 
 - **Pixel controllers** now work too: Falcon Player, ESPixelStick, ESPHome, Tasmota, home-made ESP32
