@@ -622,3 +622,17 @@ async def test_pixel_controller_lights(client):
     assert "first" not in (await (await client.put("/api/devices", json=[{"ip": "1.2.3.4"}])).json())[0]
     for bad in (0, 100001, "x"):
         assert (await client.put("/api/devices", json=[{**strings[0], "first": bad}])).status == 400
+
+
+async def test_e131_lights(client):
+    light = {"id": "e131-a", "kind": "e131", "ip": "192.168.1.90", "segments": 170, "universe": 3, "channel": 1}
+    resp = await client.put("/api/devices", json=[light, {**light, "id": "e131-b", "universe": None, "channel": None}])
+    assert resp.status == 200
+    a, b = await resp.json()
+    assert (a["kind"], a["protocol"], a["universe"], a["channel"]) == ("e131", "e131", 3, 1)
+    assert (b["universe"], b["channel"]) == (1, 1)
+    assert "universe" not in (await (await client.put("/api/devices", json=[{"ip": "1.2.3.4"}])).json())[0]
+    for bad in ({"universe": 0}, {"universe": 64000}, {"channel": 0}, {"channel": 511}, {"channel": "x"},
+                {"universe": 63999, "segments": 1000}):
+        assert (await client.put("/api/devices", json=[{**light, **bad}])).status == 400
+    assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "protocol": "e131"}])).status == 400
