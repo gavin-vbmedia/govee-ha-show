@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.110
+
+- New **Try the demo**, for trying the add-on before your lights are up, or with no lights at all. On a
+  fresh install, press it under **Setup → Devices** or **Setup → Settings → Demo**. It adds seven planned
+  lights already placed on the sample house, a sample song, and **Demo show** in Christmas colours,
+  ready for **▶ Play**. Nothing is sent to real lights.
+- The sample song is a music-box *Jingle Bells*, made for the add-on and free to use in your own shows.
+- **Remove the demo** under **Setup → Settings → Demo** takes away the demo's lights and **Demo show**,
+  and keeps your own shows.
+
 ## 0.2.109
 
 - Until you upload a photo, **Setup → House** and the editor's **House** panel now show a drawn sample
