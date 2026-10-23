@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { generateShow, barGrid, suggestLooks, tier } from "../../govee_show/app/goveeshow/static/js/autogen.js";
-import { EFFECTS, HOUSE } from "../../govee_show/app/goveeshow/static/js/effects.js";
-import { applyGenerated } from "../../govee_show/app/goveeshow/static/js/autogen.js";
+import { generateShow, barGrid, suggestLooks, tier } from "../../haliday_show/app/halidayshow/static/js/autogen.js";
+import { EFFECTS, HOUSE } from "../../haliday_show/app/halidayshow/static/js/effects.js";
+import { applyGenerated } from "../../haliday_show/app/halidayshow/static/js/autogen.js";
 
 // A 120 BPM song: quiet intro, verse, loud chorus, verse, chorus, quiet outro, 8 bars each.
 const bar = 2;
@@ -89,7 +89,7 @@ test("works without any analysis", () => {
 });
 
 test("suggests looks for the section a stretch falls in, at the song's tempo", async () => {
-  const { suggestLooks } = await import("../../govee_show/app/goveeshow/static/js/autogen.js");
+  const { suggestLooks } = await import("../../haliday_show/app/halidayshow/static/js/autogen.js");
   const chorus = suggestLooks(analysis, 33, 40);
   assert.equal(chorus.section.label, "Chorus");
   assert.equal(chorus.tier, "high");
@@ -101,7 +101,7 @@ test("suggests looks for the section a stretch falls in, at the song's tempo", a
 });
 
 test("picks a palette for the time of year", async () => {
-  const { seasonalPalette } = await import("../../govee_show/app/goveeshow/static/js/palettes.js");
+  const { seasonalPalette } = await import("../../haliday_show/app/halidayshow/static/js/palettes.js");
   assert.equal(seasonalPalette(new Date(2026, 9, 21)).name, "Halloween");
   assert.equal(seasonalPalette(new Date(2026, 11, 1)).name, "Christmas");
   assert.equal(seasonalPalette(new Date(2026, 10, 5)).name, "Bonfire Night");

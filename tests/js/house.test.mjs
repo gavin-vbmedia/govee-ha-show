@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { arcNearest, bulbLayout, bulbPositions, bulbSegment, icicleDrops, pinBulbs, segmentBulb, segmentPositions, spotColour }
-  from "../../govee_show/app/goveeshow/static/js/house.js";
+  from "../../haliday_show/app/halidayshow/static/js/house.js";
 
 const close = (a, b) => a.every((p, i) => Math.abs(p[0] - b[i][0]) < 1e-9 && Math.abs(p[1] - b[i][1]) < 1e-9);
 

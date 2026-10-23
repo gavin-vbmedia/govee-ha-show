@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from goveeshow import scenes
+from halidayshow import scenes
 
 LIBRARY = {"data": {"categories": [{"categoryName": "Festival", "scenes": [
     {"sceneName": "Christmas", "lightEffects": [{"sceneCode": 1234, "scenceParam": "AQID", "scenceName": "A"},

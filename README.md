@@ -1,21 +1,21 @@
 <div align="center">
 
-# 🎄 Govee HA Show
+# 🎄 HA-liday Show
 
 **Music-synchronised light shows for Govee lights, built right inside Home Assistant.**
 
 A simple alternative to xLights, made for Govee: design a show in your browser, watch it play on a
 photo of your house, then run it from an automation. No extra software, no separate server.
 
-[![CI](https://github.com/gavin-vbmedia/govee-ha-show/actions/workflows/ci.yml/badge.svg)](https://github.com/gavin-vbmedia/govee-ha-show/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgavin-vbmedia%2Fgovee-ha-show%2Fmain%2Fgovee_show%2Fconfig.yaml&query=%24.version&label=version&color=blue)](govee_show/CHANGELOG.md)
+[![CI](https://github.com/gavin-vbmedia/ha-liday-show/actions/workflows/ci.yml/badge.svg)](https://github.com/gavin-vbmedia/ha-liday-show/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgavin-vbmedia%2Fha-liday-show%2Fmain%2Fhaliday_show%2Fconfig.yaml&query=%24.version&label=version&color=blue)](haliday_show/CHANGELOG.md)
 ![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-informational)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 
-[![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgavin-vbmedia%2Fgovee-ha-show)
+[![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgavin-vbmedia%2Fha-liday-show)
 
-[Install](#-installation) · [Features](#-features) · [User guide](govee_show/DOCS.md) ·
-[Changelog](govee_show/CHANGELOG.md) · [Development](#-development)
+[Install](#-installation) · [Features](#-features) · [User guide](haliday_show/DOCS.md) ·
+[Changelog](haliday_show/CHANGELOG.md) · [Development](#-development)
 
 ![The editor: a generated show on five lights, playing on the house preview](docs/images/editor.webp)
 
@@ -60,11 +60,11 @@ Govee Home app.
    <details><summary>Adding it by hand</summary>
 
    Go to **Settings → Add-ons → Add-on Store**, open the ⋮ menu, choose **Repositories** and add
-   `https://github.com/gavin-vbmedia/govee-ha-show`.
+   `https://github.com/gavin-vbmedia/ha-liday-show`.
    </details>
-2. Install **Govee Light Show**, turn on **Show in sidebar**, and start it.
-3. Open **Light Shows** from the sidebar and follow the
-   [quick start](govee_show/DOCS.md#quick-start).
+2. Install **HA-liday Show**, turn on **Show in sidebar**, and start it.
+3. Open **HA-liday Show** from the sidebar and follow the
+   [quick start](haliday_show/DOCS.md#quick-start).
 
 Home Assistant builds the add-on on your machine the first time, which takes a few minutes. For show
 entities in automations, also set up the Mosquitto broker add-on and the MQTT integration (optional).
@@ -137,7 +137,7 @@ entities in automations, also set up the Mosquitto broker add-on and the MQTT in
 
 </details>
 
-The full walkthrough is in the **[user guide](govee_show/DOCS.md)**, which is also on the add-on's
+The full walkthrough is in the **[user guide](haliday_show/DOCS.md)**, which is also on the add-on's
 Documentation tab in Home Assistant.
 
 ## ⚙️ How it works
@@ -168,7 +168,7 @@ delay) and corrects large drift from its reported position.
 ## 🛠️ Development
 
 ```sh
-pip install -r govee_show/requirements.txt pytest pytest-aiohttp
+pip install -r haliday_show/requirements.txt pytest pytest-aiohttp
 python -m pytest
 node --test tests/js/*.mjs
 ```
@@ -176,19 +176,19 @@ node --test tests/js/*.mjs
 Run the service locally (requests from this machine are allowed without ingress):
 
 ```sh
-cd govee_show/app
-GOVEE_SHOW_CONFIG=/tmp/gs/config GOVEE_SHOW_MEDIA=/tmp/gs/media python -m goveeshow
-# then open http://localhost:8099/ (GOVEE_SHOW_PORT changes the port)
+cd haliday_show/app
+HALIDAY_SHOW_CONFIG=/tmp/gs/config HALIDAY_SHOW_MEDIA=/tmp/gs/media python -m halidayshow
+# then open http://localhost:8099/ (HALIDAY_SHOW_PORT changes the port)
 # Optional: HA_URL=http://homeassistant.local:8123 HA_TOKEN=<long-lived token> to use real speakers
 ```
 
 No lights to hand? Add planned lights on **Setup → Devices** and everything except the real output
-works. To try it in Home Assistant, copy the `govee_show` folder into `/addons` (Samba or SSH add-on),
+works. To try it in Home Assistant, copy the `haliday_show` folder into `/addons` (Samba or SSH add-on),
 then reload the Add-on Store; it appears under **Local add-ons** and builds on your machine.
 
-**Releasing:** bump the version in `pyproject.toml`, `govee_show/config.yaml` and
-`govee_show/app/goveeshow/__init__.py` together (CI checks they match), and add an entry to
-[`CHANGELOG.md`](govee_show/CHANGELOG.md).
+**Releasing:** bump the version in `pyproject.toml`, `haliday_show/config.yaml` and
+`haliday_show/app/halidayshow/__init__.py` together (CI checks they match), and add an entry to
+[`CHANGELOG.md`](haliday_show/CHANGELOG.md).
 
 <details>
 <summary><b>Repository layout</b></summary>
@@ -196,28 +196,28 @@ then reload the Add-on Store; it appears under **Local add-ons** and builds on y
 ```
 repository.yaml                         Home Assistant add-on repository metadata
 docs/images/                            Screenshots for the README
-govee_show/                             The add-on (config, Dockerfile, docs, changelog)
+haliday_show/                             The add-on (config, Dockerfile, docs, changelog)
   README.md                             Intro shown on the add-on's Info tab
   DOCS.md                               User guide (shown on the add-on's Documentation tab)
   CHANGELOG.md                          What changed in each version
   icon.png, logo.png                    Pictures shown in the Add-on Store
-  app/goveeshow/__main__.py             Entry point and environment settings
-  app/goveeshow/protocol.py             Govee LAN and razer packet encoding
-  app/goveeshow/discovery.py            Multicast device scan
-  app/goveeshow/listen.py               Records other Govee traffic (Settings → Listen)
-  app/goveeshow/lab.py                  Packet lab: hand-made messages to one light
-  app/goveeshow/output.py               Per-device streaming, keepalive, test pattern
-  app/goveeshow/baked.py                Baked show file format
-  app/goveeshow/player.py               Plays baked frames against a movable clock
-  app/goveeshow/runner.py               Starts shows on a speaker or for the browser
-  app/goveeshow/scenes.py               Govee scene library lookup (experimental scenes)
-  app/goveeshow/storage.py              Shows, settings, songs and the house photo on disk
-  app/goveeshow/ha.py                   Home Assistant API (media players, MQTT details)
-  app/goveeshow/commands.py             Automation commands over add-on stdin
-  app/goveeshow/mqtt.py                 MQTT discovery entities
-  app/goveeshow/server.py               HTTP API for the editor
-  app/goveeshow/ai.py                   Describe it and AI presets: asks Claude or HA's AI Task
-  app/goveeshow/static/                 The editor (plain ES modules, no build step)
+  app/halidayshow/__main__.py             Entry point and environment settings
+  app/halidayshow/protocol.py             Govee LAN and razer packet encoding
+  app/halidayshow/discovery.py            Multicast device scan
+  app/halidayshow/listen.py               Records other Govee traffic (Settings → Listen)
+  app/halidayshow/lab.py                  Packet lab: hand-made messages to one light
+  app/halidayshow/output.py               Per-device streaming, keepalive, test pattern
+  app/halidayshow/baked.py                Baked show file format
+  app/halidayshow/player.py               Plays baked frames against a movable clock
+  app/halidayshow/runner.py               Starts shows on a speaker or for the browser
+  app/halidayshow/scenes.py               Govee scene library lookup (experimental scenes)
+  app/halidayshow/storage.py              Shows, settings, songs and the house photo on disk
+  app/halidayshow/ha.py                   Home Assistant API (media players, MQTT details)
+  app/halidayshow/commands.py             Automation commands over add-on stdin
+  app/halidayshow/mqtt.py                 MQTT discovery entities
+  app/halidayshow/server.py               HTTP API for the editor
+  app/halidayshow/ai.py                   Describe it and AI presets: asks Claude or HA's AI Task
+  app/halidayshow/static/                 The editor (plain ES modules, no build step)
     index.html, style.css               Page and styles
     js/app.js                           Editor state, panels, inspector and playback
     js/effects.js                       Effect definitions, House lane effects and the baker

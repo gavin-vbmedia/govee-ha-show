@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from goveeshow import ai, server
-from goveeshow.ha import HAError
+from halidayshow import ai, server
+from halidayshow.ha import HAError
 
 REPLY = {"summary": "A red chase on the roof", "clips": [
     {"light": "Roof", "start": 0, "end": 4, "effect": "chase", "settings": [{"key": "color", "value": "#ff0000"}]}]}

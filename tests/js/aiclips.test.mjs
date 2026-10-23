@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildContext, checkClips, placeClips } from "../../govee_show/app/goveeshow/static/js/aiclips.js";
-import { HOUSE } from "../../govee_show/app/goveeshow/static/js/effects.js";
+import { buildContext, checkClips, placeClips } from "../../haliday_show/app/halidayshow/static/js/aiclips.js";
+import { HOUSE } from "../../haliday_show/app/halidayshow/static/js/effects.js";
 
 const lights = [
   { name: "House", trackIndex: 0, segments: 0, house: true },
@@ -75,7 +75,7 @@ test("copes with a reply that has no clips", () => {
 });
 
 test("presets from the AI keep valid settings only, clamped, and skip unknown effects", async () => {
-  const { checkPresets } = await import("../../govee_show/app/goveeshow/static/js/aiclips.js");
+  const { checkPresets } = await import("../../haliday_show/app/halidayshow/static/js/aiclips.js");
   const { presets, skipped } = checkPresets({ presets: [
     { name: "Icy shimmer", effect: "twinkle", settings: [
       { key: "density", value: "500" }, { key: "color", value: "88ccff" }, { key: "nope", value: "1" }] },

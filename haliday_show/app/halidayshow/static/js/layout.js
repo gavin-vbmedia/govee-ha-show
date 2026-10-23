@@ -34,7 +34,7 @@ const OLD_DEFAULT = {
   show: "top", song: "top", playback: "top", beats: "top", ai: "top",
   preview: "top", house: "top", timeline: "middle", inspector: "bottom",
 };
-const KEY = "goveeshow.layout";
+const KEY = "halidayshow.layout";
 
 // Saved as { place: {panel: dock}, order: [panels], frame, collapsed: [panels] }; panels sit in
 // their dock in `order`, and collapsed ones show just their title.

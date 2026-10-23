@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { newClip } from "../../govee_show/app/goveeshow/static/js/effects.js";
-import { PRESET_PALETTES, applyPalette, paletteKeys } from "../../govee_show/app/goveeshow/static/js/palettes.js";
+import { newClip } from "../../haliday_show/app/halidayshow/static/js/effects.js";
+import { PRESET_PALETTES, applyPalette, paletteKeys } from "../../haliday_show/app/halidayshow/static/js/palettes.js";
 
 test("presets have unique names and valid colours", () => {
   assert.equal(new Set(PRESET_PALETTES.map((p) => p.name)).size, PRESET_PALETTES.length);

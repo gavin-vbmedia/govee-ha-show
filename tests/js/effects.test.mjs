@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EFFECTS, HOUSE, applyHouse, bake, composeLight, newClip, renderTrack } from "../../govee_show/app/goveeshow/static/js/effects.js";
+import { EFFECTS, HOUSE, applyHouse, bake, composeLight, newClip, renderTrack } from "../../haliday_show/app/halidayshow/static/js/effects.js";
 
 const px = (buf, i) => [...buf.subarray(i * 3, i * 3 + 3)];
 
@@ -167,7 +167,7 @@ test("the bake lays the House lane over every light with a position", () => {
 });
 
 test("presets only name settings their effect has, and keep the clip's colours", async () => {
-  const { PRESETS, presetParams, matchesPreset } = await import("../../govee_show/app/goveeshow/static/js/effects.js");
+  const { PRESETS, presetParams, matchesPreset } = await import("../../haliday_show/app/halidayshow/static/js/effects.js");
   for (const [key, presets] of Object.entries(PRESETS)) {
     const keys = new Set(EFFECTS[key].params.map((p) => p.key));
     for (const preset of presets) for (const k of Object.keys(preset.params)) assert.ok(keys.has(k), `${key}: ${k}`);

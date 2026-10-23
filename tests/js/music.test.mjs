@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   arrange, cut, editName, mapInfo, encodeWav, hueHex, insert, joins, keep, merge, mergeSections, moveEdge, removeSection,
   render, sectionAt, splitSection,
-} from "../../govee_show/app/goveeshow/static/js/music.js";
+} from "../../haliday_show/app/halidayshow/static/js/music.js";
 
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg ?? ""} ${a} != ${b}`);
 const song = [{ src: "a", start: 0, end: 60 }];
@@ -77,7 +77,7 @@ test("WAV header describes the data", () => {
 
 test("edited copies get a fresh name", () => {
   assert.equal(editName("songs/Jingle.mp3"), "Jingle (edit).wav");
-  assert.equal(editName("govee_show/Jingle (edit).wav", ["govee_show/Jingle (edit).wav"]), "Jingle (edit 2).wav");
+  assert.equal(editName("haliday_show/Jingle (edit).wav", ["haliday_show/Jingle (edit).wav"]), "Jingle (edit 2).wav");
 });
 
 const secs = [

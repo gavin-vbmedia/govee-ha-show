@@ -33,11 +33,11 @@ async function api(path, { method = "GET", json, body, headers = {} } = {}) {
 
 const prefs = {
   get(key, fallback) {
-    try { const v = localStorage.getItem(`goveeshow.${key}`); return v === null ? fallback : JSON.parse(v); }
+    try { const v = localStorage.getItem(`halidayshow.${key}`); return v === null ? fallback : JSON.parse(v); }
     catch { return fallback; }
   },
   set(key, value) {
-    try { localStorage.setItem(`goveeshow.${key}`, JSON.stringify(value)); } catch { /* private mode */ }
+    try { localStorage.setItem(`halidayshow.${key}`, JSON.stringify(value)); } catch { /* private mode */ }
   },
 };
 
@@ -1407,8 +1407,8 @@ const visibleEffects = (keep, house) => Object.entries(EFFECTS).filter(([k, fx])
 // Previews in the effect chooser: each strip loops its effect for as long as the clip or selection
 // (within reason) on the light's own segments.
 const pickerPreview = { items: [], started: 0 };
-const SHOW_PRESETS_KEY = "goveeshow.showPresets";
-const MINE_ONLY_KEY = "goveeshow.myPresetsOnly";
+const SHOW_PRESETS_KEY = "halidayshow.showPresets";
+const MINE_ONLY_KEY = "halidayshow.myPresetsOnly";
 
 // An effect's presets: the built-in ones, then the user's own (marked mine, shown with a ★).
 const presetsFor = (effect) => [...(PRESETS[effect] || []), ...app.myPresets.filter((p) => p.effect === effect)];

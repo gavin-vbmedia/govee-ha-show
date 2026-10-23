@@ -1,7 +1,7 @@
-# Govee HA Show
+# HA-liday Show
 
 A Home Assistant add-on for making and playing music-synchronised Govee light shows. One Python
-service (aiohttp) in `govee_show/app/goveeshow/` serves a browser editor (plain ES modules in
+service (aiohttp) in `haliday_show/app/halidayshow/` serves a browser editor (plain ES modules in
 `static/`, no build step) and streams baked frames to the lights over Govee's LAN "razer" protocol.
 README.md has the architecture and a map of every file. **Before changing how lights are driven
 (protocols, `output.py`, `protocol.py`), read `docs/govee-protocols.md`**: what's known about each
@@ -18,8 +18,8 @@ python -m pytest -q                 # Python tests (tests/)
 node --test tests/js/*.mjs          # editor logic tests (tests/js/)
 
 # Run the editor locally; requests from this machine are allowed without HA ingress
-cd govee_show/app
-GOVEE_SHOW_CONFIG=/tmp/gs/config GOVEE_SHOW_MEDIA=/tmp/gs/media python -m goveeshow
+cd haliday_show/app
+HALIDAY_SHOW_CONFIG=/tmp/gs/config HALIDAY_SHOW_MEDIA=/tmp/gs/media python -m halidayshow
 # then http://localhost:8099/
 ```
 
@@ -39,11 +39,11 @@ the packet lab (Setup → Settings): give the exact thing to paste or press and 
 Home Assistant only offers an update when the version goes up, so each PR that changes what the
 user gets (code or docs) carries its own release:
 
-1. Bump the patch version in all three, identically: `pyproject.toml`, `govee_show/config.yaml`,
-   `govee_show/app/goveeshow/__init__.py`.
-2. Add a section at the top of `govee_show/CHANGELOG.md`: `## 0.2.N`, then bullets written for the
+1. Bump the patch version in all three, identically: `pyproject.toml`, `haliday_show/config.yaml`,
+   `haliday_show/app/halidayshow/__init__.py`.
+2. Add a section at the top of `haliday_show/CHANGELOG.md`: `## 0.2.N`, then bullets written for the
    user (what they'll notice and where), not for developers.
-3. Update `govee_show/DOCS.md` (the user guide, shown on the add-on's Documentation tab) for any
+3. Update `haliday_show/DOCS.md` (the user guide, shown on the add-on's Documentation tab) for any
    behaviour, button or setting that changed. Update README.md's feature list for new features.
 4. Title the PR and commit `What changed (0.2.N)`, e.g. `Collapse editor panels to their title (0.2.65)`.
 

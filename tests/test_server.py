@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from goveeshow import baked, server
+from halidayshow import baked, server
 
 
 @pytest.fixture
@@ -141,8 +141,8 @@ async def test_audio_listing_upload_and_path_safety(client):
     form = aiohttp.FormData()
     form.add_field("file", b"OggS", filename="../evil/song.ogg")
     ref = await (await client.post("/api/audio", data=form)).json()
-    # Uploads land in /media/govee_show so HA media players can reach them.
-    assert ref["source"] == "media" and ref["path"].startswith("govee_show/")
+    # Uploads land in /media/haliday_show so HA media players can reach them.
+    assert ref["source"] == "media" and ref["path"].startswith("haliday_show/")
     assert ref["path"].endswith("song.ogg") and ".." not in ref["path"]
     listed = await (await client.get("/api/audio")).json()
     assert {"source": "media", "path": ref["path"]} in listed
@@ -371,7 +371,7 @@ async def test_speakers_are_tested_before_the_editor_offers_them(client, monkeyp
     resp = await (await client.post("/api/speakers/test", json={"entity_id": "media_player.garden"})).json()
     assert resp["ok"]
     play = ha.calls[0]
-    assert play[0] == "play_media" and play[1]["media_content_id"].endswith("govee_show/govee-show-speaker-test.wav")
+    assert play[0] == "play_media" and play[1]["media_content_id"].endswith("haliday_show/haliday-show-speaker-test.wav")
     assert ha.calls[-1][0] == "media_stop"
     body = await (await client.get("/api/speakers")).json()
     assert [s["entity_id"] for s in body["speakers"]] == ["media_player.garden"]
@@ -451,7 +451,7 @@ async def test_packet_lab_runs_a_sweep_step_by_step(client):
         await client.put("/api/devices", json=[{"ip": "127.0.0.1", "name": "Tree", "segments": 10}])
         steps = [{"kind": "razer", "text": "b0 01 01 ff0000", "repeat": 1, "label": "red: first"},
                  {"kind": "razer", "text": "b2 01 01 00ff00", "repeat": 1, "label": "green: second"}]
-        import goveeshow.lab as lab
+        import halidayshow.lab as lab
         old, lab.STEP_GAP_S = lab.STEP_GAP_S, 0.05  # the sweep pauses between steps
         try:
             assert (await client.post("/api/lab/send", json={"ip": "127.0.0.1", "steps": steps})).status == 200

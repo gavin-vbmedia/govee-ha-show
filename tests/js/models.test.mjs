@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { modelDefaults, modelSummary, newLight, statusOf } from "../../govee_show/app/goveeshow/static/js/models.js";
+import { modelDefaults, modelSummary, newLight, statusOf } from "../../haliday_show/app/halidayshow/static/js/models.js";
 
-const { models } = JSON.parse(readFileSync(new URL("../../govee_show/app/goveeshow/static/models.json", import.meta.url)));
+const { models } = JSON.parse(readFileSync(new URL("../../haliday_show/app/halidayshow/static/models.json", import.meta.url)));
 const by = Object.fromEntries(models.map((m) => [m.sku, m]));
 
 test("a new light starts with its model's settings", () => {

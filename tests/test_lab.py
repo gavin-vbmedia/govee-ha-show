@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from goveeshow import lab, protocol
+from halidayshow import lab, protocol
 
 
 def decoded(msg: bytes):

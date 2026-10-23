@@ -1,10 +1,10 @@
-# 🎄 Govee Light Show
+# 🎄 HA-liday Show
 
 Build music-synchronised light shows for Govee lights, preview them on a photo of your house, and
-play them from Home Assistant. Open **Light Shows** from the Home Assistant sidebar.
+play them from Home Assistant. Open **HA-liday Show** from the Home Assistant sidebar.
 
 **Getting started:** [Finding your way](#finding-your-way) · [Requirements](#requirements) ·
-[Quick start](#quick-start)
+[Quick start](#quick-start) · [Moving from Govee Light Show](#moving-from-govee-light-show)
 
 **Setting up:** [1. Devices](#1-devices) · [2. Speakers](#2-speakers) · [3. Your house](#3-your-house)
 
@@ -53,6 +53,26 @@ page you last had open. Below, "the House tab" and so on mean that page.
 > **Tip:** lights not here yet? Add them as [planned lights](#lights-not-delivered-yet) and start
 > designing now. Once a song is picked, **✨ Generate** in the Show panel makes a whole first draft
 > to build on.
+
+## Moving from Govee Light Show
+
+This add-on used to be called **Govee Light Show**. Home Assistant treats the renamed add-on as a new
+one, so you install **HA-liday Show** alongside the old one:
+
+1. Stop **Govee Light Show**, so only one add-on drives your lights.
+2. Install **HA-liday Show** and start it. The first time it starts, it copies your shows, lights,
+   palettes, presets, settings, house photo and songs across from the old add-on. The old add-on's
+   copy isn't changed.
+3. In **HA-liday Show**'s **Configuration** tab, paste your **Claude API key** again if you use one,
+   and turn on **Show in sidebar** and **Start on boot**.
+4. If you use MQTT, the old **Govee Light Show** entities are removed and new **HA-liday Show** ones
+   appear (for example `select.ha_liday_show_show`). Point your automations at the new ones, and
+   change `addon:` in any `hassio.addon_stdin` action to **HA-liday Show**.
+5. Once your shows play as before, uninstall **Govee Light Show**. Your songs stay in
+   `/media/govee_show` until you delete them; the new add-on uses its own copies in
+   `/media/haliday_show`.
+
+The copy only happens once, and only if **HA-liday Show** has no lights or shows of its own yet.
 
 ## 1. Devices
 
@@ -270,7 +290,7 @@ show…** to remove it.
 
 The Song panel shows the show's song with its length, tempo and sections. Press
 **Change…** to pick another from your Home Assistant **media** folder, or **Upload a song…** (MP3,
-M4A, AAC, OGG, Opus, WAV, FLAC or WebM). Uploads go to `/media/govee_show/` so media players can play
+M4A, AAC, OGG, Opus, WAV, FLAC or WebM). Uploads go to `/media/haliday_show/` so media players can play
 them. For a lights-only show, choose **No song** and set its **Length**.
 
 ### Editing a song
@@ -281,7 +301,7 @@ song (or **Upload** one), drag across the waveform to select, then **Cut selecti
 another song, which is then selected so you can trim it. Joins blend over the **Crossfade at joins**
 time (a few hundredths of a second hides the click, a few seconds blends one song into the next), and
 **Fade in** and **Fade out** soften the ends. Zoom with the wheel, or type the selection's times for
-precision. **Save as new file** writes a WAV to `/media/govee_show/` and leaves the original alone, so
+precision. **Save as new file** writes a WAV to `/media/haliday_show/` and leaves the original alone, so
 pick the new file under **Song** in the editor. Once the song is detected, selection edges snap to bars
 (hold Shift to place them freely), clicking a section in the lane selects exactly its stretch (Shift-click
 adds the next), and **Preview cut** plays the join before you cut. Beats and sections follow your edits
@@ -577,8 +597,8 @@ on their own.
 
 ### With MQTT
 
-With the Mosquitto broker add-on and MQTT integration set up, the add-on creates a **Govee
-Light Show** device with a **Show** select, **Play** and **Stop** buttons, and a **Status** sensor
+With the Mosquitto broker add-on and MQTT integration set up, the add-on creates an **HA-liday
+Show** device with a **Show** select, **Play** and **Stop** buttons, and a **Status** sensor
 (the playing show's name, or `idle`). For example, to play a show at sunset:
 
 ```yaml
@@ -588,15 +608,15 @@ triggers:
 actions:
   - action: select.select_option
     target:
-      entity_id: select.govee_light_show_show
+      entity_id: select.ha_liday_show_show
     data:
       option: Halloween
   - action: button.press
     target:
-      entity_id: button.govee_light_show_play
+      entity_id: button.ha_liday_show_play
 ```
 
-You can also publish a show's name or id to the `govee_show/play` MQTT topic.
+You can also publish a show's name or id to the `haliday_show/play` MQTT topic.
 
 ### Without MQTT
 
@@ -606,7 +626,7 @@ Without MQTT, use the add-on's stdin:
 actions:
   - action: hassio.addon_stdin
     data:
-      addon: <slug>_govee_show   # pick Govee Light Show in the UI editor
+      addon: <slug>_haliday_show   # pick HA-liday Show in the UI editor
       input:
         action: play
         show: Halloween
@@ -662,7 +682,7 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 **Describe it**, **✨ Make presets** and Generate's **AI** option need one of these:
 
 - **Claude, with your own API key.** Create a key at console.anthropic.com, then in Home Assistant open
-  **Settings → Add-ons → Govee Light Show → Configuration**, paste it into **Claude API key** and save.
+  **Settings → Add-ons → HA-liday Show → Configuration**, paste it into **Claude API key** and save.
   Each request costs a few US cents on your Anthropic account (it uses Claude Opus 5.5 at low effort).
 - **Home Assistant's AI Task.** With no key, the add-on asks Home Assistant, which uses whichever AI
   integration you've set up there with an AI Task entity: Anthropic, OpenAI, Google Gemini, or a local
@@ -767,8 +787,8 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 ## Where things are stored
 
 Shows, devices, palettes, your presets, the house photo and settings live in the add-on's config folder
-(`/addon_configs/<slug>_govee_show/`), so they are included in Home Assistant backups. Uploaded songs
-go to `/media/govee_show/` so media players can play them. The editor layout, the editing speaker
+(`/addon_configs/<slug>_haliday_show/`), so they are included in Home Assistant backups. Uploaded songs
+go to `/media/haliday_show/` so media players can play them. The editor layout, the editing speaker
 and the experimental switch are kept in each browser.
 
 ## Notes

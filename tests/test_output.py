@@ -3,7 +3,7 @@ import base64
 import json
 import time
 
-from goveeshow import output
+from halidayshow import output
 
 
 class FakeSock:

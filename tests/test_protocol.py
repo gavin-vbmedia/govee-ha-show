@@ -1,7 +1,7 @@
 import base64
 import json
 
-from goveeshow import protocol
+from halidayshow import protocol
 
 
 def test_enable_packet_matches_known_bytes():

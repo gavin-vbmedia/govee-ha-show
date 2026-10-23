@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { partsFrame } from "../../govee_show/app/goveeshow/static/js/devicetest.js";
-import { partRgb } from "../../govee_show/app/goveeshow/static/js/house.js";
+import { partsFrame } from "../../haliday_show/app/halidayshow/static/js/devicetest.js";
+import { partRgb } from "../../haliday_show/app/halidayshow/static/js/house.js";
 
 const light = { segments: 8, parts: [{ id: "a", from: 2, to: 4 }, { id: "b", from: 6, to: 7 }] };
 const seg = (frame, s) => Array.from(frame.slice((s - 1) * 3, s * 3));

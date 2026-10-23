@@ -16,14 +16,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: pip install -r govee_show/requirements.txt pytest pytest-aiohttp
+      - run: pip install -r haliday_show/requirements.txt pytest pytest-aiohttp
       - run: python -m pytest -q
       - run: node --test tests/js/*.mjs
       - name: Versions match
         run: |
           v_py=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
-          v_addon=$(sed -n 's/^version: "\(.*\)"/\1/p' govee_show/config.yaml)
-          v_pkg=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' govee_show/app/goveeshow/__init__.py)
+          v_addon=$(sed -n 's/^version: "\(.*\)"/\1/p' haliday_show/config.yaml)
+          v_pkg=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' haliday_show/app/halidayshow/__init__.py)
           echo "pyproject=$v_py config.yaml=$v_addon package=$v_pkg"
           [ "$v_py" = "$v_addon" ] && [ "$v_py" = "$v_pkg" ]
 
@@ -32,15 +32,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build --build-arg BUILD_ARCH=amd64 -t govee-show-test govee_show
+      - run: docker build --build-arg BUILD_ARCH=amd64 -t haliday-show-test haliday_show
       - name: Starts and serves the editor
         run: |
-          docker run -d --name gs -e GOVEE_SHOW_ALLOW_ALL=1 -e GOVEE_SHOW_CONFIG=/tmp/c -e GOVEE_SHOW_MEDIA=/tmp/m -p 8099:8099 govee-show-test
+          docker run -d --name gs -e HALIDAY_SHOW_ALLOW_ALL=1 -e HALIDAY_SHOW_CONFIG=/tmp/c -e HALIDAY_SHOW_MEDIA=/tmp/m -p 8099:8099 haliday-show-test
           for i in $(seq 1 20); do curl -s -o /dev/null localhost:8099/api/info && break; sleep 1; done
           docker logs gs
           # 200 (not 403) also proves the container's environment reaches the app.
           curl -fsS localhost:8099/api/info
       - name: aarch64 base image exists
         run: |
-          base=$(sed -n 's/^FROM \(.*\)$/\1/p' govee_show/Dockerfile | sed 's/${BUILD_ARCH}/aarch64/')
+          base=$(sed -n 's/^FROM \(.*\)$/\1/p' haliday_show/Dockerfile | sed 's/${BUILD_ARCH}/aarch64/')
           docker manifest inspect "$base" > /dev/null
