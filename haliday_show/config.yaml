@@ -1,5 +1,5 @@
 name: HA-liday Show
-version: "0.2.113"
+version: "0.2.114"
 slug: haliday_show
 description: Music-synchronised light shows for Govee, WLED, pixel controllers, Twinkly and Home Assistant lights (formerly Govee Light Show).
 url: https://github.com/gdeboos/ha-liday-show
@@ -18,7 +18,7 @@ ingress_port: 8099
 panel_icon: mdi:string-lights
 panel_title: HA-liday Show
 homeassistant_api: true
-# Automations can send commands with the hassio.addon_stdin action.
+# Automations can send commands with the hassio.app_stdin action (hassio.addon_stdin on older HA).
 stdin: true
 # Show entities (select, play/stop buttons, status) via MQTT discovery when a broker exists.
 services:

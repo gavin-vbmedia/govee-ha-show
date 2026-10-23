@@ -8,7 +8,7 @@ services:
     network_mode: host
     restart: unless-stopped
     volumes:
-      - ./config:/config   # shows, lights and settings (same files as the add-on's)
+      - ./config:/config   # shows, lights and settings (same files as the Home Assistant app's)
       - ./media:/media     # songs
     environment:
       HALIDAY_SHOW_PASSWORD: "change-me"

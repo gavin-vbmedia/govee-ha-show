@@ -92,7 +92,7 @@ def check(data: bytes) -> tuple[zipfile.ZipFile, list[zipfile.ZipInfo]]:
         raise BackupError("that export is too big")
     bad = [i.filename for i in entries if not _allowed(i.filename)]
     if bad:
-        raise BackupError(f"that export holds a file the add-on doesn't use ({bad[0]})")
+        raise BackupError(f"that export holds a file HA-liday Show doesn't use ({bad[0]})")
     for i in entries:
         if i.filename.endswith(".json"):
             try:

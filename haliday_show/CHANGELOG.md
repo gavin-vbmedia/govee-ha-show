@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.114
+
+- Home Assistant now calls add-ons **apps**, so the guide, the README and HA-liday Show's own messages
+  say **app** too. For example, your Claude API key goes in **Settings → Apps → HA-liday Show →
+  Configuration**. Nothing about how it works has changed.
+- The install button on GitHub now opens **HA-liday Show** straight in your Home Assistant, offering to
+  add the repository first. The old **Add repository** button didn't always work on newer Home
+  Assistant versions.
+- The automation examples now use the `hassio.app_stdin` action, with `app:` where it used to say
+  `addon:`. Automations you already have with `hassio.addon_stdin` keep working, so you don't need to
+  change them.
+
 ## 0.2.113
 
 - HA-liday Show has moved on GitHub, to **github.com/gdeboos/ha-liday-show**. You don't need to change

@@ -741,7 +741,7 @@ async def test_speaker(request):
     entity = _media_player((await request.json()).get("entity_id"))
     ha = request.app[HA]
     if not ha.available:
-        raise web.HTTPServiceUnavailable(text="Home Assistant isn't reachable from the add-on")
+        raise web.HTTPServiceUnavailable(text="Home Assistant isn't reachable from HA-liday Show")
     try:
         st = await ha.state(entity)
     except HAError as e:
@@ -1175,7 +1175,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, pass
         if (broker := await app[HA].mqtt_service()):
             app[BACKGROUND].append(asyncio.create_task(app[MQTT].run(broker)))
         else:
-            log.info("no MQTT broker found; show entities are off (automations can use add-on stdin)")
+            log.info("no MQTT broker found; show entities are off (automations can use app stdin)")
         yield
         for task in app[BACKGROUND]:
             task.cancel()

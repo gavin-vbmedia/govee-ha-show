@@ -14,10 +14,10 @@ smart plug.
 - 🏠 Watch the show on a photo of your house, bulb by bulb, before it runs for real
 - 📦 Plan shows for lights that haven't arrived yet
 - ⏯️ Play the song on any Home Assistant speaker and start shows from automations (MQTT or
-  `hassio.addon_stdin`)
+  `hassio.app_stdin`)
 
 Works with any mix of those lights on your network; Govee lights need **LAN Control** switched on in the
-Govee Home app. After starting the add-on, open **HA-liday Show** from the sidebar and press
+Govee Home app. After starting the app, open **HA-liday Show** from the sidebar and press
 **+ Add a light** under **Setup → Devices**. The **Documentation** tab has the full guide.
 
 [Source, issues and screenshots on GitHub](https://github.com/gdeboos/ha-liday-show)

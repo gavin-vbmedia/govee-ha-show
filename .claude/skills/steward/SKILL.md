@@ -5,7 +5,7 @@ description: How much to decide alone on ha-liday-show, and how to work the GitH
 
 # Stewarding ha-liday-show
 
-Gavin (GitHub `gdeboos`, and his work account `gavin-vbmedia`) owns this add-on and wants it run
+Gavin (GitHub `gdeboos`, and his work account `gavin-vbmedia`) owns this app and wants it run
 with as little input from them as possible. **Little things you decide and ship. Big choices go to Gavin.**
 
 ## Ship it yourself
@@ -17,7 +17,7 @@ Merge your own PR once CI is green on its latest commit, with no review needed, 
 - anything you'd be comfortable explaining afterwards in one changelog line
 
 Use a merge commit (the repo's convention). A merged PR is a
-release (see CLAUDE.md), so Gavin gets it as a normal add-on update, and Docker and pipx installs get it
+release (see CLAUDE.md), so Gavin gets it as a normal app update, and Docker and pipx installs get it
 from the published image or `pipx upgrade`.
 
 ## Ask Gavin first
@@ -25,14 +25,14 @@ from the published image or `pipx upgrade`.
 Open the PR as a draft, or comment on the issue, and wait for an answer when the change would:
 
 - change the format of saved shows, devices, settings, palettes or presets, or anything else
-  stored in the add-on's config folder (a mistake there can damage shows they've already made)
+  stored in the app's config folder (a mistake there can damage shows they've already made)
 - remove or rename a feature, setting or button they may rely on
 - change how lights are driven (`protocol.py`, `output.py`, `player.py` timing) beyond a clear,
   tested bug fix, since it can't be checked against real lights from a cloud session
 - add a new dependency, a new external service, or anything that costs money (AI usage aside,
   which is already set up). Never set up publishing anywhere that needs a new account (PyPI, Docker
   Hub and so on): Gavin has said no; GitHub's own registry is the only place images go
-- change how the add-on behaves, or its Dockerfile or `config.yaml`, in order to support Docker or
+- change how the app behaves, or its Dockerfile or `config.yaml`, in order to support Docker or
   pipx installs (CLAUDE.md, "Running without Home Assistant")
 - take the design in a direction the issue doesn't settle (two reasonable approaches with
   different trade-offs: describe both, recommend one, ask)
