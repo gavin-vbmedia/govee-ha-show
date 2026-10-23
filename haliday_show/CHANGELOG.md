@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.107
+
+- Icons now sit beside the tabs along the top (**Editor**, **Music**, **Library**, **Setup**), the pages in
+  the side menu (**Devices**, **Speakers**, **House**, **Settings**, **Labs**, **Palettes**, **Presets**) and
+  the section headings on those pages, such as **Timing**, **Automations**, **Layout** and **AI**, so
+  you can find your way at a glance.
+
 ## 0.2.106
 
 - The **Packet lab** and **Listen for Govee traffic** have moved out of **Setup → Settings** into their own

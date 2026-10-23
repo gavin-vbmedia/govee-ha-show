@@ -22,15 +22,37 @@
 <script type="module" src="static/js/app.js"></script>
 </head>
 <body>
+<!-- The interface's line icons, used as <svg class="ico"><use href="#i-…"/></svg>. -->
+<svg class="icon-set" aria-hidden="true">
+  <symbol id="i-editor" viewBox="0 0 24 24"><rect x="3" y="4" width="10" height="4" rx="1"/><rect x="9" y="10" width="12" height="4" rx="1"/><rect x="5" y="16" width="8" height="4" rx="1"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+  <symbol id="i-library" viewBox="0 0 24 24"><path d="M4 4h4v16H4zM10 4h4v16h-4z"/><path d="m15.5 5.2 3.6-1 3.4 14.6-3.6 1z"/></symbol>
+  <symbol id="i-setup" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-devices" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-speakers" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="7.5" r="1"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></symbol>
+  <symbol id="i-labs" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5.5 9.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/></symbol>
+  <symbol id="i-palettes" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.9-.3-.9.2-2.1 1.6-2.1H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></symbol>
+  <symbol id="i-swatches" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-presets" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol>
+  <symbol id="i-timing" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-automations" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+  <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24"><path d="M11 3.5l1.8 5.2 5.2 1.8-5.2 1.8L11 17.5l-1.8-5.2L4 10.5l5.2-1.8z"/><path d="M19 15v5M16.5 17.5h5"/></symbol>
+  <symbol id="i-experimental" viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v14.5a2.5 2.5 0 0 0 5 0V3M9.5 12h5"/></symbol>
+  <symbol id="i-packet" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M12 15h5"/></symbol>
+  <symbol id="i-listen" viewBox="0 0 24 24"><path d="M3 12h3l2-6 3 12 3-9 2 6 1.5-3H21"/></symbol>
+</svg>
 <header class="topbar">
   <h1><img class="brand" src="static/favicon.svg" alt="" width="26" height="26">HA-liday Show</h1>
   <nav>
     <!-- Making shows, then what they're made from, then setting up the house. Library and Setup hold
          several pages each, picked from the side menu under them. -->
-    <button class="tab active" data-view="editor">Editor</button>
-    <button class="tab" data-view="music">Music</button>
-    <button class="tab" data-view="library">Library</button>
-    <button class="tab" data-view="setup">Setup</button>
+    <button class="tab active" data-view="editor"><svg class="ico" aria-hidden="true"><use href="#i-editor"/></svg><span>Editor</span></button>
+    <button class="tab" data-view="music"><svg class="ico" aria-hidden="true"><use href="#i-music"/></svg><span>Music</span></button>
+    <button class="tab" data-view="library"><svg class="ico" aria-hidden="true"><use href="#i-library"/></svg><span>Library</span></button>
+    <button class="tab" data-view="setup"><svg class="ico" aria-hidden="true"><use href="#i-setup"/></svg><span>Setup</span></button>
   </nav>
   <span id="status" class="status"></span>
 </header>
@@ -268,19 +290,19 @@
 
 <div id="section-library" class="section" hidden>
   <nav class="subnav" aria-label="Library">
-    <button class="subtab" data-view="palettes"><b>Palettes</b><span>Colour sets</span></button>
-    <button class="subtab" data-view="presets"><b>Presets</b><span>Ready-made effect settings</span></button>
+    <button class="subtab" data-view="palettes"><svg class="ico" aria-hidden="true"><use href="#i-palettes"/></svg><b>Palettes</b><span>Colour sets</span></button>
+    <button class="subtab" data-view="presets"><svg class="ico" aria-hidden="true"><use href="#i-presets"/></svg><b>Presets</b><span>Ready-made effect settings</span></button>
   </nav>
   <div class="section-body">
 <main id="view-palettes" class="view" hidden>
   <p class="hint">Use a palette from an effect's settings: click a colour to drop it into a colour field, or
     <b>Apply palette</b> to fill them all. Click a light's name to <b>Recolour</b> every effect on it, or on every light.</p>
   <section class="toolbar">
-    <h2>Your palettes</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-palettes"/></svg>Your palettes</h2>
     <button id="btn-new-palette" class="primary">New palette</button>
   </section>
   <div id="my-palettes" class="palette-list"></div>
-  <h2>Built in</h2>
+  <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-swatches"/></svg>Built in</h2>
   <div id="preset-palettes" class="palette-list"></div>
 </main>
 <main id="view-presets" class="view" hidden>
@@ -288,7 +310,7 @@
     save one from any clip with <b>Save as preset…</b>. They show in the effect chooser with a ★ when <b>Show
     presets</b> is ticked. Changes here save as you make them and don't alter clips already using a preset.</p>
   <section class="toolbar">
-    <h2>Your presets</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-presets"/></svg>Your presets</h2>
     <button id="btn-new-preset" class="primary">New preset</button>
   </section>
   <section class="card ai-presets">
@@ -309,11 +331,11 @@
 </div>
 <div id="section-setup" class="section" hidden>
   <nav class="subnav" aria-label="Setup">
-    <button class="subtab" data-view="devices"><b>Devices</b><span>Find, test and plan lights</span></button>
-    <button class="subtab" data-view="speakers"><b>Speakers</b><span>Speakers and timing</span></button>
-    <button class="subtab" data-view="house"><b>House</b><span>Photo and tracing</span></button>
-    <button class="subtab" data-view="settings"><b>Settings</b><span>Layout, AI and more</span></button>
-    <button class="subtab" data-view="labs" id="tab-labs" hidden><b>Labs</b><span>Packet lab and listening</span></button>
+    <button class="subtab" data-view="devices"><svg class="ico" aria-hidden="true"><use href="#i-devices"/></svg><b>Devices</b><span>Find, test and plan lights</span></button>
+    <button class="subtab" data-view="speakers"><svg class="ico" aria-hidden="true"><use href="#i-speakers"/></svg><b>Speakers</b><span>Speakers and timing</span></button>
+    <button class="subtab" data-view="house"><svg class="ico" aria-hidden="true"><use href="#i-house"/></svg><b>House</b><span>Photo and tracing</span></button>
+    <button class="subtab" data-view="settings"><svg class="ico" aria-hidden="true"><use href="#i-settings"/></svg><b>Settings</b><span>Layout, AI and more</span></button>
+    <button class="subtab" data-view="labs" id="tab-labs" hidden><svg class="ico" aria-hidden="true"><use href="#i-labs"/></svg><b>Labs</b><span>Packet lab and listening</span></button>
   </nav>
   <div class="section-body">
 <main id="view-devices" class="view" hidden>
@@ -418,7 +440,7 @@
   <p class="hint">Where the song plays, and how to line the lights up with it.</p>
   <p id="speakers-ha" class="hint"></p>
   <section class="toolbar">
-    <h2>Your speakers</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-speakers"/></svg>Your speakers</h2>
     <button id="btn-add-speaker" class="primary">+ Add a speaker</button>
     <label title="Where shows play when started from an automation, unless a show picks its own in its Show settings">Default
       show speaker <select id="default-speaker"></select></label>
@@ -451,13 +473,13 @@
     </div>
   </dialog>
   <section class="card">
-    <h2>Timing</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-timing"/></svg>Timing</h2>
     <p><label title="Positive values delay the lights relative to the audio"><span id="offset-label">Light offset</span>
       <input id="offset" type="number" step="10" value="0"> ms</label></p>
     <p class="hint" id="offset-hint">Use this to line the lights up with the audio if they lead or lag.</p>
   </section>
   <section class="card">
-    <h2>Automations</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-automations"/></svg>Automations</h2>
     <p class="hint">To play <b id="automation-show">this show</b> from an automation, use the <b>HA-liday Show</b> MQTT
       entities (pick the show, then press Play), or the <code>hassio.addon_stdin</code> action with input
       <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the show's
@@ -492,7 +514,7 @@
 </main>
 <main id="view-settings" class="view settings" hidden>
   <section class="card">
-    <h2>Layout</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-layout"/></svg>Layout</h2>
     <p class="hint">Pick a page layout to set how the five areas fit together, then choose where each editor
       panel sits: along the top or bottom, down the left or right, or in the middle. Choose <b>Hidden</b> to tuck a panel away and bring it back here. In the editor you can also
       drag a panel by its title to move it or change its order, or use the ⋯ button on it. The layout is saved
@@ -502,7 +524,7 @@
     <p><button id="btn-reset-layout" class="ghost">Reset layout</button></p>
   </section>
   <section class="card">
-    <h2>AI</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-ai"/></svg>AI</h2>
     <p class="hint" id="ai-status">Checking…</p>
     <p class="hint">The <b>Describe it</b> panel turns a request in words into effects, using either Claude with
       your own API key (set it on the add-on's <b>Configuration</b> tab in Home Assistant), or else Home
@@ -511,7 +533,7 @@
       and the selection; never the song itself.</p>
   </section>
   <section class="card">
-    <h2>Experimental</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-experimental"/></svg>Experimental</h2>
     <p><label><input id="exp-scenes" type="checkbox"> Govee scenes</label></p>
     <p class="hint">Adds a <b>Govee scene</b> effect that hands a light to one of the scenes built into the Govee
       app (the Scenes list, not your saved snapshots) for the length of the clip. It uses an unofficial command
@@ -524,7 +546,7 @@
 </main>
 <main id="view-labs" class="view settings" hidden>
   <section class="card">
-    <h2>Packet lab</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-packet"/></svg>Packet lab</h2>
     <p class="hint">For trying out commands the add-on doesn't use yet. Pick one of your lights and a starting
       point, edit the message if you like, and press <b>Send</b>. Anything the light sends back is listed below.
       A playing show is stopped first. Only lights on the Devices tab can be sent to.</p>
@@ -578,7 +600,7 @@
     <pre id="lab-log" class="lab-log" hidden></pre>
   </section>
   <section class="card">
-    <h2>Listen for Govee traffic</h2>
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-listen"/></svg>Listen for Govee traffic</h2>
     <p class="hint">Records the messages your Govee lights send each other that reach Home Assistant, so a way of
       driving them that the add-on doesn't know yet can be worked out. For example, start <b>Scene Stage</b> in the
       Govee Home app, then press <b>Listen</b>. Nothing is sent to your lights, and a playing show is stopped

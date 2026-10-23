@@ -507,3 +507,16 @@ table.device-list td.device-actions { text-align: right; width: 1%; }
   table.device-list .device-edit { display: none; }
   table.device-list td.device-preview { white-space: normal; }
 }
+
+/* Line icons, drawn in the text colour like the ▾ ▶ ⚙ symbols. */
+.icon-set { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round; }
+.topbar nav .tab { display: inline-flex; align-items: center; gap: 6px; }
+.topbar nav .tab .ico { width: 16px; height: 16px; }
+.subtab { display: grid; grid-template-columns: 18px 1fr; column-gap: 10px; align-items: center; }
+.subtab .ico { grid-row: 1 / span 2; color: var(--muted); }
+.subtab.active .ico, .subtab:hover .ico { color: var(--text); }
+.subtab b, .subtab span { grid-column: 2; }
+h2.with-ico { display: flex; align-items: center; gap: 8px; }
+h2.with-ico .ico { color: var(--muted); }
