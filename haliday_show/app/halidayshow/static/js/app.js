@@ -306,7 +306,7 @@ function renderDevices() {
   const rows = $("device-rows");
   rows.replaceChildren();
   if (!app.deviceList.length) {
-    rows.innerHTML = `<tr><td colspan="11" class="hint">No devices yet. Scan the network or add one by IP.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="11" class="hint">No lights yet. Press <b>+ Add a light</b> to add one.</td></tr>`;
     return;
   }
   for (const d of app.deviceList) {
@@ -738,15 +738,17 @@ async function loadHaEntities() {
   return haEntities;
 }
 
+// The add functions below are used by the Add a light window: each returns what to tell the user,
+// or throws with the reason it couldn't be added.
 function addHaLight(entity) {
   const found = (haEntities || []).find((e) => e.entity === entity);
-  if (!found) { status("Pick a light or switch first", true); return; }
-  if (app.deviceList.some((d) => d.entity === entity)) { status(`${found.name} is already on the list`, true); return; }
+  if (!found) throw new Error("Pick a light or switch first");
+  if (app.deviceList.some((d) => d.entity === entity)) throw new Error(`${found.name} is already on the list`);
   app.deviceList.push({ id: `ha-${entity}`, kind: "ha", name: found.name, ip: "", entity, sku: "",
     protocol: entity.startsWith("switch.") ? "ha_switch" : "ha_light", segments: 1, bulbs: 1,
     reverse: false, gradient: false, brightness: 100 });
   saveDevices();
-  status(`Added ${found.name}. ${entity.startsWith("switch.") ? "It turns on when the show is bright there, at most once a second." : "It takes the show's colour a few times a second."}`);
+  return `Added ${found.name}. ${entity.startsWith("switch.") ? "It turns on when the show is bright there, at most once a second." : "It takes the show's colour a few times a second."}`;
 }
 
 async function fillHaPicker(select, current = "") {
@@ -765,15 +767,16 @@ const isPixels = (d) => ["wled", "ddp", "e131", "twinkly"].includes(d?.kind); //
 
 // Twinkly (experimental): asks the light for its name and LED count, like WLED.
 async function addTwinkly(ip) {
-  if (app.deviceList.some((d) => d.ip === ip)) { status(`${ip} is already on the list`, true); return; }
-  try {
-    const t = await api("api/twinkly/info", { method: "POST", json: { ip } });
+  if (app.deviceList.some((d) => d.ip === ip)) throw new Error(`${ip} is already on the list`);
+  {
+    const t = await api("api/twinkly/info", { method: "POST", json: { ip } })
+      .catch((e) => { throw new Error(`Couldn't reach a Twinkly light there: ${e.message}`); });
     const segments = Math.min(t.leds, t.max);
     app.deviceList.push({ id: `twinkly-${ip}`, kind: "twinkly", name: t.name, ip, sku: "", protocol: "twinkly",
       segments, bulbs: segments, reverse: false, gradient: false, brightness: 100 });
     saveDevices();
-    status(`Added ${t.name}: ${segments} LEDs. Twinkly support is experimental, so press Test to check it.`);
-  } catch (e) { status(`Couldn't add the Twinkly light: ${e.message}`, true); }
+    return `Added ${t.name}: ${segments} LEDs. Twinkly support is experimental, so press Test to check it.`;
+  }
 }
 
 // A pixel controller: no API to ask, so the LED count comes from the form. A second light on the same
@@ -794,7 +797,7 @@ function addController(ip, leds, kind = "ddp") {
   }
   app.deviceList.push(light);
   saveDevices();
-  status(`Added ${segments} LEDs on ${ip}, starting at ${where}. Press Test to check them.`);
+  return `Added ${segments} LEDs on ${ip}, starting at ${where}. Press Test to check them.`;
 }
 // Protocols that aren't limited to 255 segments a light.
 const LONG_PROTOCOLS = ["whole", "segments", "pixels", "ddp", "e131"];
@@ -807,14 +810,14 @@ async function wledInfo(ip) {
 }
 
 async function addWled(ip) {
-  if (app.deviceList.some((d) => d.ip === ip)) { status(`${ip} is already on the list`, true); return; }
-  try {
-    const w = await wledInfo(ip);
+  if (app.deviceList.some((d) => d.ip === ip)) throw new Error(`${ip} is already on the list`);
+  {
+    const w = await wledInfo(ip).catch((e) => { throw new Error(`Couldn't reach a WLED light there: ${e.message}`); });
     app.deviceList.push({ id: `wled-${ip}`, kind: "wled", name: w.name, ip, sku: "", protocol: "ddp",
       segments: w.leds, bulbs: w.leds, reverse: false, gradient: false, brightness: 100, parts: w.parts });
     saveDevices();
-    status(`Added ${w.name}: ${w.leds} LEDs${w.parts.length ? `, ${w.parts.length} parts from its WLED segments` : ""}`);
-  } catch (e) { status(`Couldn't add the WLED light: ${e.message}`, true); }
+    return `Added ${w.name}: ${w.leds} LEDs${w.parts.length ? `, with ${w.parts.length} parts from its WLED segments` : ""}.`;
+  }
 }
 
 // Replaces a WLED light's parts with its WLED segments. Part ids follow WLED's segment ids, so clips
@@ -855,6 +858,112 @@ function modelBadge(sku) {
   return span;
 }
 
+function addPlanned() {
+  const name = $("plan-name").value.trim();
+  if (!name) throw new Error("Give it a name, as it'll appear on the timeline");
+  const base = `planned-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "light"}`;
+  let id = base;
+  for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
+  const model = app.models[skuOf($("plan-model").value)];
+  const segments = Math.max(1, Math.round(Number($("plan-segments").value)) || 15);
+  const kind = { WLED: "wled", DDP: "ddp", "E1.31": "e131", HA: "ha", TWINKLY: "twinkly" }[skuOf($("plan-model").value)];
+  if (kind === "ha") {
+    app.deviceList.push({ id, name, kind, ip: "", entity: "", sku: "", protocol: "ha_light", segments: 1, bulbs: 1,
+      reverse: false, gradient: false, brightness: 100 });
+  } else if (kind) {
+    const where = { ddp: { first: 1 }, e131: { universe: 1, channel: 1 } }[kind] || {};
+    app.deviceList.push({ id, name, kind, ip: "", sku: "", protocol: { e131: "e131", twinkly: "twinkly" }[kind] || "ddp", segments,
+      bulbs: segments, reverse: false, gradient: false, brightness: 100, ...where });
+  } else {
+    app.deviceList.push(newLight(model, { id, name, ip: "", sku: model ? model.sku : "", segments }));
+  }
+  saveDevices();
+  return `Added ${name} as a planned light. Build shows with it now; when it arrives, type its IP into its row.`;
+}
+
+// The Add a light window: pick what kind of light, then fill in what that kind needs, then done.
+const ADD_KINDS = {
+  govee: { title: "Govee light", ip: true,
+    help: "Switch on <b>LAN Control</b> for the light in the Govee Home app first. Then scan for it, or type its IP." },
+  wled: { title: "WLED strip", ip: true,
+    help: "Type the strip's IP (it's on the WLED app's <b>Info</b> page). Its name and LEDs are filled in for you, and any segments you've set up in WLED become its <b>parts</b>." },
+  ddp: { title: "Pixel controller (DDP)", ip: true, leds: true,
+    help: "Falcon Player, ESPixelStick, ESPHome, Tasmota or an ESP32: turn on DDP in the controller's settings if it has a switch for it. Add each string separately; the next one on the same controller starts just after the last." },
+  e131: { title: "Pixel controller (E1.31)", ip: true, leds: true,
+    help: "Set the controller to take E1.31 (sACN) as <b>unicast</b>. Add each string separately; the next one starts just after the last, and you can change its <b>universe</b> and <b>channel</b> in its row." },
+  ha: { title: "Home Assistant light or switch", entity: true,
+    help: "Any light, or a switch such as a smart plug for an inflatable. Lights take the show's colour a few times a second; switches turn on when the show is bright, at most once a second. They go back as they were afterwards." },
+  twinkly: { title: "Twinkly (experimental)", ip: true,
+    help: "Type the light's IP (it's in the Twinkly app under <b>Device settings</b>). Twinkly support hasn't been tried on a real light yet, so press <b>Test</b> once it's added." },
+  plan: { title: "A light that hasn't arrived", plan: true,
+    help: "Build shows with it now. Pick the <b>model</b> if you know it: ✓ means it's known to work, ? that it's untested, so Test one before buying more. Segment counts aren't published, so 15 is a guess. When it arrives, scan and choose <b>Link to</b>, or type its IP into its row." },
+};
+const addFlow = { kind: null };
+
+function addStep(step) {
+  const dlg = $("add-dialog");
+  for (const sec of dlg.querySelectorAll("[data-step]")) sec.hidden = sec.dataset.step !== step;
+  const k = ADD_KINDS[addFlow.kind];
+  $("add-title").textContent = step === "kind" ? "Add a light" : k.title;
+  $("add-steps").textContent = `Step ${{ kind: 1, details: 2, done: 3 }[step]} of 3`;
+  dlg.querySelector('[data-add="back"]').hidden = step !== "details";
+  $("add-cancel").hidden = step === "done";
+  $("add-go").hidden = step !== "details";
+  dlg.querySelector('[data-add="again"]').hidden = step !== "done";
+  $("add-finish").hidden = step !== "done";
+  $("add-error").hidden = true;
+  if (step !== "details") return;
+  $("add-help").innerHTML = k.help;
+  $("add-scan").hidden = addFlow.kind !== "govee";
+  $("add-ip-field").hidden = !k.ip;
+  $("add-leds-field").hidden = !k.leds;
+  $("add-entity-field").hidden = !k.entity;
+  $("add-plan-fields").hidden = !k.plan;
+  $("add-go").textContent = addFlow.kind === "plan" ? "Add planned light" : "Add";
+  $("scan-results").replaceChildren();
+  if (k.entity) fillHaPicker($("add-entity"));
+  const first = k.plan ? $("plan-model") : k.entity ? $("add-entity") : $("add-ip");
+  setTimeout(() => first.focus(), 0);
+}
+
+function openAddLight() {
+  addFlow.kind = null;
+  for (const id of ["add-ip", "plan-name", "plan-model"]) $(id).value = "";
+  $("plan-segments").value = 15;
+  $("plan-segments").max = 255;
+  $("plan-info").replaceChildren();
+  addStep("kind");
+  $("add-dialog").showModal();
+}
+
+async function addLightNow() {
+  const k = ADD_KINDS[addFlow.kind], ip = $("add-ip").value.trim();
+  const go = $("add-go");
+  $("add-error").hidden = true;
+  try {
+    if (k.ip && !/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) throw new Error("Type the light's IP address, like 192.168.1.50");
+    go.disabled = true;
+    go.textContent = "Adding…";
+    const said = await {
+      govee: () => addDevice({ id: ip, ip, sku: "" }),
+      wled: () => addWled(ip),
+      ddp: () => addController(ip, Number($("add-leds").value), "ddp"),
+      e131: () => addController(ip, Number($("add-leds").value), "e131"),
+      ha: () => addHaLight($("add-entity").value),
+      twinkly: () => addTwinkly(ip),
+      plan: () => addPlanned(),
+    }[addFlow.kind]();
+    $("add-done").textContent = said;
+    addStep("done");
+  } catch (e) {
+    $("add-error").textContent = e.message;
+    $("add-error").hidden = false;
+  } finally {
+    go.disabled = false;
+    go.textContent = addFlow.kind === "plan" ? "Add planned light" : "Add";
+  }
+}
+
 function planModelChanged() {
   const m = app.models[skuOf($("plan-model").value)];
   const info = $("plan-info");
@@ -889,10 +998,11 @@ function button(label, onclick, cls = "") {
 }
 
 function addDevice(found) {
-  if (app.devices[found.id] || app.deviceList.some((d) => d.ip && d.ip === found.ip)) return;
+  if (app.devices[found.id] || app.deviceList.some((d) => d.ip && d.ip === found.ip)) throw new Error(`${found.ip} is already on the list`);
   const name = `${found.sku || "Govee"} ${found.ip.split(".").pop()}`;
   app.deviceList.push(newLight(app.models[skuOf(found.sku)], { id: found.id, name, ip: found.ip, sku: found.sku || "" }));
   saveDevices();
+  return `Added ${name}. Next, set its Segments with Find or Test.`;
 }
 
 async function scan() {
@@ -902,8 +1012,8 @@ async function scan() {
     const found = await api("api/devices/scan", { method: "POST" });
     box.replaceChildren();
     if (!found.length) {
-      box.innerHTML = `<p class="hint">No devices answered. Check LAN Control is on in the Govee app and that
-        the devices are on the same network as Home Assistant.</p>`;
+      box.innerHTML = `<p class="hint">No lights answered. Check <b>LAN Control</b> is on in the Govee Home app and
+        that they're on the same network as HA-liday Show.</p>`;
       return;
     }
     for (const f of found) {
@@ -912,7 +1022,9 @@ async function scan() {
       row.append(`${f.sku || "Govee"} at ${f.ip}`, modelBadge(f.sku));
       const known = app.devices[f.id] || app.deviceList.find((d) => d.ip === f.ip);
       if (known) { row.append(` (${known.name})`); box.append(row); continue; }
-      row.append(button("Add", () => { addDevice(f); row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (added)`); }));
+      row.append(button("Add", () => {
+        try { addDevice(f); row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (added)`); } catch (e) { status(e.message, true); }
+      }));
       const planned = app.deviceList.filter((d) => !d.ip && (d.kind || "govee") === "govee");
       if (planned.length) {
         const sel = document.createElement("select");
@@ -3705,6 +3817,21 @@ function wire() {
   $("btn-zoom-out").addEventListener("click", () => timeline.zoom(1 / 1.5));
 
   $("btn-scan").addEventListener("click", scan);
+  $("btn-add-light").addEventListener("click", openAddLight);
+  for (const b of $("add-dialog").querySelectorAll("[data-kind]")) {
+    b.addEventListener("click", () => { addFlow.kind = b.dataset.kind; addStep("details"); });
+  }
+  $("add-dialog").addEventListener("click", (e) => {
+    const what = e.target.closest("[data-add]")?.dataset.add;
+    if (what === "close") $("add-dialog").close();
+    else if (what === "back") addStep("kind");
+    else if (what === "again") openAddLight();
+    else if (what === "go") addLightNow();
+  });
+  $("add-dialog").addEventListener("input", () => { $("add-error").hidden = true; });
+  $("add-dialog").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.matches("input") && !$("add-go").hidden) { e.preventDefault(); addLightNow(); }
+  });
   $("btn-new-preset").addEventListener("click", newPreset);
   $("btn-new-palette").addEventListener("click", () => {
     app.palettes.push({ name: uniqueName("My palette"), colors: ["#ff0000", "#00ff00", "#0000ff"] });
@@ -3712,51 +3839,7 @@ function wire() {
     renderPalettes();
   });
   $("plan-model").addEventListener("change", planModelChanged);
-  $("plan-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const name = $("plan-name").value.trim();
-    const base = `planned-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "light"}`;
-    let id = base;
-    for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
-    const model = app.models[skuOf($("plan-model").value)];
-    const segments = Number($("plan-segments").value) || 15;
-    const kind = { WLED: "wled", DDP: "ddp", "E1.31": "e131", HA: "ha", TWINKLY: "twinkly" }[skuOf($("plan-model").value)];
-    if (kind === "ha") {
-      app.deviceList.push({ id, name, kind, ip: "", entity: "", sku: "", protocol: "ha_light", segments: 1, bulbs: 1,
-        reverse: false, gradient: false, brightness: 100 });
-    } else if (kind) {
-      const where = { ddp: { first: 1 }, e131: { universe: 1, channel: 1 } }[kind] || {};
-      app.deviceList.push({ id, name, kind, ip: "", sku: "", protocol: { e131: "e131", twinkly: "twinkly" }[kind] || "ddp", segments,
-        bulbs: segments, reverse: false, gradient: false, brightness: 100, ...where });
-    } else {
-      app.deviceList.push(newLight(model, { id, name, ip: "", sku: model ? model.sku : "", segments }));
-    }
-    $("plan-name").value = "";
-    $("plan-model").value = "";
-    $("plan-segments").max = 255;
-    $("plan-info").replaceChildren();
-    saveDevices();
-  });
-  $("add-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const ip = $("add-ip").value.trim();
-    const kind = $("add-kind").value;
-    if (kind === "ha") { addHaLight($("add-entity").value); return; }
-    if (kind === "wled") addWled(ip);
-    else if (kind === "twinkly") addTwinkly(ip);
-    else if (kind === "ddp" || kind === "e131") addController(ip, Number($("add-leds").value), kind);
-    else addDevice({ id: ip, ip, sku: "" });
-    $("add-ip").value = "";
-  });
-  $("add-kind").addEventListener("change", () => {
-    const kind = $("add-kind").value;
-    $("add-leds-label").hidden = !["ddp", "e131"].includes(kind);
-    $("add-ip").hidden = kind === "ha";
-    $("add-ip").required = kind !== "ha";
-    $("add-entity").hidden = kind !== "ha";
-    $("add-button").textContent = kind === "ha" ? "Add" : "Add by IP";
-    if (kind === "ha") fillHaPicker($("add-entity"));
-  });
+
 
   document.addEventListener("keydown", (e) => {
     if (music.active) { music.key(e); return; }

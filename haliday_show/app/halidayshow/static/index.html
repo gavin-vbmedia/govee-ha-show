@@ -317,36 +317,68 @@
   <div class="section-body">
 <main id="view-devices" class="view" hidden>
   <section class="toolbar">
-    <button id="btn-scan" class="primary">Scan network</button>
-    <form id="add-form" class="group">
-      <select id="add-kind" title="What kind of light it is"><option value="govee">Govee</option><option value="wled">WLED</option><option value="ddp">Pixel controller (DDP)</option><option value="e131">Pixel controller (E1.31)</option><option value="ha">Home Assistant light or switch</option><option value="twinkly">Twinkly (experimental)</option></select>
-      <select id="add-entity" hidden title="Your Home Assistant lights and switches"></select>
-      <input id="add-ip" placeholder="IP address" pattern="\d+\.\d+\.\d+\.\d+" required size="14">
-      <label id="add-leds-label" hidden title="How many LEDs this light has on the controller">LEDs <input id="add-leds" type="number" min="1" max="1000" value="50"></label>
-      <button id="add-button">Add by IP</button>
-    </form>
-    <form id="plan-form" class="group" title="Build shows for lights you don't have yet, then link them when they arrive">
-      <input id="plan-model" list="model-list" placeholder="Model, e.g. H706A or WLED (optional)" size="26"
-        title="Pick the Govee model to fill in its name and the settings that suit it">
-      <datalist id="model-list"></datalist>
-      <input id="plan-name" placeholder="Name, e.g. Porch" required size="14">
-      <label>Segments <input id="plan-segments" type="number" min="1" max="255" value="15" required></label>
-      <button>Add planned light</button>
-      <span id="plan-info" class="hint"></span>
-    </form>
+    <button id="btn-add-light" class="primary">+ Add a light</button>
   </section>
-  <p class="hint">Devices need <b>LAN Control</b> switched on in the Govee Home app. Govee doesn't report
-    segment counts, so press <b>Find</b> next to <b>Segments</b> and answer a few yes or no questions, which works
-    even with the light still on its reel. Or press <b>Test</b>: a rainbow runs with a white dot stepping along it.
-    Set <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
-    If Test only turns the light on, change <b>Protocol</b> and test again.</p>
-  <p class="hint">For a <b>WLED</b> strip, pick <b>WLED</b> next to <b>Add by IP</b> and type its IP: its name and
-    number of LEDs are filled in for you, and any segments you've set up in WLED become its <b>parts</b>.
-    For a string on a <b>pixel controller</b> (Falcon Player, ESPixelStick, ESPHome and the like), pick
-    <b>Pixel controller (DDP)</b>, type its IP and how many <b>LEDs</b> it has. Falcon, Kulp and xLights set-ups
-    usually use <b>Pixel controller (E1.31)</b> instead. Any light or smart plug in Home Assistant can join in
-    too: pick <b>Home Assistant light or switch</b>, then the light or plug. <b>Twinkly</b> lights are
-    experimental: pick <b>Twinkly (experimental)</b> and type the light's IP.</p>
+  <p class="hint">Press <b>Test</b> on a light to check it: a rainbow runs with a white dot stepping along it. Set
+    <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
+    Govee doesn't report segment counts, so for a Govee light press <b>Find</b> next to <b>Segments</b> and answer a
+    few yes or no questions, which works even with the light still on its reel. If Test only turns a Govee light on,
+    change <b>Protocol</b> and test again.</p>
+  <dialog id="add-dialog" class="effect-dialog form-dialog add-dialog" aria-labelledby="add-title">
+    <div class="effect-dialog-head"><h3 id="add-title">Add a light</h3>
+      <span id="add-steps" class="hint"></span>
+      <button class="ghost" data-add="close" aria-label="Close">✕</button></div>
+    <div class="form-dialog-body">
+      <section data-step="kind">
+        <p class="hint">What are you adding?</p>
+        <div class="add-kinds">
+          <button type="button" data-kind="govee"><b>Govee light</b><span>Found on your network, or by its IP</span></button>
+          <button type="button" data-kind="wled"><b>WLED strip</b><span>Its LEDs and segments are filled in for you</span></button>
+          <button type="button" data-kind="ddp"><b>Pixel controller (DDP)</b><span>Falcon Player, ESPixelStick, ESPHome, ESP32</span></button>
+          <button type="button" data-kind="e131"><b>Pixel controller (E1.31)</b><span>Falcon, Kulp, xLights set-ups</span></button>
+          <button type="button" data-kind="ha"><b>Home Assistant light or switch</b><span>Bulbs, or a plug for a prop</span></button>
+          <button type="button" data-kind="twinkly"><b>Twinkly</b><span>Experimental</span></button>
+          <button type="button" data-kind="plan" class="add-plan"><b>A light that hasn't arrived</b><span>Build shows now, link it later</span></button>
+        </div>
+      </section>
+      <section data-step="details" hidden>
+        <p id="add-help" class="hint"></p>
+        <div id="add-scan" class="add-scan" hidden>
+          <button type="button" id="btn-scan" class="primary">Scan network</button>
+          <div id="scan-results"></div>
+          <p class="hint">Not found? Type its IP below.</p>
+        </div>
+        <label class="field" id="add-ip-field">IP address
+          <input id="add-ip" placeholder="e.g. 192.168.1.50" inputmode="decimal" autocomplete="off"></label>
+        <label class="field" id="add-leds-field" hidden>LEDs
+          <input id="add-leds" type="number" min="1" max="1000" value="50">
+          <span class="hint">How many LEDs this light has on the controller. Check it afterwards with <b>Test</b>.</span></label>
+        <label class="field" id="add-entity-field" hidden>Light or switch
+          <select id="add-entity"></select></label>
+        <div id="add-plan-fields" hidden>
+          <label class="field">Model
+            <input id="plan-model" list="model-list" placeholder="e.g. H706A, WLED, DDP, E1.31, HA or Twinkly (optional)"
+              title="Pick the model to fill in its name and the settings that suit it">
+            <datalist id="model-list"></datalist>
+            <span id="plan-info" class="hint"></span></label>
+          <label class="field">Name <input id="plan-name" placeholder="e.g. Porch"></label>
+          <label class="field">Segments <input id="plan-segments" type="number" min="1" max="255" value="15"></label>
+        </div>
+        <p id="add-error" class="hint warn" hidden></p>
+      </section>
+      <section data-step="done" hidden>
+        <p id="add-done"></p>
+      </section>
+    </div>
+    <div class="form-dialog-foot">
+      <button type="button" class="ghost" data-add="back">← Back</button>
+      <span class="spacer"></span>
+      <button type="button" data-add="close" id="add-cancel">Cancel</button>
+      <button type="button" class="primary" data-add="go" id="add-go">Add</button>
+      <button type="button" data-add="again" hidden>Add another</button>
+      <button type="button" class="primary" data-add="close" id="add-finish" hidden>Done</button>
+    </div>
+  </dialog>
   <section id="finder" class="finder" hidden>
     <b id="finder-title"></b>
     <p id="finder-question"></p>
@@ -357,11 +389,6 @@
     </div>
     <p id="finder-progress" class="hint"></p>
   </section>
-  <p class="hint">Lights not delivered yet? Pick the <b>model</b> and add a <b>planned light</b>, then build shows
-    with it. ✓ realtime means the model is known to support per-segment control; ? untested means it isn't
-    known yet (many newer lights work), so Test one before buying more. Segment counts aren't published, so 15 is a guess until you Test the real light. When it arrives, scan and choose <b>Link to</b>, or type its IP into the row. Its
-    shows carry over.</p>
-  <div id="scan-results"></div>
   <div class="table-scroll">
   <table class="devices">
     <thead><tr><th title="Drag to reorder. Shows, the timeline and the House tab follow this order."></th><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th title="How many bulbs the light has, for the House view. Blank guesses 4 per segment.">Bulbs</th><th title="Caps this light in every show">Brightness %</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th title="How colours are sent to the light">Protocol</th><th></th></tr></thead>

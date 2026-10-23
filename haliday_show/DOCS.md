@@ -43,8 +43,8 @@ page you last had open. Below, "the House tab" and so on mean that page.
 
 ## Quick start
 
-1. **Setup → Devices**: **Scan network**, **Add** each light, then press **Find** or **Test** to set
-   its segment count.
+1. **Setup → Devices**: press **+ Add a light**, pick what kind it is and follow the steps, then press
+   **Find** or **Test** to set its segment count.
 2. **Setup → Speakers** (optional): **Test and add** your speaker and pick it as the default show
    speaker.
 3. **Setup → House** (optional): upload a photo of your house and trace each light on it.
@@ -78,8 +78,11 @@ The copy only happens once, and only if **HA-liday Show** has no lights or shows
 
 ## 1. Devices
 
-On the **Devices** tab press **Scan network**, then **Add** each light it finds. If a light doesn't
-show up, type its IP address and add it by hand. Each light has a row of settings:
+On the **Devices** tab press **+ Add a light**. First pick what you're adding (a Govee light, a WLED
+strip, a pixel controller, a Home Assistant light or switch, a Twinkly, or a light that hasn't arrived
+yet), then fill in what that kind needs, and press **Add**. For a Govee light, press **Scan network** and
+**Add** each light it finds, or type its IP if it doesn't show up. When it's added, press **Add another**
+for the next one, or **Done**. Each light has a row of settings:
 
 | Setting | What it does |
 | --- | --- |
@@ -93,8 +96,8 @@ show up, type its IP address and add it by hand. Each light has a row of setting
 
 ### WLED strips
 
-WLED strips work alongside your Govee lights. Pick **WLED** in the box next to **Add by IP**, type the
-strip's IP address (it's on the WLED app's **Info** page) and press **Add by IP**. The add-on asks the
+WLED strips work alongside your Govee lights. Press **+ Add a light**, pick **WLED strip**, type the
+strip's IP address (it's on the WLED app's **Info** page) and press **Add**. The add-on asks the
 strip for its name and number of LEDs, so there's nothing to work out: every LED is its own segment,
 up to 1000 a strip. **Find**, **Blend** and **Protocol** don't apply to WLED, so they're not shown.
 
@@ -110,15 +113,15 @@ left off. WLED's own brightness still applies, on top of **Brightness %** here. 
 strip lights up during a show, open WLED's **Config → Sync Interfaces** and untick **Use main segment
 only**.
 
-To plan a WLED strip before it arrives, type **WLED** as the model next to **Add planned light** and set
+To plan a WLED strip before it arrives, pick **A light that hasn't arrived**, type **WLED** as the model and set
 **Segments** to its number of LEDs.
 
 ### Pixel controllers
 
 Strings on a pixel controller work too: Falcon Player, ESPixelStick, ESPHome, Tasmota, a home-made ESP32,
 or anything else that listens for **DDP**. Turn DDP on in the controller's settings if it has a switch for
-it. Then pick **Pixel controller (DDP)** next to **Add by IP**, type the controller's IP and how many
-**LEDs** the string has, and press **Add by IP**. Controllers don't say how many LEDs they have, so check
+it. Then press **+ Add a light**, pick **Pixel controller (DDP)**, type the controller's IP and how many
+**LEDs** the string has, and press **Add**. Controllers don't say how many LEDs they have, so check
 with **Test**: the white dot should reach the end of the string.
 
 One controller often drives several strings or props. Add the same IP again for each one: the new light
@@ -127,14 +130,14 @@ light starts in the controller's LED order, so you can set it to match how you'v
 lights on one controller share LEDs, the row says *Shares LEDs with…*. You can also add the whole
 controller as one long light and split it into **parts** instead.
 
-To plan one before it arrives, type **DDP** as the model next to **Add planned light** and set
+To plan one before it arrives, pick **A light that hasn't arrived**, type **DDP** as the model and set
 **Segments** to its number of LEDs.
 
 ### E1.31 controllers
 
 Most Falcon and Kulp controllers, and anything set up for xLights, speak **E1.31** (also called sACN).
-Pick **Pixel controller (E1.31)** next to **Add by IP**, type the controller's IP and how many **LEDs**
-the string has, and press **Add by IP**. Set the controller to take E1.31 as **unicast** (straight to
+Press **+ Add a light**, pick **Pixel controller (E1.31)**, type the controller's IP and how many **LEDs**
+the string has, and press **Add**. Set the controller to take E1.31 as **unicast** (straight to
 its IP); the add-on doesn't use multicast.
 
 Each light has a **universe** and **channel** in the **Model** column: where it starts in the
@@ -144,12 +147,12 @@ again for the next string and it starts just after the last one. Lights on one c
 universe without blanking each other, and the row says *Shares LEDs with…* if two overlap.
 
 When a show or test stops, the add-on tells the controller, so it goes straight back to what it was
-doing. To plan one before it arrives, type **E1.31** as the model next to **Add planned light**.
+doing. To plan one before it arrives, pick **A light that hasn't arrived** and type **E1.31** as the model.
 
 ### Home Assistant lights and switches
 
 Any light or switch in Home Assistant can join in: Zigbee and Hue bulbs, LIFX, or a smart plug driving an
-inflatable or a lit-up prop. Pick **Home Assistant light or switch** next to **Add by IP**, pick it from
+inflatable or a lit-up prop. Press **+ Add a light**, pick **Home Assistant light or switch**, pick it from
 the list and press **Add**. To swap it for another later, pick it in the row's **IP** column.
 
 Changes go through Home Assistant, so these are slow, and each is one colour at a time:
@@ -165,12 +168,12 @@ Effects that are too fast for one are marked on the timeline, as for other slow 
 show or test starts, the add-on remembers how each light and switch was, and puts it back when it ends.
 
 Running HA-liday Show without Home Assistant? These need `HA_URL` and `HA_TOKEN` set (see **Running
-without Home Assistant**). To plan one, type **HA** as the model next to **Add planned light**.
+without Home Assistant**). To plan one, pick **A light that hasn't arrived** and type **HA** as the model.
 
 ### Twinkly lights (experimental)
 
-Pick **Twinkly (experimental)** next to **Add by IP** and type the light's IP (it's in the Twinkly app
-under the light's **Device settings**). Its name and number of LEDs are filled in for you, and you can
+Press **+ Add a light**, pick **Twinkly** and type the light's IP (it's in the Twinkly app under the
+light's **Device settings**). Its name and number of LEDs are filled in for you, and you can
 split it into **parts** like any other light.
 
 During a show the add-on switches the light into Twinkly's realtime mode and sets every LED itself; when
@@ -213,17 +216,17 @@ Lights accept different forms of the realtime command. Change
 
 ### Lights not delivered yet?
 
-Pick the model (for example `H706A`), give it a name and press **Add
-planned light**, then build shows with it straight away. The badge next to a model says what we've
+Press **+ Add a light** and pick **A light that hasn't arrived**. Pick the model (for example `H706A`),
+give it a name and press **Add planned light**, then build shows with it straight away. The badge next to a model says what we've
 found on real lights: **✓ works** (tested, works on Realtime), **⚠ limited** (tested, only partly works;
 point at the badge to see what it can do) or **? untested** (not tried with this add-on yet: most
 Govee lights with LAN Control work, so add one and press **Test** before buying more; the badge's
 tooltip says whether Govee lists the model as having LAN Control). A tested model
 starts with the settings that suit it, such as **Per bulb** with 300 segments for the 30 m Christmas
-String Lights 2, both when you plan it and when you add it from **Scan network**. Lights you've already
+String Lights 2, both when you plan it and when you add it from **Scan network** (under **+ Add a light → Govee light**). Lights you've already
 added keep their settings. Otherwise 15 segments is a guess until you test the real
 light. Planned lights appear in the previews but nothing is sent to them. When the light arrives,
-press **Scan network** and choose **Link to** next to it, or type its IP into the planned light's
+press **+ Add a light → Govee light → Scan network** and choose **Link to** next to it, or type its IP into the planned light's
 row. Its shows carry over, and if the real segment count differs, just change it: effects scale
 to any number of segments.
 
