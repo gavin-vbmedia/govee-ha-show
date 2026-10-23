@@ -42,6 +42,7 @@
   <symbol id="i-ai" viewBox="0 0 24 24"><path d="M11 3.5l1.8 5.2 5.2 1.8-5.2 1.8L11 17.5l-1.8-5.2L4 10.5l5.2-1.8z"/><path d="M19 15v5M16.5 17.5h5"/></symbol>
   <symbol id="i-experimental" viewBox="0 0 24 24"><path d="M8 3h8M9.5 3v14.5a2.5 2.5 0 0 0 5 0V3M9.5 12h5"/></symbol>
   <symbol id="i-packet" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M12 15h5"/></symbol>
+  <symbol id="i-data" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/></symbol>
   <symbol id="i-listen" viewBox="0 0 24 24"><path d="M3 12h3l2-6 3 12 3-9 2 6 1.5-3H21"/></symbol>
 </svg>
 <header class="topbar">
@@ -532,6 +533,16 @@
       Assistant's <b>AI Task</b>, which uses whichever AI integration you have set up there, including a local
       one such as Ollama. It sends the AI your lights' names, the effect list, the song's beats and sections,
       and the selection; never the song itself.</p>
+  </section>
+  <section class="card">
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-data"/></svg>Your data</h2>
+    <p class="hint">Everything the add-on saves: your lights, shows, palettes, presets, settings and house photo, in
+      one file. Songs stay in your songs folder and aren't in it.</p>
+    <p class="row"><a id="btn-export" class="button" href="api/backup" download>Export…</a>
+      <label class="button">Import…<input id="import-file" type="file" accept=".zip,application/zip" hidden></label>
+      <button id="btn-afresh" class="ghost danger">Start afresh…</button></p>
+    <p class="hint">Before an import or a fresh start, a copy of what you had is kept here, so you can put it back.</p>
+    <div id="data-copies" class="wz-list"></div>
   </section>
   <section class="card">
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-presets"/></svg>Setup guide</h2>

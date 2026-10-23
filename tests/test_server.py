@@ -755,3 +755,44 @@ async def test_wled_scan_endpoint(client, monkeypatch):
     body = await (await client.post("/api/wled/scan")).json()
     assert body == {"found": [{"ip": "192.168.1.70", "name": "Eaves", "leds": 1200, "version": "", "parts": []}],
                     "max": 1000}
+
+
+async def test_export_start_afresh_and_import_back(client):
+    await client.put("/api/devices", json=[{"id": "roof", "name": "Roof", "ip": "", "segments": 10}])
+    created = await (await client.post("/api/shows", json={"name": "Carol"})).json()
+    await client.put(f"/api/shows/{created['id']}", json={"name": "Carol", "tracks": []})
+    resp = await client.get("/api/backup")
+    assert resp.status == 200 and resp.content_type == "application/zip"
+    assert "attachment" in resp.headers["Content-Disposition"]
+    exported = await resp.read()
+
+    reset = await (await client.post("/api/backup/reset")).json()
+    assert reset["kept"].startswith("before-fresh-start-")
+    assert await (await client.get("/api/devices")).json() == []
+    assert await (await client.get("/api/shows")).json() == []
+
+    resp = await client.post("/api/backup", data=exported, headers={"Content-Type": "application/zip"})
+    assert resp.status == 200
+    assert (await resp.json())["restored"] >= 2
+    assert [d["name"] for d in await (await client.get("/api/devices")).json()] == ["Roof"]
+    assert [s["id"] for s in await (await client.get("/api/shows")).json()] == [created["id"]]
+
+
+async def test_a_bad_import_is_refused_and_changes_nothing(client):
+    await client.put("/api/devices", json=[{"id": "roof", "name": "Roof", "ip": "", "segments": 10}])
+    resp = await client.post("/api/backup", data=b"not a zip")
+    assert resp.status == 400
+    assert "isn't a .zip" in await resp.text()
+    assert len(await (await client.get("/api/devices")).json()) == 1
+    assert await (await client.get("/api/backup/copies")).json() == []
+
+
+async def test_the_copy_kept_before_a_fresh_start_brings_it_all_back(client):
+    await client.put("/api/devices", json=[{"id": "roof", "name": "Roof", "ip": "", "segments": 10}])
+    kept = (await (await client.post("/api/backup/reset")).json())["kept"]
+    copies = await (await client.get("/api/backup/copies")).json()
+    assert [c["name"] for c in copies] == [kept] and copies[0]["reason"] == "fresh-start"
+    assert (await client.get(f"/api/backup/copies/{kept}")).status == 200
+    assert (await client.post("/api/backup/copies/nope.zip/restore")).status == 404
+    assert (await client.post(f"/api/backup/copies/{kept}/restore")).status == 200
+    assert [d["name"] for d in await (await client.get("/api/devices")).json()] == ["Roof"]

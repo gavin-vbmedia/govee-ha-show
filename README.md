@@ -139,6 +139,8 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
 - **Try the demo**: seven planned lights on the sample house, a sample song and a show ready to play,
   in one press, with no lights needed
 - A setup guide on first run: lights, a speaker, the house, then a first show generated from a song
+- **Export** and **Import** everything in one file, or **Start afresh**, with a copy kept first so it
+  can be undone
 - Draw icicle lights as hanging drops and spotlights as beams aimed at the wall
 - Mark stretches that run out of view (round a corner, or an extension lead) so the bulb count
   still lines up; those bulbs still play in the real show
@@ -282,6 +284,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
   app/halidayshow/runner.py               Starts shows on a speaker or for the browser
   app/halidayshow/scenes.py               Govee scene library lookup (experimental scenes)
   app/halidayshow/storage.py              Shows, settings, songs and the house photo on disk
+  app/halidayshow/backup.py               Export, import and start afresh, with copies kept first
   app/halidayshow/ha.py                   Home Assistant API (media players, lights and switches, MQTT details)
   app/halidayshow/commands.py             Automation commands over add-on stdin
   app/halidayshow/mqtt.py                 MQTT discovery entities
@@ -293,6 +296,8 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
     js/effects.js                       Effect definitions, House lane effects and the baker
     js/timeline.js                      Timeline canvas: waveform, clips, selection, zoom
     js/house.js                         House photo: tracing, bulb layout, icicles, spots
+    js/samplehouse.js, sample-house.svg  The sample house and its ready-made places for lights
+    js/demo.js, sample-song.mp3         Try the demo: its planned lights and the music-box song
     js/devicetest.js                    Frames for testing a light's parts on the Devices tab
     js/labtemplates.js                  Packet lab starting points
     js/layout.js                        Movable panel layout

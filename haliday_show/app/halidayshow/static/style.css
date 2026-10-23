@@ -549,3 +549,5 @@ h2.with-ico .ico { color: var(--muted); }
 .wz-pick > .sel { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .wz-pick > [hidden] { display: none; }
 @media (max-width: 560px) { .wz-pick { grid-template-columns: 1fr; } }
+
+a.button { text-decoration: none; }

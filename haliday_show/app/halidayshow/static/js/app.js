@@ -3067,6 +3067,59 @@ async function removeDemo() {
   status("Removed the demo");
 }
 
+// your data -------------------------------------------------------------------
+async function renderCopies() {
+  let copies = [];
+  try { copies = await api("api/backup/copies"); } catch { /* shown as none */ }
+  const when = (s) => new Date(s * 1000).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  $("data-copies").replaceChildren(...copies.map((c) => {
+    const get = Object.assign(document.createElement("a"), { className: "button ghost", textContent: "Download",
+      href: `api/backup/copies/${encodeURIComponent(c.name)}`, download: c.name });
+    const put = button("Put back", () => replaceData(`api/backup/copies/${encodeURIComponent(c.name)}/restore`, null,
+      `Put back the copy from ${when(c.made)}? It replaces what you have now, and a copy of that is kept first.`));
+    return wizardRow(c.reason === "import" ? "Before an import" : "Before a fresh start",
+      `${when(c.made)} · ${Math.max(1, Math.round(c.size / 1024))} KB`, get, put);
+  }));
+}
+
+// Import, put back or start afresh: the add-on keeps a copy first, then the page reloads with the new data.
+async function replaceData(url, body, question) {
+  if (!confirm(question)) return;
+  clearTimeout(autoSaveTimer);
+  await stop();
+  try {
+    // Save the open show first, so the copy kept beforehand has your latest changes.
+    if (app.dirty && worthSaving()) await save();
+    status("Working…");
+    const r = await api(url, { method: "POST", ...(body ? { body, headers: { "Content-Type": "application/zip" } } : {}) });
+    if (url.endsWith("/reset")) {
+      // A fresh start in this browser too: its layout, choices and the setup guide's "done".
+      for (const k of Object.keys(localStorage)) if (k.startsWith("halidayshow.")) localStorage.removeItem(k);
+    } else {
+      prefs.set("lastShow", null);
+    }
+    status(r.restored ? `Imported ${r.restored} files` : "Done");
+    app.dirty = false;  // what was open has been replaced, so don't ask about leaving it
+    location.reload();
+  } catch (e) {
+    status(e.message, true);
+    renderCopies();
+  }
+}
+
+function wireData() {
+  $("import-file").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (file) replaceData("api/backup", file, `Import ${file.name}? It replaces your lights, shows, palettes, presets, `
+      + "settings and house photo with the ones in the file. A copy of what you have now is kept first, under Your data.");
+  });
+  $("btn-afresh").addEventListener("click", () => replaceData("api/backup/reset", null, "Start afresh? This removes your "
+    + "lights, shows, palettes, presets, settings and house photo, and resets this browser's layout, so the add-on is "
+    + "like new and the setup guide opens. Your songs are kept, and so is a copy of everything, under Your data."));
+  $("btn-export").addEventListener("click", () => status("Exporting… check your downloads"));
+}
+
 // setup guide ----------------------------------------------------------------
 // One window that walks a new user from nothing to a show. Each step uses the add-on's own windows
 // (Add a light, Find, Add a speaker), so there's one way of doing each thing.
@@ -4236,6 +4289,7 @@ function showView(view) {
   if (page === "music") refreshAudio().catch(() => {}).then(() => music.show()); else music.hide();
   if (page === "speakers") loadSpeakers();
   if (page === "house") renderHouseLights();
+  if (page === "settings") renderCopies();
   if (page === "editor") { layoutPreview(); timeline.layout(); }
 }
 
@@ -4528,6 +4582,7 @@ async function init() {
   wireLab();
   wireHouse();
   wireWizard();
+  wireData();
   const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
   $("btn-reset-layout").addEventListener("click", () => layout.reset());
   $("exp-labs").checked = labsOn();
