@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.104
+
+- **Find** (next to **Segments** under **Setup → Devices**) now opens its questions in a window in front
+  of you. Before, they appeared at the top of the page, so with a few lights it looked as if **Find**
+  did nothing.
+- The window shows how far through you are, and says what it found at the end. If the light can't be
+  reached, it says so there too. **Cancel**, **✕** or Esc stops it and lets the light go.
+
 ## 0.2.103
 
 - The documentation now covers every kind of light, not just Govee. **Requirements** lists them all, and

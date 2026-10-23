@@ -183,9 +183,12 @@ table.devices { border-collapse: collapse; background: var(--panel); border-radi
 table.devices th, table.devices td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
 table.devices td input[type="number"] { width: 5em; }
 .range-value { display: inline-block; min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
-.finder { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
-  display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
-.finder p { margin: 0; }
+.finder-dialog { width: min(480px, calc(100vw - 32px)); }
+.finder-dialog .form-dialog-body p { margin: 0; }
+#finder-question { font-size: 15px; }
+.finder-bar { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.finder-bar[hidden] { display: none; }
+.finder-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
 #scan-results { display: flex; flex-direction: column; gap: 6px; }
 .scan-row { display: flex; gap: 10px; align-items: center; }
 .badge { font-size: 12px; margin-left: 6px; }

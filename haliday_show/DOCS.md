@@ -118,8 +118,9 @@ segments a light has, and different models take colours in different ways.
 Press **Test**: a rainbow runs along the light with a white dot
 stepping from segment to segment. Set **Segments** so the dot visits every segment once per lap,
 and tick **Reverse** if it runs the wrong way. If the light is still on its reel, press **Find**
-next to **Segments** instead: it lights one segment and asks whether anything is lit. Each answer
-halves the possible range, so after about 7 answers the count is filled in. Set **Reverse** later,
+next to **Segments** instead: a window opens, lights one segment and asks whether anything is lit.
+Each answer halves the possible range, so after about 7 answers the count is filled in and the
+window says what it found. **Cancel** stops it and lets the light go back to normal. Set **Reverse** later,
 once the light is hung up.
 
 While the test is running you can change **Segments**, **Reverse** or **Protocol** and the light
