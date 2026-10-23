@@ -186,6 +186,8 @@ have (a sync centre such as the Curtain Lights 2, or a DreamView sync box) and m
 be segments only or to go over Bluetooth or the cloud. Agreed with the owner to stop here unless one
 turns up; if it does, capture its traffic (Listen first, then `tcpdump` on the UniFi access point) and
 walk the owner through it one step at a time.
+Since the owner has neither, `docs/capture-help.md` (Oct 2026) asks the community for set-up details, a
+video and a router capture from their own sync box or sync centre; record anything that comes back here.
 
 ## Tools in the add-on for this kind of work
 
