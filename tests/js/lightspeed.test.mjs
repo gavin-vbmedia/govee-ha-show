@@ -69,3 +69,11 @@ test("a Home Assistant switch flags a beat flash that's faster than once a secon
   assert.equal(pace.label, "a Home Assistant switch");
   assert.equal(pace.can, 1);
 });
+
+test("a Home Assistant switch previews as plain on or off", async () => {
+  const { asShown, switchOn } = await import("../../haliday_show/app/halidayshow/static/js/lightspeed.js");
+  const sw = { protocol: "ha_switch", segments: 1 };
+  assert.deepEqual([...asShown(sw, 0, () => new Uint8Array([200, 0, 0]))], [255, 255, 255]);
+  assert.deepEqual([...asShown(sw, 0, () => new Uint8Array([60, 60, 60]))], [0, 0, 0]);
+  assert.equal(switchOn(new Uint8Array([0, 128, 0])), true);
+});

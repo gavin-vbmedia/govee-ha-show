@@ -23,7 +23,7 @@ class FakeHA:
 def fake_output(ha):
     out = output.Output.__new__(output.Output)
     out.sock, out.devices, out.universes, out._task = None, {}, {}, None
-    out.ha, out.calls = ha, set()
+    out.ha, out.calls, out.ha_budget = ha, set(), output.HaBudget()
     return out
 
 
@@ -107,3 +107,32 @@ async def test_a_failing_call_doesnt_stop_the_show():
 def test_one_segment_test_pattern_goes_round_the_colours():
     assert output.test_frame(1, 0) != output.test_frame(1, 1.5)
     assert len(output.test_frame(1, 0)) == 3
+
+
+async def test_switch_ignores_brightness_so_it_can_still_turn_on():
+    ha = FakeHA()
+    out = fake_output(ha)
+    dev = out.claim("ha:switch.snowman", 1, protocol="ha_switch", brightness=40)
+    await settle(out)
+    dev.update(b"\xff\xff\xff")
+    dev.tick(time.monotonic())
+    await settle(out)
+    assert ha.calls[-1] == ("switch.turn_on", {"entity_id": "switch.snowman"})
+
+
+async def test_lights_share_the_changes_a_second_fairly():
+    ha = FakeHA()
+    out = fake_output(ha)
+    out.ha_budget = output.HaBudget(per_second=2)  # one change every half second, across all of them
+    lights = [out.claim(f"ha:light.l{i}", 1, protocol="ha_light") for i in range(3)]
+    await settle(out)
+    t0 = time.monotonic()
+    for step in range(12):  # 3 seconds, every light wanting a new colour all the time
+        now = t0 + step * 0.25
+        for k, dev in enumerate(lights):
+            dev.update(bytes([(step * 40 + k * 10) % 256, 0, 255]))
+            dev.tick(now)
+        await settle(out)
+    sent = [d["entity_id"] for c, d in ha.calls if c == "light.turn_on"]
+    assert len(sent) == 6  # 2 a second for 3 seconds, not 4 a second each
+    assert {sent.count(f"light.l{i}") for i in range(3)} == {2}  # each light got its turn

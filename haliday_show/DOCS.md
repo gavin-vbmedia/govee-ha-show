@@ -211,12 +211,18 @@ Changes go through Home Assistant, so these are slow, and each is one colour at 
 - A **light** takes the show's colour up to 4 times a second. Fades, colour changes and pulses look
   good; chases and sparkles don't show on a single colour. A light that only does white gets just the
   brightness.
-- A **switch** turns on while the show is at least half bright there and off when it's darker. It
-  changes at most once a second, to spare the plug's relay and the prop, so it suits beats in slower
-  songs and changes between sections.
+- A **switch** turns on while the show is at least half bright there and off when it's darker, whatever
+  the colour. It changes at most once a second, to spare the plug's relay and the prop, so it suits
+  beats in slower songs and changes between sections. **Brightness %** doesn't apply to a switch, as a
+  plug can't dim. In the editor a switch shows as plain white when it's on and dark when it's off, and a
+  clip is marked if it would leave the switch off the whole time, or keep it on so its colours are lost.
+  A steady clip, such as **Solid**, is the way to have the prop on for part of the song.
 
-Effects that are too fast for one are marked on the timeline, as for other slow lights. Just before a
-show or test starts, the add-on remembers how each light and switch was, and puts it back when it ends.
+Effects that are too fast for one are marked on the timeline, as for other slow lights. All your Home
+Assistant lights and switches share about 10 changes a second between them, as that's what a Hue bridge
+or a Zigbee network keeps up with, so with lots of them each one changes a little less often and none
+fall behind. Just before a show or test starts, the add-on remembers how each light and switch was, and
+puts it back when it ends.
 
 Running HA-liday Show without Home Assistant? These need `HA_URL` and `HA_TOKEN` set (see **Running
 without Home Assistant**). To plan one, pick **Plan a light** and type **HA** as the model.

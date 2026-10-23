@@ -90,3 +90,19 @@ test("realtime reach is noted only where the model's realtime mode stops short",
   assert.equal(reachNote({ protocol: "standard" }, { sku: "H6199" }), null);
   assert.equal(reachNote({ protocol: "standard" }, undefined), null);
 });
+
+test("a Home Assistant switch only shows on and off", () => {
+  const sw = { protocol: "ha_switch", segments: 1, entity: "switch.snowman" };
+  assert.equal(level(clip("solid"), sw), "ok"); // the prop on for the clip
+  assert.equal(level(clip("pulse", { rate: 0.3 }), sw), "ok"); // goes on and off
+  assert.equal(level(clip("solid", { color: "#202020" }), sw), "no"); // too dim to ever turn on
+  assert.match(clipFit(clip("solid", { color: "#202020" }), sw).reasons[0], /stays off/);
+  const colours = clip("cycle", { color: "#ff0000", color2: "#00ff00", color3: "#0000ff", color4: "#ffffff" });
+  assert.equal(level(colours, sw), "limited"); // always bright, so the colours are lost
+  assert.match(clipFit(colours, sw).reasons[0], /stays on/);
+});
+
+test("a Home Assistant light's warning talks about colours, not length", () => {
+  const light = { protocol: "ha_light", segments: 1, entity: "light.porch" };
+  assert.match(clipFit(clip("chase"), light).reasons[0], /one colour at a time/);
+});

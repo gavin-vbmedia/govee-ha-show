@@ -6,7 +6,7 @@
 // The editor won't pick a "no" effect unless you allow it, and marks clips that are "limited" or "no".
 
 import { EFFECTS, renderTrack } from "./effects.js";
-import { clipPace } from "./lightspeed.js";
+import { clipPace, switchOn } from "./lightspeed.js";
 
 export const REALTIME_PROTOCOLS = ["standard", "razer", "v2"];
 const SAMPLES = 48;
@@ -65,6 +65,18 @@ export function clipFit(clip, dev, { house = null } = {}) {
     if (!dev.sku) return result("no", "Set this light's model under Setup → Devices to play a Govee scene.");
     return result("ok");
   }
+  if (dev.protocol === "ha_switch") {
+    // A switch only goes on and off with how bright the show is there, so colours don't show at all.
+    const frames = shown(clip, 1, false), states = frames.map(switchOn);
+    if (states.every((on) => !on)) {
+      return result("no", "This switch stays off: it only turns on when the show is at least half bright there.");
+    }
+    // Staying on is what a steady clip is for (the prop on for a chorus); a moving one loses its movement.
+    if (states.every((on) => on) && !steady(frames)) {
+      return result("limited", "This switch just stays on for the whole clip: it follows how bright the show is, not its colours.");
+    }
+    return result("ok");
+  }
   const whole = dev.protocol === "whole";
   // On a long light only the average can flatten it, and the average of 50 segments is near enough.
   const n = Math.max(1, whole ? Math.min(dev.segments || 1, LONG_LIGHT) : dev.segments || 1);
@@ -72,7 +84,9 @@ export function clipFit(clip, dev, { house = null } = {}) {
   if ((whole || n < LONG_LIGHT) && steady(shown(clip, n, whole)) && !steady(shown(clip, LONG_LIGHT, false))) {
     return result("no", whole
       ? "On Whole light only the light shows one colour at a time, the average of this effect, and that hardly changes."
-      : `With ${n} segment${n === 1 ? "" : "s"} this light is too short for these settings, so it shows one steady colour.`);
+      : dev.protocol === "ha_light"
+        ? "A Home Assistant light shows one colour at a time, and this effect hardly changes it."
+        : `With ${n} segment${n === 1 ? "" : "s"} this light is too short for these settings, so it shows one steady colour.`);
   }
   const pace = clipPace(clip, dev);
   if (pace?.tooFast) {
