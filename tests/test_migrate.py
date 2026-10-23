@@ -62,3 +62,16 @@ def test_leaves_an_already_set_up_addon_alone(tmp_path):
 def test_nothing_to_import(tmp_path):
     assert migrate.import_old(tmp_path / "config", tmp_path / "media", tmp_path / "missing") is None
     assert not (tmp_path / "config" / migrate.MARKER).exists()
+
+
+def test_saved_lights_without_a_kind_are_marked_govee(tmp_path):
+    store = Storage(tmp_path / "config", tmp_path / "media")
+    store.save_devices([{"id": "a", "ip": "10.0.0.1", "segments": 15},
+                        {"id": "b", "kind": "wled", "ip": "10.0.0.2", "segments": 60}])
+    assert migrate.fill_device_kinds(store) == 1
+    assert store.load_devices() == [{"id": "a", "ip": "10.0.0.1", "segments": 15, "kind": "govee"},
+                                    {"id": "b", "kind": "wled", "ip": "10.0.0.2", "segments": 60}]
+    before = store.devices_file.stat().st_mtime_ns
+    assert migrate.fill_device_kinds(store) == 0  # nothing to do: the file isn't rewritten
+    assert store.devices_file.stat().st_mtime_ns == before
+    assert migrate.fill_device_kinds(Storage(tmp_path / "empty", tmp_path / "media")) == 0

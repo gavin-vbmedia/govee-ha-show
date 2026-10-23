@@ -261,7 +261,8 @@ def _clean_device(d: dict) -> dict:
         segments = int(d.get("segments", 15))
     except (TypeError, ValueError) as e:
         raise web.HTTPBadRequest(text=f"bad device: {e}")
-    # Saved before WLED existed, a device has no kind: it's a Govee light.
+    # Saved before WLED existed (say, restored from an old backup), a device has no kind: it's a Govee
+    # light. Start-up fills these in (migrate.fill_device_kinds).
     kind = "wled" if d.get("kind") == "wled" else "govee"
     protocol = "ddp" if kind == "wled" else str(d.get("protocol") or "standard")
     if kind == "govee" and protocol not in PROTOCOLS:
@@ -976,6 +977,10 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     except OSError as e:
         logging.getLogger(__name__).error("couldn't import from the old add-on: %s", e)
     app[STORAGE] = Storage(config_dir, media_dir)
+    try:
+        migrate.fill_device_kinds(app[STORAGE])
+    except OSError as e:
+        logging.getLogger(__name__).error("couldn't mark saved lights as Govee: %s", e)
     app[TESTS] = {}
     app[PREVIEWS] = {}
     app[LISTENING] = {"listener": None, "options": {}}

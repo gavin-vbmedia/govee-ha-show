@@ -114,3 +114,16 @@ def imported(config_dir: Path) -> dict | None:
         return json.loads((config_dir / MARKER).read_text())
     except (OSError, ValueError):
         return None
+
+
+def fill_device_kinds(storage) -> int:
+    """Saved lights from before WLED support have no kind. Mark them Govee, which they are, so every
+    saved light says what it is. Only the missing field is added; nothing else in the file changes."""
+    devices = storage.load_devices()
+    missing = [d for d in devices if isinstance(d, dict) and not d.get("kind")]
+    for d in missing:
+        d["kind"] = "govee"
+    if missing:
+        storage.save_devices(devices)
+        log.info("marked %d saved light(s) as Govee", len(missing))
+    return len(missing)

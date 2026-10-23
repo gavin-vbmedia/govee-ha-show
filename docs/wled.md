@@ -5,7 +5,8 @@ How HA-liday Show drives WLED strips. Govee lights are in `govee-protocols.md`; 
 ## Saved devices
 
 A device with `"kind": "wled"` is a WLED strip. Devices saved before WLED support have no `kind` and
-load as Govee (`server._clean_device`). A WLED device always has `protocol: "ddp"`, `sku: ""` and no
+are marked Govee at start-up (`migrate.fill_device_kinds`, from 0.2.89), and a device that still arrives
+without one (say, from an old backup) is read as Govee (`server._clean_device`). A WLED device always has `protocol: "ddp"`, `sku: ""` and no
 blending, and can have up to `MAX_SEGMENTS` (1000) segments, one per LED.
 
 ## Sending frames: DDP

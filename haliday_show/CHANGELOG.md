@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.89
+
+- When the add-on starts, any of your saved lights from before WLED support are marked as Govee lights,
+  so every light says what kind it is. Nothing else about them changes, and you don't need to do anything.
+
 ## 0.2.88
 
 - **WLED strips** now work alongside your Govee lights. Under **Setup → Devices**, pick **WLED** next to
