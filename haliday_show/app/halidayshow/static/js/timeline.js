@@ -190,7 +190,7 @@ export class Timeline {
         : !dev ? tr.device
         : dev.light ? (dev.light.whole === false ? "Not played: parts only" : `All parts · ${dev.segments} segments`)
         : dev.parent ? `Segments ${dev.from}–${dev.to}`
-        : `${dev.segments} segments${dev.ip ? "" : " · planned"}`;
+        : `${dev.segments} segments${dev.ip || dev.entity ? "" : " · planned"}`;
       const note = !house && dev && this.app.trackNote?.(dev);
       if (note) ctx.fillStyle = WARN;
       ctx.fillText(clipText(ctx, note ? `⚠ ${note}` : sub, HEADER_W - x - 6), x, y + 36);

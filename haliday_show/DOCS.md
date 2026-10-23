@@ -146,6 +146,27 @@ universe without blanking each other, and the row says *Shares LEDs with…* if 
 When a show or test stops, the add-on tells the controller, so it goes straight back to what it was
 doing. To plan one before it arrives, type **E1.31** as the model next to **Add planned light**.
 
+### Home Assistant lights and switches
+
+Any light or switch in Home Assistant can join in: Zigbee and Hue bulbs, LIFX, or a smart plug driving an
+inflatable or a lit-up prop. Pick **Home Assistant light or switch** next to **Add by IP**, pick it from
+the list and press **Add**. To swap it for another later, pick it in the row's **IP** column.
+
+Changes go through Home Assistant, so these are slow, and each is one colour at a time:
+
+- A **light** takes the show's colour up to 4 times a second. Fades, colour changes and pulses look
+  good; chases and sparkles don't show on a single colour. A light that only does white gets just the
+  brightness.
+- A **switch** turns on while the show is at least half bright there and off when it's darker. It
+  changes at most once a second, to spare the plug's relay and the prop, so it suits beats in slower
+  songs and changes between sections.
+
+Effects that are too fast for one are marked on the timeline, as for other slow lights. Just before a
+show or test starts, the add-on remembers how each light and switch was, and puts it back when it ends.
+
+Running HA-liday Show without Home Assistant? These need `HA_URL` and `HA_TOKEN` set (see **Running
+without Home Assistant**). To plan one, type **HA** as the model next to **Add planned light**.
+
 ### Putting lights in order
 
 Drag a light by its ⠿ handle, or use its ↑ and ↓ buttons. Every
@@ -873,7 +894,7 @@ You set everything with these settings (environment variables). All are optional
 | `HALIDAY_SHOW_CONFIG` | The folder your shows, lights and settings are kept in. It holds the same files as the add-on's, so you can copy shows across. |
 | `HALIDAY_SHOW_MEDIA` | The folder your songs are kept in. |
 | `HALIDAY_SHOW_PORT` | The web port, `8099` unless you change it. |
-| `HA_URL`, `HA_TOKEN` | Your Home Assistant address (e.g. `http://homeassistant.local:8123`) and a long-lived access token (your profile in Home Assistant → **Security**). Needed for speakers and for Home Assistant's AI. |
+| `HA_URL`, `HA_TOKEN` | Your Home Assistant address (e.g. `http://homeassistant.local:8123`) and a long-lived access token (your profile in Home Assistant → **Security**). Needed for speakers, Home Assistant's AI, and Home Assistant lights and switches in shows. |
 | `ANTHROPIC_API_KEY` | A Claude API key for the AI, instead of Home Assistant's. |
 | `HALIDAY_SHOW_AI_TASK_ENTITY` | Which Home Assistant AI Task to use, if you have several. |
 | `HALIDAY_SHOW_MQTT_HOST` | Your MQTT broker, for the show entities. Also `_PORT`, `_USERNAME` and `_PASSWORD`. |

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.98
+
+- Any **light or switch in Home Assistant** can now be in your shows: Zigbee and Hue bulbs, LIFX, or a
+  smart plug for an inflatable or a lit-up prop. Under **Setup → Devices**, pick **Home Assistant light or
+  switch** next to **Add by IP**, pick it from the list and press **Add**.
+- A light takes the show's colour up to 4 times a second, so fades, colour changes and pulses look
+  best. A switch turns on while the show is bright there and changes at most once a second, to spare the
+  plug and the prop; it suits beats in slower songs and changes between sections. Effects that are too
+  fast for one are marked on the timeline.
+- When the show or a test ends, each light and switch goes back to how it was before.
+
 ## 0.2.97
 
 - The logo in the **Add-on Store** now shows the same Christmas tree as the add-on's icon.
