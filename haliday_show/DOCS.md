@@ -129,6 +129,22 @@ controller as one long light and split it into **parts** instead.
 To plan one before it arrives, type **DDP** as the model next to **Add planned light** and set
 **Segments** to its number of LEDs.
 
+### E1.31 controllers
+
+Most Falcon and Kulp controllers, and anything set up for xLights, speak **E1.31** (also called sACN).
+Pick **Pixel controller (E1.31)** next to **Add by IP**, type the controller's IP and how many **LEDs**
+the string has, and press **Add by IP**. Set the controller to take E1.31 as **unicast** (straight to
+its IP); the add-on doesn't use multicast.
+
+Each light has a **universe** and **channel** in the **Model** column: where it starts in the
+controller's set-up. Each LED takes 3 channels, a universe holds 510 (170 LEDs), and a light carries on
+into the next universe when it runs past the end of one, the way xLights numbers them. Add the same IP
+again for the next string and it starts just after the last one. Lights on one controller can share a
+universe without blanking each other, and the row says *Shares LEDs with…* if two overlap.
+
+When a show or test stops, the add-on tells the controller, so it goes straight back to what it was
+doing. To plan one before it arrives, type **E1.31** as the model next to **Add planned light**.
+
 ### Putting lights in order
 
 Drag a light by its ⠿ handle, or use its ↑ and ↓ buttons. Every

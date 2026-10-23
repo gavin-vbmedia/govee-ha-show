@@ -13,6 +13,7 @@ import time
 from .protocol import (CMD_PORT, average, colorwc_msg, ptreal_msg, razer_colors, razer_enable, razer_msg,
                        pixel_packets, scene_packets, segment_changes, segment_colour_packet, segment_colour_packets,
                        wrap)
+from . import e131
 from .wled import DDP_PORT, ddp_packets
 
 log = logging.getLogger(__name__)
@@ -205,6 +206,9 @@ WLED_RESEND_S = 1.0
 def address(d: dict) -> str:
     """Where a saved light's frames go, and the key it's claimed under. A pixel controller can drive
     several lights from one IP, each from its own first LED, so those get `ip#first`."""
+    if d.get("kind") == "e131":
+        universe, channel = int(d.get("universe") or 1), int(d.get("channel") or 1)
+        return d["ip"] if (universe, channel) == (1, 1) else f"{d['ip']}#u{universe}c{channel}"
     first = int(d.get("first") or 1)
     return f"{d['ip']}#{first}" if d.get("kind") == "ddp" and first > 1 else d["ip"]
 
@@ -261,8 +265,72 @@ class DdpDevice(OutputDevice):
 
 WledDevice = DdpDevice
 
+# E1.31 receivers let go of a universe they haven't heard for 2.5 s, so a still frame is repeated.
+E131_RESEND_S = 1.0
 
-def make_device(ip: str, segments: int, sock: socket.socket, **kwargs) -> OutputDevice:
+
+class E131Device(DdpDevice):
+    """A light on an E1.31 controller. Its frames go into the controller's shared universes
+    (e131.Universes), and each universe it touches is sent whole, with the other lights' channels in it."""
+
+    def __init__(self, ip: str, segments: int, sock: socket.socket, *, universes: e131.Universes, **kwargs):
+        ip, _, where = ip.partition("#")
+        universe, channel = (int(x) for x in where[1:].split("c")) if where else (1, 1)
+        super().__init__(ip, segments, sock, **kwargs)
+        self.channel = e131.channel_of(universe, channel)
+        self.universes = universes
+        self.used: set[int] = set()
+        self.keepalive = E131_RESEND_S
+
+    def _send(self, payload: bytes):
+        try:
+            self.sock.sendto(payload, (self.ip, e131.PORT))
+        except OSError as e:
+            log.debug("[%s] send failed: %s", self.ip, e)
+
+    def enable(self):
+        if not self.enabled:
+            self.universes.users += 1
+        super().enable()
+
+    def disable(self):
+        if self.enabled:
+            self.universes.users -= 1
+            if self.universes.users <= 0:
+                # The last light on the controller is stopping: tell it so, as the standard asks,
+                # three times in case one is lost, so it lets go straight away.
+                for universe in sorted(self.universes.data):
+                    for _ in range(3):
+                        self._send(self.universes.packet(universe, terminated=True))
+                self.universes.data.clear()
+            elif self.last_frame is not None:
+                # Other lights on the controller play on: switch just this one's channels off.
+                for universe in self.universes.write(self.channel, bytes(len(self.last_frame))):
+                    self._send(self.universes.packet(universe))
+        super().disable()
+
+    def packet(self, frame: bytes, previous: bytes | None = None) -> bytes:
+        universe = next(e131.spans(self.channel, len(frame)))[0]
+        return e131.packet(universe, frame[:e131.UNIVERSE_SIZE], 0)
+
+    def tick(self, now: float):
+        if not self.enabled:
+            return
+        frame = self.pending if self.pending is not None else self.last_frame
+        if frame is None or now - self.last_sent < self.min_interval:
+            return  # rate limited; latest pending frame wins
+        if frame != self.last_frame or now - self.last_sent > self.keepalive:
+            touched = self.universes.write(self.channel, frame)
+            self.used.update(touched)
+            for universe in touched:
+                self._send(self.universes.packet(universe))
+            self.last_frame, self.last_sent = frame, now
+        self.pending = None
+
+
+def make_device(ip: str, segments: int, sock: socket.socket, *, universes=None, **kwargs) -> OutputDevice:
+    if kwargs.get("protocol") == "e131":
+        return E131Device(ip, segments, sock, universes=universes, **kwargs)
     cls = DdpDevice if kwargs.get("protocol") == "ddp" else OutputDevice
     return cls(ip, segments, sock, **kwargs)
 
@@ -274,6 +342,7 @@ class Output:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setblocking(False)
         self.devices: dict[str, OutputDevice] = {}
+        self.universes: dict[str, e131.Universes] = {}  # E1.31 controller IP -> its universes
         self._task: asyncio.Task | None = None
 
     def start(self):
@@ -296,8 +365,9 @@ class Output:
         if dev is None or (dev.segments, dev.reverse, dev.gradient, dev.protocol) != (segments, reverse, gradient, protocol):
             if dev:
                 dev.disable()
+            universes = self.universes.setdefault(ip.partition("#")[0], e131.Universes()) if protocol == "e131" else None
             dev = make_device(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol,
-                               brightness=brightness)
+                              brightness=brightness, universes=universes)
             self.devices[ip] = dev
         if not dev.enabled:
             dev.enable()
@@ -342,6 +412,8 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
     first = test_frame(segments, 0)
     if dev.realtime:
         packet = razer_colors(first, gradient, protocol).hex(" ")
+    elif isinstance(dev, E131Device):
+        packet = dev.packet(first)[:16].hex(" ") + " …"
     elif isinstance(dev, DdpDevice):
         packet = dev.packet(first)[:10].hex(" ") + " …"
     else:

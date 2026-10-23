@@ -26,3 +26,17 @@ test("each controller light gets its own id", () => {
   assert.equal(controllerId([], "10.0.0.5"), "ddp-10.0.0.5");
   assert.equal(controllerId([{ id: "ddp-10.0.0.5" }, { id: "ddp-10.0.0.5-2" }], "10.0.0.5"), "ddp-10.0.0.5-3");
 });
+
+test("E1.31 lights run on from universe to universe", async () => {
+  const { nextUniverse, channels } = await import("../../haliday_show/app/halidayshow/static/js/controllers.js");
+  const a = { id: "a", kind: "e131", ip: "10.0.0.7", universe: 1, channel: 1, segments: 170 };
+  assert.deepEqual(channels(a), [0, 510]);
+  assert.deepEqual(nextUniverse([a], "10.0.0.7"), { universe: 2, channel: 1 });
+  const b = { id: "b", kind: "e131", ip: "10.0.0.7", universe: 2, channel: 1, segments: 50 };
+  assert.deepEqual(nextUniverse([a, b], "10.0.0.7"), { universe: 2, channel: 151 });
+  assert.deepEqual(nextUniverse([a, b], "10.0.0.8"), { universe: 1, channel: 1 });
+  // A DDP light on the same IP is a different set of LEDs.
+  const ddp = { id: "d", kind: "ddp", ip: "10.0.0.7", first: 1, segments: 100 };
+  assert.equal(overlapping([a, ddp], a), null);
+  assert.equal(overlapping([a, { ...b, universe: 1, channel: 400 }], a)?.id, "b");
+});
