@@ -287,7 +287,7 @@ function retestLight(d) {
   const t = deviceTests[d.id];
   if (!t) return;
   const gone = !["rainbow", "parts"].includes(t.what) && !(d.parts || []).some((p) => p.id === t.what);
-  if (t.until < Date.now() || !d.ip || (d.protocol === "whole" && t.what !== "rainbow") || gone) {
+  if (t.until < Date.now() || !linked(d) || (d.protocol === "whole" && t.what !== "rainbow") || gone) {
     delete deviceTests[d.id];
     return;
   }
@@ -334,10 +334,21 @@ function renderDevices() {
       d.ip = v;
       saveDevices();
     });
-    cell(ip);
-    const wled = isPixels(d);
+    if (isHa(d)) {
+      const pick = document.createElement("select");
+      pick.title = "The Home Assistant light or switch this is";
+      fillHaPicker(pick, d.entity);
+      pick.addEventListener("change", () => {
+        d.entity = pick.value;
+        d.protocol = pick.value.startsWith("switch.") ? "ha_switch" : "ha_light";
+        saveDevices();
+      });
+      cell(pick);
+    } else cell(ip);
+    const wled = isPixels(d) || isHa(d);
     const model = document.createElement("span");
     if (isWled(d)) model.append("WLED");
+    else if (isHa(d)) model.append(d.protocol === "ha_switch" ? "Home Assistant switch" : "Home Assistant light");
     else if (d.kind === "ddp") {
       const first = input("number", "first", { min: 1, max: 100000, className: "seg-num",
         title: "The LED on the controller where this light starts. Lights sharing a controller each start at their own LED." });
@@ -367,6 +378,7 @@ function renderDevices() {
     find.disabled = !d.ip || LONG_PROTOCOLS.includes(d.protocol);
     find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
     const count = input("number", "segments", { min: 1, max: LONG_PROTOCOLS.includes(d.protocol) ? 1000 : 255 });
+    if (isHa(d)) Object.assign(count, { disabled: true, title: "A Home Assistant light is one colour at a time" });
     if (wled) count.title = "How many LEDs the light has. Each one is a segment.";
     segs.append(count);
     if (!wled) segs.append(" ", find);
@@ -381,13 +393,14 @@ function renderDevices() {
     });
     cell(bulbs);
     cell(input("number", "brightness", { min: 1, max: 100, title: "Caps this light in every show. 100 is full brightness." }));
-    cell(input("checkbox", "reverse"));
+    if (isHa(d)) cell(document.createTextNode("")); else cell(input("checkbox", "reverse"));
     if (wled) cell(document.createTextNode("")); else cell(input("checkbox", "gradient"));
     if (wled) {
       const how = document.createElement("span");
       how.className = "hint";
-      how.textContent = d.kind === "e131" ? "E1.31" : "DDP";
-      how.title = isWled(d) ? "Colours go to the strip over DDP, which WLED listens for with no setup"
+      how.textContent = isHa(d) ? "Home Assistant" : d.kind === "e131" ? "E1.31" : "DDP";
+      how.title = isHa(d) ? "Changes go through Home Assistant, so they're slow: a few a second for a light, one a second for a switch"
+        : isWled(d) ? "Colours go to the strip over DDP, which WLED listens for with no setup"
         : d.kind === "e131" ? "Colours go straight to the controller's IP over E1.31 (sACN)"
         : "Colours go to the controller over DDP. Turn DDP on in the controller's settings if it has a switch for it.";
       cell(how);
@@ -399,7 +412,7 @@ function renderDevices() {
       cell(proto);
     }
     const actions = document.createElement("td");
-    const test = button(d.ip ? "Test" : "Planned", async () => {
+    const test = button(linked(d) ? "Test" : "Planned", async () => {
       if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`);
     });
     const remove = button("Remove", () => {
@@ -407,10 +420,11 @@ function renderDevices() {
       app.deviceList = app.deviceList.filter((x) => x !== d);
       saveDevices();
     }, "ghost danger");
-    test.disabled = !d.ip;
+    test.disabled = !linked(d);
     actions.append(test, " ", remove);
     tr.append(actions);
-    rows.append(tr, partsRow(d));
+    rows.append(tr);
+    if (!isHa(d)) rows.append(partsRow(d)); // one segment: nothing to split
     dropTarget(tr, d);
   }
 }
@@ -594,7 +608,7 @@ function partsRow(d) {
       if (await testLight(d, p.id)) status(`${p.name} is lit for a minute, white at its first segment. Change its segments to move it.`);
     }, "ghost small");
     test.title = "Light just this part on the real light, so you can see where it starts and ends";
-    test.disabled = !d.ip || d.protocol === "whole";
+    test.disabled = !linked(d) || d.protocol === "whole";
     const count = document.createElement("span");
     count.className = "hint";
     count.textContent = `${p.to - p.from + 1} segments`;
@@ -621,10 +635,10 @@ function partsRow(d) {
     if (await testLight(d, "parts")) status(`${d.name}'s parts are lit in their colours for a minute, each white at its first segment`);
   }, "ghost small");
   testAll.title = "Light every part in its colour on the real light, with unused segments off";
-  testAll.disabled = !d.ip || d.protocol === "whole";
+  testAll.disabled = !linked(d) || d.protocol === "whole";
   const stop = button("Stop", () => stopTest(d), "ghost small");
   stop.title = "Let the light go back to what it was doing";
-  stop.disabled = !d.ip;
+  stop.disabled = !linked(d);
   foot.append(more, testAll, stop);
   if (fromWled) foot.append(fromWled);
   foot.append(asOne, note);
@@ -703,13 +717,47 @@ async function loadModels() {
     const list = $("model-list");
     for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.status ? "" : " (untested)"}`, m.sku));
     list.append(new Option("WLED strip", "WLED"), new Option("Pixel controller (DDP)", "DDP"),
-      new Option("Pixel controller (E1.31)", "E1.31"));
+      new Option("Pixel controller (E1.31)", "E1.31"), new Option("Home Assistant light or switch", "HA"));
     renderDevices();
     timeline.draw(); // lights' notes on the timeline come from the models
   } catch { /* the picker is a convenience; manual entry still works */ }
 }
 
 const isWled = (d) => d?.kind === "wled";
+const isHa = (d) => d?.kind === "ha";
+// Whether a light has somewhere to send to: an IP, or a Home Assistant entity (output.linked).
+const linked = (d) => !!(d?.ip || d?.entity);
+
+// Home Assistant's lights and switches, fetched once when first needed (server.py ha_entities).
+let haEntities = null;
+async function loadHaEntities() {
+  if (!haEntities) haEntities = await api("api/ha/entities");
+  return haEntities;
+}
+
+function addHaLight(entity) {
+  const found = (haEntities || []).find((e) => e.entity === entity);
+  if (!found) { status("Pick a light or switch first", true); return; }
+  if (app.deviceList.some((d) => d.entity === entity)) { status(`${found.name} is already on the list`, true); return; }
+  app.deviceList.push({ id: `ha-${entity}`, kind: "ha", name: found.name, ip: "", entity, sku: "",
+    protocol: entity.startsWith("switch.") ? "ha_switch" : "ha_light", segments: 1, bulbs: 1,
+    reverse: false, gradient: false, brightness: 100 });
+  saveDevices();
+  status(`Added ${found.name}. ${entity.startsWith("switch.") ? "It turns on when the show is bright there, at most once a second." : "It takes the show's colour a few times a second."}`);
+}
+
+async function fillHaPicker(select, current = "") {
+  select.replaceChildren(new Option("Loading…", ""));
+  try {
+    const list = await loadHaEntities();
+    select.replaceChildren(new Option(current ? "Not linked" : "Pick a light or switch", ""),
+      ...list.map((e) => new Option(`${e.name} (${e.entity})`, e.entity, false, e.entity === current)));
+    if (current && !list.some((e) => e.entity === current)) select.add(new Option(`${current} (not found)`, current, false, true));
+  } catch (e) {
+    select.replaceChildren(new Option(current || "Home Assistant isn't reachable", current));
+    status(`Couldn't list Home Assistant's lights: ${e.message}`, true);
+  }
+}
 const isPixels = (d) => ["wled", "ddp", "e131"].includes(d?.kind); // one LED a segment, not a Govee light
 
 // A pixel controller: no API to ask, so the LED count comes from the form. A second light on the same
@@ -795,6 +843,10 @@ function planModelChanged() {
   const m = app.models[skuOf($("plan-model").value)];
   const info = $("plan-info");
   info.replaceChildren();
+  if (skuOf($("plan-model").value) === "HA") {
+    info.append(" A Home Assistant light or plug: pick it in its row once it's set up in Home Assistant.");
+    return;
+  }
   if (["WLED", "DDP", "E1.31"].includes(skuOf($("plan-model").value))) {
     $("plan-segments").max = 1000;
     info.append(` A ${skuOf($("plan-model").value) === "WLED" ? "WLED strip" : "pixel controller light"}: set Segments to its number of LEDs.`);
@@ -844,7 +896,7 @@ async function scan() {
       const known = app.devices[f.id] || app.deviceList.find((d) => d.ip === f.ip);
       if (known) { row.append(` (${known.name})`); box.append(row); continue; }
       row.append(button("Add", () => { addDevice(f); row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (added)`); }));
-      const planned = app.deviceList.filter((d) => !d.ip);
+      const planned = app.deviceList.filter((d) => !d.ip && (d.kind || "govee") === "govee");
       if (planned.length) {
         const sel = document.createElement("select");
         for (const p of planned) sel.add(new Option(p.name, p.id));
@@ -948,7 +1000,7 @@ function remember(key, fit) {
 // The fit of `clip` on `dev`: worked out now, or with `then`, null and then(fit) once it's ready.
 function fitFor(clip, dev, opts = {}, then = null) {
   const { start, end, ...rest } = clip;
-  const key = JSON.stringify([rest, end - start, dev && [dev.protocol, dev.segments, !!dev.ip, dev.sku || ""], opts.house]);
+  const key = JSON.stringify([rest, end - start, dev && [dev.protocol, dev.segments, linked(dev), dev.sku || ""], opts.house]);
   if (fitMemo.has(key)) return fitMemo.get(key);
   if (!then) return remember(key, clipFit(clip, dev, opts));
   const copy = { ...clip };
@@ -1154,11 +1206,11 @@ function houseSegmentEditor(d) {
     } catch (e) { status(`Couldn't light it: ${e.message}`, true); }
   }, "primary");
   lightIt.title = "Light just this segment on the real light, white, so you can see where it is";
-  lightIt.disabled = !light.ip || light.protocol === "whole";
+  lightIt.disabled = !linked(light) || light.protocol === "whole";
   const stop = button("Stop", async () => {
     try { await api("api/devices/probe", { method: "POST", json: { ...light, segment: 0 } }); } catch { /* it lets go by itself */ }
   }, "ghost");
-  stop.disabled = !light.ip;
+  stop.disabled = !linked(light);
   box.append(label, lightIt, stop);
   if (pinned) box.append(button("Unpin", () => { house.unpin(d.id, pick.s); renderHouseLights(); }, "ghost"));
   box.append(button("✕", () => { house.pinPick = null; renderHouseLights(); }, "ghost"));
@@ -1418,7 +1470,7 @@ function clipPreviewRow(clip, dev) {
   if (clipPreview.clip !== clip) Object.assign(clipPreview, { clip, started: performance.now() });
   clipPreview.canvas = canvas;
   row.append(canvas);
-  if (dev?.ip && !EFFECTS[clip.effect]?.experimental) {
+  if (linked(dev) && !EFFECTS[clip.effect]?.experimental) {
     const box = document.createElement("input");
     box.type = "checkbox";
     box.checked = previewOnLight();
@@ -1450,7 +1502,7 @@ function drawClipPreview() {
   if (!dev) { if (clipPreview.dev) stopLightPreview(); return; }
   const rgb = asShown(dev, t, (tt) => renderTrack([clip], Math.max(tt, clip.start), dev.segments));
   drawStrip(c, rgb, dev.segments, (dev.brightness ?? 100) / 100);
-  const onLight = previewOnLight() && dev.ip && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
+  const onLight = previewOnLight() && linked(dev) && !EFFECTS[clip.effect]?.experimental && !app.playing && !app.starting;
   if (onLight) sendPreview(dev, rgb);
   else if (clipPreview.dev) stopLightPreview();
 }
@@ -1501,7 +1553,7 @@ async function stopLightPreview() {
   const dev = app.lights[clipPreview.dev];
   clipPreview.dev = null;
   await clipPreview.pending;
-  if (dev?.ip) await api("api/devices/preview", { method: "POST", json: { ...dev, stop: true } }).catch(() => {});
+  if (linked(dev)) await api("api/devices/preview", { method: "POST", json: { ...dev, stop: true } }).catch(() => {});
 }
 
 // effects and inspector -------------------------------------------------------
@@ -3022,7 +3074,7 @@ async function offsetChanged(e) {
 }
 
 // transport -------------------------------------------------------------------
-const lightsOn = () => $("lights").checked && app.show.tracks.some((t) => playingDev(t)?.ip);
+const lightsOn = () => $("lights").checked && app.show.tracks.some((t) => linked(playingDev(t)));
 const offset = () => (Number($("offset").value) || 0) / 1000;
 
 function currentTime() {
@@ -3651,8 +3703,11 @@ function wire() {
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
     const model = app.models[skuOf($("plan-model").value)];
     const segments = Number($("plan-segments").value) || 15;
-    const kind = { WLED: "wled", DDP: "ddp", "E1.31": "e131" }[skuOf($("plan-model").value)];
-    if (kind) {
+    const kind = { WLED: "wled", DDP: "ddp", "E1.31": "e131", HA: "ha" }[skuOf($("plan-model").value)];
+    if (kind === "ha") {
+      app.deviceList.push({ id, name, kind, ip: "", entity: "", sku: "", protocol: "ha_light", segments: 1, bulbs: 1,
+        reverse: false, gradient: false, brightness: 100 });
+    } else if (kind) {
       const where = { ddp: { first: 1 }, e131: { universe: 1, channel: 1 } }[kind] || {};
       app.deviceList.push({ id, name, kind, ip: "", sku: "", protocol: kind === "e131" ? "e131" : "ddp", segments,
         bulbs: segments, reverse: false, gradient: false, brightness: 100, ...where });
@@ -3669,12 +3724,21 @@ function wire() {
     e.preventDefault();
     const ip = $("add-ip").value.trim();
     const kind = $("add-kind").value;
+    if (kind === "ha") { addHaLight($("add-entity").value); return; }
     if (kind === "wled") addWled(ip);
     else if (kind === "ddp" || kind === "e131") addController(ip, Number($("add-leds").value), kind);
     else addDevice({ id: ip, ip, sku: "" });
     $("add-ip").value = "";
   });
-  $("add-kind").addEventListener("change", () => { $("add-leds-label").hidden = !["ddp", "e131"].includes($("add-kind").value); });
+  $("add-kind").addEventListener("change", () => {
+    const kind = $("add-kind").value;
+    $("add-leds-label").hidden = !["ddp", "e131"].includes(kind);
+    $("add-ip").hidden = kind === "ha";
+    $("add-ip").required = kind !== "ha";
+    $("add-entity").hidden = kind !== "ha";
+    $("add-button").textContent = kind === "ha" ? "Add" : "Add by IP";
+    if (kind === "ha") fillHaPicker($("add-entity"));
+  });
 
   document.addEventListener("keydown", (e) => {
     if (music.active) { music.key(e); return; }

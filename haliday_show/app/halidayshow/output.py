@@ -6,6 +6,7 @@ makes some lights blink.
 """
 import asyncio
 import colorsys
+import contextlib
 import logging
 import socket
 import time
@@ -203,9 +204,16 @@ class OutputDevice:
 WLED_RESEND_S = 1.0
 
 
+def linked(d: dict) -> bool:
+    """Whether a saved light has somewhere to send to: an IP, or a Home Assistant entity."""
+    return bool(d.get("ip") or d.get("entity"))
+
+
 def address(d: dict) -> str:
     """Where a saved light's frames go, and the key it's claimed under. A pixel controller can drive
     several lights from one IP, each from its own first LED, so those get `ip#first`."""
+    if d.get("kind") == "ha":
+        return f"ha:{d['entity']}"
     if d.get("kind") == "e131":
         universe, channel = int(d.get("universe") or 1), int(d.get("channel") or 1)
         return d["ip"] if (universe, channel) == (1, 1) else f"{d['ip']}#u{universe}c{channel}"
@@ -328,7 +336,133 @@ class E131Device(DdpDevice):
         self.pending = None
 
 
-def make_device(ip: str, segments: int, sock: socket.socket, *, universes=None, **kwargs) -> OutputDevice:
+# Home Assistant lights and switches go through HA's API, so they're slow. Lights get the show's colour
+# up to 4 times a second; a switch (often a smart plug's relay, maybe an inflatable) changes at most
+# once a second. Each light is put back as it was when it's let go, from a scene snapshot taken first.
+HA_LIGHT_INTERVAL_S = 0.25
+HA_SWITCH_INTERVAL_S = 1.0
+HA_CLOSE = 6  # out of 255: smaller colour changes wait until they add up
+HA_SWITCH_ON = 128  # a switch is on while the show is at least half bright there
+HA_COLOUR_MODES = {"hs", "xy", "rgb", "rgbw", "rgbww"}
+
+
+class HaDevice(OutputDevice):
+    """A Home Assistant light or switch, one segment. Calls are made one at a time, in order: the
+    snapshot, then each change (only the latest waits while one is going), then putting it back."""
+
+    def __init__(self, address: str, segments: int, sock: socket.socket, *, ha=None, tasks=None, **kwargs):
+        entity = address.partition(":")[2]
+        super().__init__(entity, segments, sock, **kwargs)
+        self.entity, self.domain = entity, entity.partition(".")[0]
+        self.ha = ha
+        self.tasks = tasks if tasks is not None else set()
+        self.realtime = False
+        self.min_interval = HA_SWITCH_INTERVAL_S if self.domain == "switch" else HA_LIGHT_INTERVAL_S
+        self.colour = True
+        self.saved = False
+        self.shown: tuple | None = None
+        self.task: asyncio.Task | None = None
+
+    @property
+    def scene_id(self) -> str:
+        return "haliday_show_" + self.entity.replace(".", "_")
+
+    def _run(self, make):
+        """Queue a call after the ones already going."""
+        before = self.task
+
+        async def go():
+            if before:
+                with contextlib.suppress(Exception, asyncio.CancelledError):
+                    await before
+            try:
+                await make()
+            except Exception as e:  # HA unreachable or the entity gone: the show plays on without it
+                log.warning("[%s] Home Assistant call failed: %s", self.entity, e)
+
+        self.task = asyncio.get_event_loop().create_task(go())
+        self.tasks.add(self.task)
+        self.task.add_done_callback(self.tasks.discard)
+
+    def enable(self):
+        self.enabled_at = time.monotonic()
+        if not self.enabled and self.ha is not None:
+            self._run(self._snapshot)
+        self.enabled = True
+
+    async def _snapshot(self):
+        state = await self.ha.state(self.entity)
+        modes = set((state.get("attributes") or {}).get("supported_color_modes") or [])
+        self.colour = self.domain == "light" and bool(modes & HA_COLOUR_MODES)
+        await self.ha.call("scene", "create", {"scene_id": self.scene_id, "snapshot_entities": [self.entity]})
+        self.saved = True
+
+    def disable(self):
+        if self.enabled and self.ha is not None:
+            self._run(self._restore)
+        self.enabled = False
+        self.pending = self.last_frame = self.shown = None
+
+    async def _restore(self):
+        if self.saved:
+            await self.ha.call("scene", "turn_on", {"entity_id": f"scene.{self.scene_id}"})
+
+    def play_scene(self, code: int, param: str):
+        pass
+
+    def end_scene(self):
+        pass
+
+    def state_for(self, frame: bytes) -> tuple:
+        r, g, b = average(frame)
+        level = max(r, g, b)
+        if self.domain == "switch":
+            return ("on",) if level >= HA_SWITCH_ON else ("off",)
+        if level < 3:
+            return ("off",)
+        return ("on", r, g, b)
+
+    def _changed(self, state: tuple) -> bool:
+        if self.shown is None or state[0] != self.shown[0] or len(state) != len(self.shown):
+            return True
+        return any(abs(a - b) > HA_CLOSE for a, b in zip(state[1:], self.shown[1:]))
+
+    def packet(self, frame: bytes, previous: bytes | None = None) -> bytes:
+        return repr(self.state_for(frame)).encode()
+
+    async def _send_state(self, state: tuple):
+        domain = "switch" if self.domain == "switch" else "light"
+        if state[0] == "off":
+            await self.ha.call(domain, "turn_off", {"entity_id": self.entity})
+            return
+        data = {"entity_id": self.entity}
+        if domain == "light":
+            r, g, b = state[1:]
+            level = max(r, g, b)
+            data.update(brightness=level, transition=0)
+            if self.colour:
+                data["rgb_color"] = [v * 255 // level for v in (r, g, b)]
+        await self.ha.call(domain, "turn_on", data)
+
+    def tick(self, now: float):
+        if not self.enabled or self.ha is None:
+            return
+        if self.task is not None and not self.task.done():
+            return  # a call is still going; the latest frame waits for it
+        frame = self.pending if self.pending is not None else self.last_frame
+        if frame is None or now - self.last_sent < self.min_interval:
+            return
+        state = self.state_for(frame)
+        if self._changed(state):
+            self._run(lambda: self._send_state(state))
+            self.shown, self.last_sent = state, now
+        self.last_frame, self.pending = frame, None
+
+
+def make_device(ip: str, segments: int, sock: socket.socket, *, universes=None, ha=None, tasks=None,
+                **kwargs) -> OutputDevice:
+    if kwargs.get("protocol") in ("ha_light", "ha_switch"):
+        return HaDevice(ip, segments, sock, ha=ha, tasks=tasks, **kwargs)
     if kwargs.get("protocol") == "e131":
         return E131Device(ip, segments, sock, universes=universes, **kwargs)
     cls = DdpDevice if kwargs.get("protocol") == "ddp" else OutputDevice
@@ -343,6 +477,8 @@ class Output:
         self.sock.setblocking(False)
         self.devices: dict[str, OutputDevice] = {}
         self.universes: dict[str, e131.Universes] = {}  # E1.31 controller IP -> its universes
+        self.ha = None  # the Home Assistant client, for HA lights and switches
+        self.ha_tasks: set[asyncio.Task] = set()  # their calls still going, finished before closing
         self._task: asyncio.Task | None = None
 
     def start(self):
@@ -350,6 +486,8 @@ class Output:
 
     async def close(self):
         self.release_all()
+        if self.ha_tasks:  # let HA lights be put back as they were before the client closes
+            await asyncio.wait(set(self.ha_tasks), timeout=5)
         if self._task:
             self._task.cancel()
         self.sock.close()
@@ -367,7 +505,8 @@ class Output:
                 dev.disable()
             universes = self.universes.setdefault(ip.partition("#")[0], e131.Universes()) if protocol == "e131" else None
             dev = make_device(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol,
-                              brightness=brightness, universes=universes)
+                              brightness=brightness, universes=universes,
+                              **(dict(ha=self.ha, tasks=self.ha_tasks) if protocol.startswith("ha_") else {}))
             self.devices[ip] = dev
         if not dev.enabled:
             dev.enable()
@@ -391,7 +530,13 @@ class Output:
 
 
 def test_frame(segments: int, t: float) -> bytes:
-    """Rainbow with a moving white dot that shows segment order and direction."""
+    """Rainbow with a moving white dot that shows segment order and direction.
+
+    A light with one segment (a Home Assistant light) has nowhere for the dot, so it just goes round
+    the colours."""
+    if segments == 1:
+        r, g, b = colorsys.hsv_to_rgb((t * 0.2) % 1, 1, 1)
+        return bytes([int(r * 255), int(g * 255), int(b * 255)])
     buf = bytearray()
     dot = int(t * 4) % segments
     for i in range(segments):
@@ -412,6 +557,8 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
     first = test_frame(segments, 0)
     if dev.realtime:
         packet = razer_colors(first, gradient, protocol).hex(" ")
+    elif isinstance(dev, HaDevice):
+        packet = dev.packet(first).decode()
     elif isinstance(dev, E131Device):
         packet = dev.packet(first)[:16].hex(" ") + " …"
     elif isinstance(dev, DdpDevice):

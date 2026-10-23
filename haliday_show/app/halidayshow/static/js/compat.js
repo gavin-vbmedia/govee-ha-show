@@ -61,7 +61,7 @@ export function clipFit(clip, dev, { house = null } = {}) {
   }
   if (!dev) return result("ok");
   if (clip.effect === "scene") {
-    if (!dev.ip) return result("no", "This light isn't linked yet, so it can't play a Govee scene.");
+    if (!dev.ip && !dev.entity) return result("no", "This light isn't linked yet, so it can't play a Govee scene.");
     if (!dev.sku) return result("no", "Set this light's model under Setup → Devices to play a Govee scene.");
     return result("ok");
   }

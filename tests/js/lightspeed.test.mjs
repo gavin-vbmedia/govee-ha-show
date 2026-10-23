@@ -4,9 +4,10 @@ import test from "node:test";
 import { SLOW_PROTOCOLS, isSlow } from "../../haliday_show/app/halidayshow/static/js/lightspeed.js";
 
 test("only the non-realtime protocols are slow", () => {
-  assert.deepEqual(Object.keys(SLOW_PROTOCOLS).sort(), ["pixels", "segments", "whole"]);
+  assert.deepEqual(Object.keys(SLOW_PROTOCOLS).sort(), ["ha_light", "ha_switch", "pixels", "segments", "whole"]);
   assert.equal(isSlow({ protocol: "pixels" }), true);
-  for (const p of ["standard", "razer", "v2", undefined]) assert.equal(isSlow({ protocol: p }), false);
+  assert.equal(isSlow({ protocol: "ha_switch" }), true);
+  for (const p of ["standard", "razer", "v2", "ddp", "e131", undefined]) assert.equal(isSlow({ protocol: p }), false);
   assert.equal(isSlow(undefined), false);
 });
 
@@ -59,4 +60,12 @@ test("previews show what a slow light shows: stepped, and one colour on Whole li
   assert.deepEqual(busy(0.4), busy(0.6)); // about 1.5 a second
   const plain = (t) => asShown(pixels, t, (tt) => renderTrack([fade], tt, 300));
   assert.notDeepEqual(plain(0.4), plain(0.6)); // about 6 a second
+});
+
+test("a Home Assistant switch flags a beat flash that's faster than once a second", () => {
+  const sw = { protocol: "ha_switch", segments: 1 };
+  const flash = { ...newClip("pulse", 0, 4), params: { ...newClip("pulse", 0, 4).params } };
+  const pace = clipPace(flash, sw);
+  assert.equal(pace.label, "a Home Assistant switch");
+  assert.equal(pace.can, 1);
 });

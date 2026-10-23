@@ -26,7 +26,7 @@ from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as
                   Step as LabStep, build as lab_build, pixel_speed_steps)
 from .listen import Listener
 from .mqtt import MqttBridge
-from .output import PROBE_MAX, LivePreview, Output, address, run_hold, run_probe, run_test_pattern
+from .output import PROBE_MAX, LivePreview, Output, address, linked, run_hold, run_probe, run_test_pattern
 from .player import Player
 from .protocol import LONG_PROTOCOLS, PROTOCOLS
 from .runner import Runner, RunnerError
@@ -40,7 +40,8 @@ MAX_UPLOAD = 200 * 1024 * 1024
 MAX_BULBS = 2000  # bulbs on one light
 MAX_SEGMENTS = 1000  # per light; the Christmas String Lights 2 have 300 bulbs
 MAX_FIRST_LED = 100000  # where a light starts on a pixel controller; DDP offsets go far beyond this
-KINDS = ("govee", "wled", "ddp", "e131")
+KINDS = ("govee", "wled", "ddp", "e131", "ha")
+_HA_ENTITY = re.compile(r"^(light|switch)\.[a-z0-9_]{1,200}$")
 
 OUTPUT = web.AppKey("output", Output)
 PLAYER = web.AppKey("player", Player)
@@ -293,7 +294,16 @@ def _clean_device(d: dict) -> dict:
     # Saved before WLED existed (say, restored from an old backup), a device has no kind: it's a Govee
     # light. Start-up fills these in (migrate.fill_device_kinds).
     kind = d.get("kind") if d.get("kind") in KINDS else "govee"
+    entity = ""
+    if kind == "ha":
+        # A Home Assistant light or switch: no IP, one segment. No entity yet is a planned one.
+        entity = str(d.get("entity") or "").strip()
+        if entity and not _HA_ENTITY.match(entity):
+            raise web.HTTPBadRequest(text="entity must be a light or switch, like light.porch")
+        ip, segments = "", 1
     protocol = {"wled": "ddp", "ddp": "ddp", "e131": "e131"}.get(kind) or str(d.get("protocol") or "standard")
+    if kind == "ha":
+        protocol = "ha_switch" if entity.startswith("switch.") else "ha_light"
     if kind == "govee" and protocol not in PROTOCOLS:
         raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
     # Realtime messages hold the segment count in one byte; the other protocols can go further.
@@ -312,10 +322,10 @@ def _clean_device(d: dict) -> dict:
         raise web.HTTPBadRequest(text="bulbs must be a number")
     if bulbs is not None and not 1 <= bulbs <= MAX_BULBS:
         raise web.HTTPBadRequest(text=f"bulbs must be 1-{MAX_BULBS}")
-    dev_id = str(d.get("id") or ip)
+    dev_id = str(d.get("id") or ip or (f"ha-{entity}" if entity else ""))
     if not dev_id:
         raise web.HTTPBadRequest(text="a planned device needs an id")
-    extra = {}
+    extra = {"entity": entity} if kind == "ha" else {}
     if kind == "ddp":
         # A controller can drive several lights from one IP, each from its own first LED.
         try:
@@ -379,10 +389,31 @@ async def wled_info(request):
     return web.json_response({**found, "max": MAX_SEGMENTS})
 
 
+async def ha_entities(request):
+    """Home Assistant's lights and switches, to pick from when adding one as a light in shows."""
+    ha = request.app[HA]
+    if not ha.available:
+        raise web.HTTPServiceUnavailable(text="Home Assistant isn't reachable from here")
+    try:
+        states = await ha.states()
+    except HAError as e:
+        raise web.HTTPBadGateway(text=str(e))
+    found = []
+    for s in states:
+        entity = s.get("entity_id", "")
+        if not _HA_ENTITY.match(entity):
+            continue
+        attrs = s.get("attributes") or {}
+        modes = set(attrs.get("supported_color_modes") or [])
+        found.append({"entity": entity, "name": str(attrs.get("friendly_name") or entity)[:64],
+                      "colour": entity.startswith("light.") and bool(modes & {"hs", "xy", "rgb", "rgbw", "rgbww"})})
+    return web.json_response(sorted(found, key=lambda f: f["name"].lower()))
+
+
 async def test_device(request):
     body = await request.json()
     d = _clean_device(body)
-    if not d["ip"]:
+    if not linked(d):
         raise web.HTTPBadRequest(text="link this device to a real light before testing it")
     target = address(d)
     seconds = min(max(float(body.get("seconds", 15)), 1), 60)
@@ -419,7 +450,7 @@ async def probe_device(request):
     """Find segments: light one segment so the user can say whether it exists. Segment 0 stops."""
     body = await request.json()
     d = _clean_device(body)
-    if not d["ip"]:
+    if not linked(d):
         raise web.HTTPBadRequest(text="link this device to a real light first")
     target = address(d)
     try:
@@ -447,7 +478,7 @@ async def preview_device(request):
     """One frame of the clip being edited, shown on the light until frames stop or `stop` is sent."""
     body = await request.json()
     d = _clean_device(body)
-    if not d["ip"]:
+    if not linked(d):
         raise web.HTTPBadRequest(text="link this device to a real light first")
     target = address(d)
     app = request.app
@@ -1047,6 +1078,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, pass
         app[OUTPUT].start()
         app[PLAYER] = Player(app[OUTPUT])
         app[HA] = HomeAssistant()
+        app[OUTPUT].ha = app[HA]
         app[RUNNER] = Runner(app[STORAGE], app[PLAYER], app[HA])
         app[MQTT] = MqttBridge(app[RUNNER])
         app[BACKGROUND] = []
@@ -1073,6 +1105,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, pass
     r.add_put("/api/devices", put_devices)
     r.add_post("/api/devices/scan", scan_devices)
     r.add_post("/api/wled/info", wled_info)
+    r.add_get("/api/ha/entities", ha_entities)
     r.add_post("/api/devices/test", test_device)
     r.add_post("/api/devices/probe", probe_device)
     r.add_post("/api/devices/preview", preview_device)

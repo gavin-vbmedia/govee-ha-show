@@ -83,6 +83,8 @@ run it [with Docker](haliday_show/DOCS.md#with-docker) on a NAS, Raspberry Pi or
   for you
 - Pixel controllers over DDP (Falcon Player, ESPixelStick, ESPHome, Tasmota, ESP32) or E1.31/sACN
   (Falcon, Kulp, xLights set-ups), with several lights on one controller
+- Any Home Assistant light or switch (Zigbee, Hue, LIFX bulbs, smart plugs for inflatables), put back
+  as it was after the show
 - Plan shows before your lights arrive: add planned lights by name and segment count, then link
   them to the real devices later
 - Put your lights in any order (drag them on the Devices tab) and every show's timeline follows
@@ -162,6 +164,7 @@ flowchart LR
     E -- "razer packets over LAN UDP" --> F[💡 Govee lights]
     E -- "DDP over LAN UDP" --> W[💡 WLED strips · pixel controllers]
     E -- "E1.31 unicast" --> X[💡 E1.31 controllers]
+    E -- "light and switch actions" --> Y[💡 HA lights and plugs]
     E -- "start song" --> G[🔊 HA media player]
     H[Automations<br/>MQTT · addon_stdin] --> E
 ```
@@ -253,6 +256,7 @@ docs/govee-protocols.md                 How Govee lights are driven: findings, m
 docs/wled.md                            How WLED strips are driven: DDP, and how WLED segments become parts
 docs/ddp.md                             Pixel controllers over DDP: several lights on one controller
 docs/e131.md                            E1.31 (sACN) controllers: universes, shared universes, stopping
+docs/ha-lights.md                       Home Assistant lights and switches: pace, switching, putting back
 tests/                                  pytest and node tests (tests/js)
 ```
 

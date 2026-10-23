@@ -8,7 +8,7 @@ import logging
 import time
 
 from .baked import Baked
-from .output import Output, address
+from .output import Output, address, linked
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class Player:
 
         Planned devices (no IP yet) are skipped.
         """
-        devices = {k: d for k, d in devices.items() if d.get("ip")}
+        devices = {k: d for k, d in devices.items() if linked(d)}
         await self.stop(release=False)
         self.baked, self.show_id, self.devices, self.offset = baked, show_id, devices, offset
         claimed = set()

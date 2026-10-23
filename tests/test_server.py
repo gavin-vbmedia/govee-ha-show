@@ -709,3 +709,35 @@ async def test_e131_lights(client):
                 {"universe": 63999, "segments": 1000}):
         assert (await client.put("/api/devices", json=[{**light, **bad}])).status == 400
     assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "protocol": "e131"}])).status == 400
+
+
+async def test_home_assistant_lights(client):
+    resp = await client.put("/api/devices", json=[
+        {"kind": "ha", "entity": "light.porch", "name": "Porch", "ip": "10.0.0.1", "segments": 30},
+        {"kind": "ha", "entity": "switch.inflatable", "name": "Snowman"},
+        {"id": "planned-plug", "kind": "ha", "name": "Plug to buy"}])
+    assert resp.status == 200
+    porch, snowman, plug = await resp.json()
+    assert (porch["id"], porch["ip"], porch["segments"], porch["protocol"]) == ("ha-light.porch", "", 1, "ha_light")
+    assert (snowman["protocol"], snowman["entity"]) == ("ha_switch", "switch.inflatable")
+    assert plug["entity"] == "" and plug["protocol"] == "ha_light"
+    for bad in ("sensor.temp", "light.Porch", "light.", "light.a b"):
+        assert (await client.put("/api/devices", json=[{"kind": "ha", "entity": bad}])).status == 400
+    # Outside Home Assistant there's nothing to list.
+    assert (await client.get("/api/ha/entities")).status == 503
+
+
+async def test_home_assistant_entities_are_listed(client, monkeypatch):
+    class HA:
+        async def states(self, domain=None):
+            return [{"entity_id": "light.porch", "attributes": {"friendly_name": "Porch", "supported_color_modes": ["xy"]}},
+                    {"entity_id": "light.hall", "attributes": {"friendly_name": "Hall", "supported_color_modes": ["brightness"]}},
+                    {"entity_id": "switch.snowman", "attributes": {"friendly_name": "snowman"}},
+                    {"entity_id": "sensor.temp", "attributes": {}}]
+    real = client.app[server.HA]
+    monkeypatch.setattr(type(real), "available", True)
+    monkeypatch.setattr(real, "states", HA().states)
+    found = await (await client.get("/api/ha/entities")).json()
+    assert found == [{"entity": "light.hall", "name": "Hall", "colour": False},
+                     {"entity": "light.porch", "name": "Porch", "colour": True},
+                     {"entity": "switch.snowman", "name": "snowman", "colour": False}]

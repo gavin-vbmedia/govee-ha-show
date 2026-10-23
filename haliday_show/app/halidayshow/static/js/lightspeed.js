@@ -10,6 +10,8 @@ export const SLOW_PROTOCOLS = {
   pixels: { label: "Per bulb", whole: 6, busy: 1.5 },
   segments: { label: "App segments", whole: 10, busy: 3 },
   whole: { label: "Whole light only", whole: 10, busy: 10 },
+  ha_light: { label: "a Home Assistant light", whole: 4, busy: 4 },
+  ha_switch: { label: "a Home Assistant switch", whole: 1, busy: 1 },
 };
 
 export const isSlow = (device) => !!device && device.protocol in SLOW_PROTOCOLS;
