@@ -255,8 +255,9 @@ export class Timeline {
     ctx.lineWidth = 1;
     if (x1 - x0 > 40) {
       ctx.font = "600 11px system-ui, sans-serif";
-      const label = `${level === "ok" ? "" : "⚠ "}${EFFECTS[clip.effect]?.label || clip.effect}`;
       const tx = Math.max(x0, HEADER_W) + 4;
+      // Trimmed to its own clip, so a short clip's name doesn't run into the next one.
+      const label = clipText(ctx, `${level === "ok" ? "" : "⚠ "}${EFFECTS[clip.effect]?.label || clip.effect}`, x1 - tx - 8);
       ctx.fillStyle = "rgba(0,0,0,0.55)";
       ctx.fillRect(tx - 2, top + 2, ctx.measureText(label).width + 6, 15);
       ctx.fillStyle = "#fff";

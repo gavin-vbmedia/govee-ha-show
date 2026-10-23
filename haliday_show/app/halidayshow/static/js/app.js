@@ -19,6 +19,7 @@ import { Layout } from "./layout.js";
 import { STATUS, modelSummary, newLight, statusOf } from "./models.js";
 import { MusicEditor } from "./music.js";
 import { PRESET_PALETTES, applyPalette, paletteKeys, seasonalPalette } from "./palettes.js";
+import { fetchSong, songLoadMessage } from "./songload.js";
 import { Timeline, fmtTime } from "./timeline.js";
 
 const $ = (id) => document.getElementById(id);
@@ -335,10 +336,11 @@ function renderDevices() {
     cell(model);
     const preview = cell(segmentPreview(d));
     preview.className = "device-preview";
-    const test = button(linked(d) ? "Test" : "Planned", async () => {
+    const test = button("Test", async () => {
       if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`);
     }, "ghost");
     test.disabled = !linked(d);
+    if (!linked(d)) test.title = plannedTip(d);
     const edit = button("Edit", () => openLightEditor(d), "ghost device-edit");
     cell(test, " ", edit).className = "device-actions";
     tr.addEventListener("click", (e) => {
@@ -519,7 +521,7 @@ function renderLightEditor() {
   body.scrollTop = scroll;
   const test = $("light-test");
   test.disabled = !linked(d);
-  test.textContent = linked(d) ? "Test" : "Planned";
+  test.title = linked(d) ? "" : plannedTip(d);
 }
 
 // Moves light `d` to position `to` in the list. Every show's tracks follow the list's order.
@@ -864,6 +866,9 @@ const isWled = (d) => d?.kind === "wled";
 const isHa = (d) => d?.kind === "ha";
 // Whether a light has somewhere to send to: an IP, or a Home Assistant entity (output.linked).
 const linked = (d) => !!(d?.ip || d?.entity);
+// Why Test can't be pressed yet, for a planned light.
+const plannedTip = (d) => isHa(d) ? "Pick its Home Assistant light under Edit to test it"
+  : "Add its IP address under Edit to test it";
 
 // Home Assistant's lights and switches, fetched once when first needed (server.py ha_entities).
 let haEntities = null;
@@ -3507,7 +3512,7 @@ async function loadAudio(ref) {
   audio.src = url;
   status("Loading song…");
   try {
-    const buf = await (await fetch(url)).arrayBuffer();
+    const buf = await fetchSong(url);
     audioCtx ||= new AudioContext();
     const decoded = await audioCtx.decodeAudioData(buf);
     app.peaks = computePeaks(decoded);
@@ -3515,7 +3520,7 @@ async function loadAudio(ref) {
     app.audioDuration = decoded.duration;
     status("");
   } catch (e) {
-    status(`Couldn't load the song: ${e.message}`, true);
+    status(songLoadMessage(e), true);
   }
   timeline.layout();
   renderSongSummary();
@@ -4147,6 +4152,8 @@ async function loadAiStatus() {
   $("ai-hint").hidden = !!st.via;
   $("ai-preset-hint").textContent = st.via ? "" : $("ai-hint").textContent;
   $("ai-preset-hint").hidden = !!st.via;
+  // With no AI there's nothing for Create to do, so it shouldn't look ready to press.
+  $("btn-ai").disabled = $("btn-ai-preset").disabled = !st.via;
 }
 
 // The lights as the AI knows them: unique names, with the House lane when the house photo is traced.
