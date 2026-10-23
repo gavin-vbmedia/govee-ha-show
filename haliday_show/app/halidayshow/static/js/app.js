@@ -1292,7 +1292,19 @@ let fitTimer = null;
 function fitContext(i) {
   if (!isHouse(i)) return { dev: app.devices[app.show.tracks[i]?.device], opts: {} };
   const pos = housePositionsAll();
-  return { dev: null, opts: { house: { lights: houseLights().map((d) => ({ name: d.name, placed: !!pos[d.id] })) } } };
+  const lights = houseLights().map((d) => ({ name: d.name, placed: !!pos[d.id], positions: pos[d.id] || null,
+    device: { protocol: d.protocol, segments: d.segments } }));
+  return { dev: null, opts: { house: { lights } } };
+}
+
+// A short stand-in for the House lane's lights in a remembered fit: their settings, and a sum over
+// their traced positions, so retracing a light checks again without keying on every point.
+function houseKey(house) {
+  return house?.lights.map((l) => {
+    let sum = 0;
+    for (const q of l.positions || []) if (q) sum += q[0] * 7 + q[1] * 13;
+    return [l.name, l.placed, l.device.protocol, l.positions?.length || 0, Math.round(sum * 1000)];
+  });
 }
 
 function remember(key, fit) {
@@ -1304,7 +1316,7 @@ function remember(key, fit) {
 // The fit of `clip` on `dev`: worked out now, or with `then`, null and then(fit) once it's ready.
 function fitFor(clip, dev, opts = {}, then = null) {
   const { start, end, ...rest } = clip;
-  const key = JSON.stringify([rest, end - start, dev && [dev.protocol, dev.segments, linked(dev), dev.sku || ""], opts.house]);
+  const key = JSON.stringify([rest, end - start, dev && [dev.protocol, dev.segments, linked(dev), dev.sku || ""], houseKey(opts.house)]);
   if (fitMemo.has(key)) return fitMemo.get(key);
   if (!then) return remember(key, clipFit(clip, dev, opts));
   const copy = { ...clip };

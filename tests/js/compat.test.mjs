@@ -68,6 +68,29 @@ test("House lane clips are marked when lights aren't on the house photo", () => 
   assert.equal(level(sweep, null, { house: { lights: [{ name: "Tree", placed: false }] } }), "no");
 });
 
+test("House lane clips too fast for a slow light are marked, naming it", () => {
+  // A light traced left to right across the house.
+  const along = (n) => Array.from({ length: n }, (_, i) => [i / (n - 1), 0.5]);
+  const light = (name, protocol) => ({ name, placed: true, positions: along(60), device: { protocol, segments: 60 } });
+  const fast = clip("sweep", { sweeps: 20 });
+  const onSlow = clipFit(fast, null, { house: { lights: [light("Pillars", "pixels"), light("Roof", "standard")] } });
+  assert.equal(onSlow.level, "limited");
+  assert.match(onSlow.reasons[0], /Too fast for Pillars \(Per bulb\)/);
+  assert.doesNotMatch(onSlow.reasons[0], /Roof/);
+  assert.equal(level(fast, null, { house: { lights: [light("Roof", "standard")] } }), "ok");
+  const slow = clip("sweep", { sweeps: 1, width: 1 }, 60);
+  assert.equal(level(slow, null, { house: { lights: [light("Pillars", "pixels")] } }), "ok");
+});
+
+test("a House clip can be both too fast somewhere and missing a light", () => {
+  const along = Array.from({ length: 60 }, (_, i) => [i / 59, 0.5]);
+  const r = clipFit(clip("sweep", { sweeps: 20 }), null, { house: { lights: [
+    { name: "Pillars", placed: true, positions: along, device: { protocol: "pixels", segments: 60 } },
+    { name: "Tree", placed: false }] } });
+  assert.equal(r.level, "limited");
+  assert.match(r.reasons.join(" "), /Tree.*Too fast for Pillars/);
+});
+
 test("unknown effects and missing lights aren't judged", () => {
   assert.equal(level({ effect: "gone", start: 0, end: 1 }, realtime), "ok");
   assert.equal(level(clip("chase"), undefined), "ok");

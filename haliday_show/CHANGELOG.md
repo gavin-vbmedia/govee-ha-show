@@ -1,11 +1,19 @@
 # Changelog
 
-## 0.2.118
+## 0.2.119
 
 - **Library → Palettes** can now make palettes with the AI, like **Presets** can. Describe some
   colours, such as "frosty winter night" or "tropical sunset", and press **✨ Make palettes**: you get up to
   three ideas, each shown as a colour bar. **Keep** adds one to your palettes, where you can rename it
   and change its colours as usual. It needs an AI set up, as for **Describe it**.
+
+## 0.2.118
+
+- House lane effects now get the same **⚠ Too fast** warning as a light's own effects. A sweep, wipe
+  or wave across the house is checked on each of your slow lights (**Per bulb**, **App segments**,
+  **Whole light only** and Home Assistant lights), and the warning names the ones it would look
+  steppy on, such as **Pillars · Left**. The clip gets the orange corner on the timeline as well.
+  Nothing in your shows changes; they're only marked.
 
 ## 0.2.117
 
