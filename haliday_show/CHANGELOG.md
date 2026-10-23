@@ -1,10 +1,15 @@
 # Changelog
 
-## 0.2.95
+## 0.2.96
 
 - Nothing changes inside Home Assistant.
 - The documentation now mentions, under **Requirements**, that you can run HA-liday Show without
   Home Assistant add-ons, and the front page explains the three ways to install it.
+
+## 0.2.95
+
+- A new look: **HA-liday Show** has its own icon and logo in the **Add-on Store**, and the icon also
+  appears next to the name at the top of the editor and on its browser tab.
 
 ## 0.2.94
 
