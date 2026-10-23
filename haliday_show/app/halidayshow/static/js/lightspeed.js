@@ -31,13 +31,15 @@ export const switchOn = (frame) => {
 // if it flashes or steps much more often than the light can change, or if it moves smoothly but,
 // sampled at the light's own pace, a good part of it jumps a long way between updates. On Whole light only just the average
 // colour counts, as that's all it shows.
-export function clipPace(clip, device, { seconds = 4, fps = 20 } = {}) {
+// `render(time, n)` gives the light's frame at a show time, for a clip that isn't the light's own
+// (a House lane clip, say); by default it's the clip rendered along the light.
+export function clipPace(clip, device, { seconds = 4, fps = 20, render = null } = {}) {
   const speed = SLOW_PROTOCOLS[device?.protocol];
   if (!speed) return null;
   const n = device.segments, whole = device.protocol === "whole";
   const span = Math.min(seconds, clip.end - clip.start);
   const frameAt = (t) => {
-    const f = renderTrack([clip], clip.start + t, n);
+    const f = render ? render(clip.start + t, n) : renderTrack([clip], clip.start + t, n);
     return whole ? average(f) : f;
   };
   // Flashes and steps: how many times a second any bulb changes noticeably.

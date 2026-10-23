@@ -573,6 +573,10 @@ times a second, the Selection panel warns **⚠ Too fast for this light** when a
 faster than that, such as a quick chase, sparkle or strobe. It would look steppy on the real light.
 Slow the effect down, or use a fade, pulse or colour change instead.
 
+House lane effects are checked the same way, light by light: the warning names each slow light the
+effect is too fast for, such as **⚠ Too fast for Pillars · Left (Per bulb)**. Realtime lights in the
+same sweep or wave are fine.
+
 ### Effects a light can't show
 
 Not every effect works on every light. A light set to **Whole light only** shows one colour at a
@@ -582,8 +586,9 @@ its model set.
 
 - In the effect chooser, effects that won't work on the light are greyed out. Click one to see why.
   Tick **Allow effects that won't work** to pick them anyway.
-- Effects that work, but not quite as meant (too fast for a slow light, or a House lane effect that
-  leaves out lights you haven't traced on the photo), are marked **⚠**.
+- Effects that work, but not quite as meant (too fast for a slow light, a House lane effect that is
+  too fast for one of your slow lights, or one that leaves out lights you haven't traced on the photo),
+  are marked **⚠**.
 - On the timeline, clips that won't work are hatched with a red corner and a **⚠**; ones that only
   partly work get an orange corner. Select one and the Selection panel says why. When you open a show,
   a message says how many of its clips won't work.
