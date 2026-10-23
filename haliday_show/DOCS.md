@@ -45,7 +45,7 @@ page you last had open. Below, "the House tab" and so on mean that page.
 
 1. **Setup → Devices**: press **+ Add a light**, pick what kind it is and follow the steps, then press
    **Find** or **Test** to set its segment count.
-2. **Setup → Speakers** (optional): **Test and add** your speaker and pick it as the default show
+2. **Setup → Speakers** (optional): press **+ Add a speaker**, **Test and add** your speaker, and pick it as the default show
    speaker.
 3. **Setup → House** (optional): upload a photo of your house and trace each light on it.
 4. **Editor** tab: pick or upload a song, drag across a light's track, press **＋ Add effect…** and pick one. Press
@@ -275,7 +275,8 @@ ends.
 The song can play on any Home Assistant media player that can play files from the media folder.
 Speakers are added on the **Speakers** tab first, and only those are offered in the editor.
 
-- Press **Test and add** next to a media player. The add-on plays a short chime on it the same way
+- Press **+ Add a speaker**, then **Test and add** next to a media player in the window that opens
+  (type in **Find a speaker** to narrow a long list). The add-on plays a short chime on it the same way
   a show starts and only adds it if that works. Media players that can't be sent a song are listed
   but can't be added, and a failed test shows Home Assistant's reason. Echo devices through Alexa
   Media Player and Emby clients, for example, often can't play files from the media folder.

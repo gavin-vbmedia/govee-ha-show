@@ -458,3 +458,18 @@ table.devices td > span > .seg-num { width: 5.4em; }
   stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .add-kinds .add-plan .add-icon { stroke: var(--muted); }
 @media (prefers-color-scheme: dark) { .add-icon { stroke: #4fb3e8; } }
+
+/* Add a speaker: one row per Home Assistant media player. */
+.speaker-help { margin: 0; }
+.speaker-list { display: flex; flex-direction: column; max-height: min(52vh, 460px); overflow-y: auto;
+  border: 1px solid var(--line); border-radius: 8px; }
+.speaker-list > .hint { margin: 0; padding: 12px; }
+.speaker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; }
+.speaker-row + .speaker-row { border-top: 1px solid var(--line); }
+.speaker-who { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.speaker-who span { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.speaker-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.speaker-actions .hint { margin: 0; }
+.hint.ok { color: #16a34a; }
+#speaker-filter { width: 100%; }
+#speaker-filter[hidden] { display: none; }
