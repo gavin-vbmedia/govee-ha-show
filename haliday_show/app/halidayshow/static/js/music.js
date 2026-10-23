@@ -95,6 +95,16 @@ export function insert(pieces, crossfade, t, added) {
   return merge([...slice(pieces, crossfade, 0, t), ...added, ...slice(pieces, crossfade, t, total)]);
 }
 
+// The beats to draw when they'd be `gap` pixels apart at this zoom: every beat when there's room,
+// else every bar, then every 2nd, 4th, 8th… bar, so the lines never swamp the waveform.
+export function beatsToDraw(beats, bars, gap, min = 8) {
+  if (gap >= min || !bars.length) return beats;
+  const perBar = beats.length / Math.max(bars.length, 1);
+  let every = 1;
+  while (gap * perBar * every < min && every < 1024) every *= 2;
+  return bars.filter((_, i) => i % every === 0);
+}
+
 // sections ----------------------------------------------------------------------
 // [{start, end, label, energy, color?}], in order. Edits return a new list.
 
@@ -268,7 +278,11 @@ export class MusicEditor {
     this.dirty = false;
     this.info = null; // the base song's saved beats and sections
     this.secSel = -1; // the section picked for editing
+    this.canvas.tabIndex = 0;
+    this.canvas.setAttribute("role", "slider");
+    this.canvas.setAttribute("aria-label", "Song waveform. Left and right arrows move the playhead a beat; hold Shift to select.");
     this.wire();
+    this.updateControls();
     new ResizeObserver(() => this.layout()).observe(this.canvas.parentElement);
   }
 
@@ -547,16 +561,20 @@ export class MusicEditor {
 
   updateControls() {
     const has = this.pieces.length > 0, sel = this.sel;
-    for (const id of ["music-play", "music-insert", "music-append", "music-save", "music-zoom-in", "music-zoom-out", "music-fit"]) $(id).disabled = !has;
+    for (const id of ["music-play", "music-insert", "music-append", "music-save", "music-zoom-in", "music-zoom-out", "music-fit",
+      "music-xf", "music-fadein", "music-fadeout", "music-name"]) $(id).disabled = !has;
     for (const id of ["music-cut", "music-keep", "music-play-sel", "music-zoom-sel", "music-preview"]) $(id).disabled = !sel;
     $("music-undo").disabled = !this.history.length;
     $("music-detect").disabled = !this.base || this.dirty;
+    $("music-detect").title = this.dirty
+      ? "Save the edit as a new file first: it's detected when saved, and the beats here follow your edits until then"
+      : "Find the tempo, beats, bars and sections (verse, chorus…) and keep them with this song. A show that picks the song uses them.";
     const info = this.shown;
     $("music-analysis").textContent = !has ? ""
       : this.dirty && !info ? "Save the edit to find its beats and sections"
         : info ? `${info.tempo ? `${info.tempo} BPM, ` : ""}${info.beats.length} beats, ${info.sections.length} sections${info.sections.length ? `: ${info.sections.map((x) => x.label).join(", ")}` : ""}`
           : "Not detected yet";
-    if (this.dirty && info) $("music-analysis").textContent += " (following your edits)";
+    if (this.dirty && info) $("music-analysis").textContent += " (following your edits; Detect again once saved)";
     $("music-redo").disabled = !this.future.length;
     if (!this.sections || this.secSel >= this.sections.length) this.secSel = -1;
     this.renderSection();
@@ -746,14 +764,6 @@ export class MusicEditor {
       ctx.fillRect(px, mid - hgt, 1, hgt * 2);
     }
 
-    // joins between pieces
-    ctx.strokeStyle = col("--beat");
-    ctx.setLineDash([4, 3]);
-    for (const j of joins(this.pieces, this.crossfade)) {
-      const x = Math.round(this.x(j)) + 0.5;
-      ctx.beginPath(); ctx.moveTo(x, waveT); ctx.lineTo(x, waveB); ctx.stroke();
-    }
-    ctx.setLineDash([]);
 
     // section lane: each section in its colour with its name, the picked one outlined
     ctx.fillStyle = col("--panel");
@@ -790,8 +800,9 @@ export class MusicEditor {
     ctx.fillRect(0, RULER_H, w, BEAT_H);
     if (info) {
       const bars = new Set(info.bars.map((b) => Math.round(b * 1000)));
+      const gap = info.beats.length > 1 ? (w / this.view.span) * ((info.beats.at(-1) - info.beats[0]) / (info.beats.length - 1)) : w;
       ctx.strokeStyle = ctx.fillStyle = col("--beat");
-      for (const b of info.beats) {
+      for (const b of beatsToDraw(info.beats, info.bars, gap)) {
         const x = this.x(b);
         if (x < -4 || x > w + 4) continue;
         ctx.globalAlpha = bars.has(Math.round(b * 1000)) ? 0.7 : 0.35;
@@ -815,6 +826,29 @@ export class MusicEditor {
       ctx.fillText(fmtTime(t, step < 1), x + 3, 14);
     }
 
+    // joins between pieces: a dashed line in the text colour, and a ✂ grip in the ruler to hear it
+    ctx.strokeStyle = ctx.fillStyle = col("--text");
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    for (const j of joins(this.pieces, this.crossfade)) {
+      const x = Math.round(this.x(j)) + 0.5;
+      if (x < -8 || x > w + 8) continue;
+      ctx.beginPath(); ctx.moveTo(x, RULER_H); ctx.lineTo(x, waveB); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    ctx.font = "12px system-ui, sans-serif";
+    for (const j of joins(this.pieces, this.crossfade)) {
+      const x = this.x(j);
+      if (x < -8 || x > w + 8) continue;
+      ctx.fillStyle = col("--panel");
+      ctx.fillRect(x - 9, 1, 18, RULER_H - 3);
+      ctx.strokeStyle = col("--text");
+      ctx.strokeRect(Math.round(x - 9) + 0.5, 1.5, 18, RULER_H - 4);
+      ctx.fillStyle = col("--text");
+      ctx.fillText("✂", x - 6, RULER_H - 7);
+    }
+
     // selection on top of everything: dim what's outside it, band the ruler, solid edges with grips
     if (this.sel) {
       ctx.fillStyle = "#000";
@@ -835,6 +869,11 @@ export class MusicEditor {
     ctx.fillStyle = col("--playhead");
     ctx.fillRect(Math.round(this.x(this.time)) - 1, 0, 2, h);
     $("music-clock").textContent = `${fmtTime(this.time)} / ${fmtTime(this.total)}`;
+    this.canvas.setAttribute("aria-valuemin", "0");
+    this.canvas.setAttribute("aria-valuemax", this.total.toFixed(2));
+    this.canvas.setAttribute("aria-valuenow", this.time.toFixed(2));
+    this.canvas.setAttribute("aria-valuetext", `${fmtTime(this.time)} of ${fmtTime(this.total)}`
+      + (this.sel ? `, ${(this.sel.end - this.sel.start).toFixed(2)} seconds selected` : ""));
   }
 
   // input ---------------------------------------------------------------------
@@ -846,9 +885,25 @@ export class MusicEditor {
     return secs.findIndex((s, i) => i > 0 && Math.abs(x - this.x(s.start)) < EDGE_PX);
   }
 
+  // The join whose ✂ grip in the ruler is under (x, y), or null.
+  joinAt(x, y) {
+    if (y >= RULER_H) return null;
+    return joins(this.pieces, this.crossfade).find((j) => Math.abs(this.x(j) - x) <= 10) ?? null;
+  }
+
+  // Moves the playhead to a join and plays a few seconds either side of it.
+  hearJoin(j) {
+    this.sel = null;
+    this.time = j;
+    this.updateControls();
+    this.play(Math.max(0, j - 3), Math.min(this.total, j + 3));
+  }
+
   down(e) {
     if (!this.rendered) return;
     const x = e.offsetX, t = Math.min(Math.max(this.t(x), 0), this.total);
+    const join = this.joinAt(x, e.offsetY);
+    if (join !== null) { this.drag = null; this.hearJoin(join); return; }
     this.canvas.setPointerCapture(e.pointerId);
     if (this.inLane(e.offsetY) && this.shown) {
       const edge = this.sections ? this.edgeNear(x) : -1;
@@ -875,6 +930,8 @@ export class MusicEditor {
     const x = e.offsetX, raw = Math.min(Math.max(this.t(x), 0), this.total), d = this.drag;
     const t = d && !d.section ? this.snap(raw, e) : raw;
     if (!d) {
+      if (this.joinAt(x, e.offsetY) !== null) { this.canvas.style.cursor = "pointer"; this.canvas.title = "Hear this join"; return; }
+      this.canvas.title = "";
       const lane = this.inLane(e.offsetY) && this.shown;
       const near = lane ? this.sections && this.edgeNear(x) > 0
         : this.sel && [this.sel.start, this.sel.end].some((s) => Math.abs(x - this.x(s)) < EDGE_PX);
@@ -945,9 +1002,35 @@ export class MusicEditor {
     else if (e.key === "Home") { this.time = 0; this.follow(); this.draw(); }
     else if (e.key === "+" || e.key === "=") this.zoom(0.66);
     else if (e.key === "-") this.zoom(1.5);
-    else if (e.key === "Escape") { this.sel = null; this.updateControls(); this.draw(); }
+    else if (e.key === "Escape") { this.sel = null; this.kbAnchor = null; this.updateControls(); this.draw(); }
+    else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && document.activeElement === this.canvas && this.rendered) {
+      e.preventDefault();
+      this.arrow(e.key === "ArrowRight" ? 1 : -1, e.shiftKey);
+    }
     else return false;
     return true;
+  }
+
+  // The next beat (or second, before Detect) from the playhead in `dir`; with Shift, the selection
+  // stretches from where it started to there.
+  arrow(dir, extend) {
+    const beats = this.shown?.beats?.length ? this.shown.beats : null;
+    const t = this.time;
+    let next = beats
+      ? (dir > 0 ? beats.find((b) => b > t + 1e-3) : beats.findLast((b) => b < t - 1e-3))
+      : t + dir;
+    next = Math.min(Math.max(next ?? (dir > 0 ? this.total : 0), 0), this.total);
+    if (extend) {
+      if (!this.sel || this.kbAnchor == null) this.kbAnchor = this.sel ? (Math.abs(t - this.sel.end) < 1e-3 ? this.sel.start : this.sel.end) : t;
+      this.sel = next === this.kbAnchor ? null : { start: Math.min(next, this.kbAnchor), end: Math.max(next, this.kbAnchor) };
+    } else {
+      this.kbAnchor = null;
+    }
+    this.time = next;
+    if (this.playing && !extend) this.play(this.time);
+    this.follow();
+    this.updateControls();
+    this.draw();
   }
 
   wire() {
@@ -990,7 +1073,8 @@ export class MusicEditor {
     $("music-save").addEventListener("click", () => this.save());
     $("music-detect").addEventListener("click", () => this.detect());
     this.wireSections();
-    window.addEventListener("beforeunload", (e) => { if (this.dirty) e.preventDefault(); });
+    // Some browsers (older Safari, the Home Assistant app on iPhone) also need returnValue to ask.
+    window.addEventListener("beforeunload", (e) => { if (this.dirty) { e.preventDefault(); e.returnValue = ""; } });
   }
 
   show() {

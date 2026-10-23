@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.120
+
+The **Music** tab, tidied up after a review:
+
+- Each join in an edited song now has a **✂** at the top of the waveform. Click it to hear a few seconds
+  either side of the join. The join line is clearer too.
+- Zoomed out, the beat lines thin out to every bar, then every 2nd or 4th bar, so you can see the music
+  again, especially on a phone. Zoom in to see every beat.
+- With no song chosen, the buttons and boxes are greyed out instead of looking ready to press.
+- You can work the waveform from the keyboard: Tab to it, then **←** and **→** move a beat at a time,
+  and Shift selects as you go. Screen readers hear where the playhead is.
+- **From** and **to** now say they're in seconds.
+- Pointing at a greyed-out **Detect** after an edit says why: save the edit first.
+- The **Beats and sections** help sits under **How to…**, and the save hint says "your songs folder"
+  rather than a folder path.
+- The "unsaved changes" question when you close the page now also appears in older Safari and the
+  Home Assistant app on iPhone.
+
 ## 0.2.119
 
 - **Library → Palettes** can now make palettes with the AI, like **Presets** can. Describe some

@@ -469,6 +469,16 @@ adds the next), and **Preview cut** plays the join before you cut. Beats and sec
 and are kept when you save. Edit the song before placing clips, because cutting it
 afterwards won't move them.
 
+Each join shows as a dashed line with a **✂** at the top. Click the **✂** to hear a few seconds either
+side of the join. When you zoom out, the beat lines thin out to every bar, then every 2nd or 4th bar, so
+the music stays visible; zoom in to see every beat.
+
+You can also use the keyboard: press Tab until the waveform is outlined, then **←** and **→** move the
+playhead a beat at a time (a second at a time before **Detect**), and holding Shift selects as you go.
+Space plays, Delete cuts the selection, and Ctrl+Z undoes. Saving a song without changing it is a quick
+way to get a WAV copy of it that plays on every speaker. If you close the page with an edit you haven't
+saved, you're asked first.
+
 ### Detecting on the Music tab
 
 **Detect on the Music tab** finds a song's beats, bars and sections and keeps them with the song file,

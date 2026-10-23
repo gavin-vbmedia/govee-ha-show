@@ -4550,7 +4550,7 @@ function wire() {
     else if (e.key === "-") timeline.zoom(1 / 1.5);
     else if (e.key === "Escape") app.select(null);
   });
-  window.addEventListener("beforeunload", (e) => { if (app.dirty) e.preventDefault(); });
+  window.addEventListener("beforeunload", (e) => { if (app.dirty) { e.preventDefault(); e.returnValue = ""; } });
 }
 
 // Setup → Labs → Packet lab: send a hand-made message to one light and show what comes back.

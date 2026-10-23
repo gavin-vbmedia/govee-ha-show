@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "haliday-show"
-version = "0.2.119"
+version = "0.2.120"
 description = "Music-synchronised light shows for Govee, WLED and pixel-controller lights"
 license = "MIT"
 requires-python = ">=3.12"
