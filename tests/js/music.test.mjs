@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   arrange, cut, editName, mapInfo, encodeWav, hueHex, insert, joins, keep, merge, mergeSections, moveEdge, removeSection,
-  render, sectionAt, splitSection,
+  render, sectionAt, splitSection, beatsToDraw,
 } from "../../haliday_show/app/halidayshow/static/js/music.js";
 
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg ?? ""} ${a} != ${b}`);
@@ -126,4 +126,14 @@ test("beats, bars and sections follow cuts and splices", () => {
   m = mapInfo(info, insert(song40, 0, 10, [{ src: "b", start: 0, end: 5 }]), 0, "a");
   assert.deepEqual(m.sections.map((x) => [x.start, x.end, x.label]), [[0, 10, "Intro"], [15, 35, "Chorus"], [35, 45, "Outro"]]);
   assert.deepEqual(m.beats, [1, 5, 20, 30, 40]);
+});
+
+test("beat lines thin out to bars, then every 2nd, 4th… bar as you zoom out", () => {
+  const beats = Array.from({ length: 64 }, (_, i) => i * 0.5);
+  const bars = beats.filter((_, i) => i % 4 === 0);
+  assert.equal(beatsToDraw(beats, bars, 12), beats);
+  assert.deepEqual(beatsToDraw(beats, bars, 4), bars);
+  assert.deepEqual(beatsToDraw(beats, bars, 1), bars.filter((_, i) => i % 2 === 0));
+  assert.deepEqual(beatsToDraw(beats, bars, 0.5), bars.filter((_, i) => i % 4 === 0));
+  assert.equal(beatsToDraw(beats, [], 1), beats);
 });

@@ -225,8 +225,8 @@
         <span id="music-clock" class="clock">0:00.00 / 0:00.00</span>
       </div>
       <div class="group">
-        <label title="Selection start in seconds">From <input id="music-sel-start" type="number" min="0" step="0.01"></label>
-        <label title="Selection end in seconds">to <input id="music-sel-end" type="number" min="0" step="0.01"></label>
+        <label title="Selection start in seconds">From <input id="music-sel-start" type="number" min="0" step="0.01"> s</label>
+        <label title="Selection end in seconds">to <input id="music-sel-end" type="number" min="0" step="0.01"> s</label>
         <span id="music-sel-len" class="hint"></span>
       </div>
       <div class="group">
@@ -271,9 +271,14 @@
       <button id="music-detect" title="Find the tempo, beats, bars and sections (verse, chorus…) and keep them with this song. A show that picks the song uses them.">Detect</button>
       <span id="music-analysis" class="hint"></span>
     </div>
-    <p class="hint">Click a section in the lane above the waveform to rename it, change its colour or add notes for <b>Describe it</b>, and drag the line
-      between two sections to move it. Changes save with the song; a show already using the song picks them up with
-      <b>From song</b>.</p>
+    <details class="howto" data-howto="music-sections"><summary>How to…</summary>
+      <ul>
+        <li>Click a section in the lane above the waveform to rename it, change its colour or add notes for
+          <b>Describe it</b>.</li>
+        <li>Drag the line between two sections to move it.</li>
+        <li>Changes save with the song. A show already using the song picks them up with <b>From song</b>.</li>
+      </ul>
+    </details>
     <div id="music-section" class="group music-section" hidden>
       <span id="music-sec-time" class="hint"></span>
       <label>Name <input id="music-sec-name" size="14" maxlength="40"></label>
@@ -291,7 +296,7 @@
   <section class="toolbar">
     <label>File name <input id="music-name" size="32" placeholder="song (edit).wav"></label>
     <button id="music-save" class="primary" title="Save the result as a new song in HA-liday Show's songs folder (Ctrl+S)">Save as new file</button>
-    <span class="hint">Saved as WAV in /media/haliday_show, so it plays on every speaker.</span>
+    <span class="hint">Saved as WAV in your songs folder, so it plays on every speaker. Save a song unchanged to get a WAV copy of it.</span>
   </section>
 </main>
 
