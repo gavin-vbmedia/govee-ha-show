@@ -3,15 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Govee Light Show</title>
+<title>HA-liday Show</title>
 <!-- Relative URLs only: ingress serves this page from /api/hassio_ingress/<token>/ -->
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="static/style.css">
+<script>
+  // Before the rename (0.2.87) editor preferences were saved under "goveeshow."; carry them over once.
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k.startsWith("goveeshow.")) {
+        const nk = "halidayshow." + k.slice(10);
+        if (localStorage.getItem(nk) === null) localStorage.setItem(nk, localStorage.getItem(k));
+      }
+    }
+  } catch { /* private mode */ }
+</script>
 <script type="module" src="static/js/app.js"></script>
 </head>
 <body>
 <header class="topbar">
-  <h1>Light Shows</h1>
+  <h1>HA-liday Show</h1>
   <nav>
     <!-- Making shows, then what they're made from, then setting up the house. Library and Setup hold
          several pages each, picked from the side menu under them. -->
@@ -248,7 +260,7 @@
   <section class="toolbar">
     <label>File name <input id="music-name" size="32" placeholder="song (edit).wav"></label>
     <button id="music-save" class="primary" title="Save the result as a new song in the add-on's folder (Ctrl+S)">Save as new file</button>
-    <span class="hint">Saved as WAV in /media/govee_show, so it plays on every speaker.</span>
+    <span class="hint">Saved as WAV in /media/haliday_show, so it plays on every speaker.</span>
   </section>
 </main>
 
@@ -381,7 +393,7 @@
   </section>
   <section class="card">
     <h2>Automations</h2>
-    <p class="hint">To play <b id="automation-show">this show</b> from an automation, use the <b>Govee Light Show</b> MQTT
+    <p class="hint">To play <b id="automation-show">this show</b> from an automation, use the <b>HA-liday Show</b> MQTT
       entities (pick the show, then press Play), or the <code>hassio.addon_stdin</code> action with input
       <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the show's
       <b>Show speaker</b> (in the editor's <b>⚙ Settings…</b> for the show), or on the <b>Default show speaker</b> above when a show

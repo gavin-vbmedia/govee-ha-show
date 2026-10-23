@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { SLOW_PROTOCOLS, isSlow } from "../../govee_show/app/goveeshow/static/js/lightspeed.js";
+import { SLOW_PROTOCOLS, isSlow } from "../../haliday_show/app/halidayshow/static/js/lightspeed.js";
 
 test("only the non-realtime protocols are slow", () => {
   assert.deepEqual(Object.keys(SLOW_PROTOCOLS).sort(), ["pixels", "segments", "whole"]);
@@ -10,8 +10,8 @@ test("only the non-realtime protocols are slow", () => {
   assert.equal(isSlow(undefined), false);
 });
 
-import { clipPace } from "../../govee_show/app/goveeshow/static/js/lightspeed.js";
-import { newClip } from "../../govee_show/app/goveeshow/static/js/effects.js";
+import { clipPace } from "../../haliday_show/app/halidayshow/static/js/lightspeed.js";
+import { newClip } from "../../haliday_show/app/halidayshow/static/js/effects.js";
 
 const pixels = { protocol: "pixels", segments: 300 };
 const clip = (effect, params) => ({ ...newClip(effect, 0, 10), ...params });
@@ -39,8 +39,8 @@ test("colour changes are fine up to what the light manages, and smooth drifts on
 });
 
 test("previews show what a slow light shows: stepped, and one colour on Whole light only", async () => {
-  const { asShown } = await import("../../govee_show/app/goveeshow/static/js/lightspeed.js");
-  const { renderTrack } = await import("../../govee_show/app/goveeshow/static/js/effects.js");
+  const { asShown } = await import("../../haliday_show/app/halidayshow/static/js/lightspeed.js");
+  const { renderTrack } = await import("../../haliday_show/app/halidayshow/static/js/effects.js");
   const fade = clip("fade", { from: "#000000", to: "#ff0000" });
   const at = (dev, t) => asShown(dev, t, (tt) => renderTrack([fade], tt, dev.segments));
   const realtime = { protocol: "standard", segments: 4 };

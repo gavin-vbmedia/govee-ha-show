@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { clipFit, reachNote, worst } from "../../govee_show/app/goveeshow/static/js/compat.js";
-import { newClip } from "../../govee_show/app/goveeshow/static/js/effects.js";
+import { clipFit, reachNote, worst } from "../../haliday_show/app/halidayshow/static/js/compat.js";
+import { newClip } from "../../haliday_show/app/halidayshow/static/js/effects.js";
 
 const clip = (effect, params = {}, end = 10) => ({ ...newClip(effect, 0, end), ...params });
 const realtime = { protocol: "standard", segments: 15, ip: "10.0.0.2" };

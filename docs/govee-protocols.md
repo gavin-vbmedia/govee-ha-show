@@ -2,7 +2,7 @@
 
 Developer notes for whoever works on how lights are driven next (person or AI). Everything here was
 worked out on the owner's real lights in October 2026, mostly in issue #74. Code references are to
-`govee_show/app/goveeshow/` unless they say otherwise.
+`haliday_show/app/halidayshow/` unless they say otherwise.
 
 ## The ways the add-on can drive a light
 

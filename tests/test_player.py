@@ -1,6 +1,6 @@
 import time
 
-from goveeshow import player
+from halidayshow import player
 
 
 class FakeOutput:
@@ -50,7 +50,7 @@ class RecordingDevice:
 
 
 async def test_player_hands_a_light_to_a_scene_for_its_frames():
-    from goveeshow import baked
+    from halidayshow import baked
     blob = baked.encode(40, [{"device": "a", "segments": 1}], [b"\0\0\0"] * 4,
                         scenes=[{"track": 0, "start": 1, "end": 3, "code": 7, "param": ""}])
     dev = RecordingDevice()

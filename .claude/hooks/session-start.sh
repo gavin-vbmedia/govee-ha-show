@@ -7,4 +7,4 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 cd "$CLAUDE_PROJECT_DIR"
-pip install -q -r govee_show/requirements.txt pytest pytest-aiohttp
+pip install -q -r haliday_show/requirements.txt pytest pytest-aiohttp

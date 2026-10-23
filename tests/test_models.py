@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-MODELS = Path(__file__).parent.parent / "govee_show/app/goveeshow/static/models.json"
+MODELS = Path(__file__).parent.parent / "haliday_show/app/halidayshow/static/models.json"
 PROTOCOLS = {"standard", "razer", "v2", "whole", "segments", "pixels"}
 
 

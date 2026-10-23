@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from goveeshow import baked
+from halidayshow import baked
 
-EFFECTS_JS = Path(__file__).parent.parent / "govee_show/app/goveeshow/static/js/effects.js"
+EFFECTS_JS = Path(__file__).parent.parent / "haliday_show/app/halidayshow/static/js/effects.js"
 SCRIPT = f"""
 import {{ bake, newClip }} from {str(EFFECTS_JS.as_uri())!r};
 const show = {{ duration: 2, tracks: [

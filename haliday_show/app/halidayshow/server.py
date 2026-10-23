@@ -16,7 +16,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, ai, commands, discovery, scenes
+from . import __version__, ai, commands, discovery, migrate, scenes
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError,
@@ -62,7 +62,7 @@ async def ingress_only(request: web.Request, handler):
         except ValueError:
             ok = False
         if not ok:
-            raise web.HTTPForbidden(text="Open Govee Light Show from the Home Assistant sidebar.")
+            raise web.HTTPForbidden(text="Open HA-liday Show from the Home Assistant sidebar.")
     return await handler(request)
 
 
@@ -954,6 +954,10 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     app = web.Application(middlewares=[ingress_only], client_max_size=MAX_UPLOAD)
     app.on_response_prepare.append(no_cache_static)
     app[ALLOW_ALL] = allow_all
+    try:
+        migrate.import_old(config_dir, media_dir)
+    except OSError as e:
+        logging.getLogger(__name__).error("couldn't import from the old add-on: %s", e)
     app[STORAGE] = Storage(config_dir, media_dir)
     app[TESTS] = {}
     app[PREVIEWS] = {}

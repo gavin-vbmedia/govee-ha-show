@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 
 SOURCE = "https://app2.govee.com/bff-app/v1/user/guide/device/info?market=US"
-MODELS = Path(__file__).parent.parent / "govee_show/app/goveeshow/static/models.json"
+MODELS = Path(__file__).parent.parent / "haliday_show/app/halidayshow/static/models.json"
 
 
 def govee_models() -> dict[str, str]:

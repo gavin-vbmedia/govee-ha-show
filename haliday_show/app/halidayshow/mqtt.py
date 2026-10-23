@@ -1,27 +1,27 @@
 """Home Assistant entities over MQTT discovery, when an MQTT broker is set up.
 
-Creates a "Govee Light Show" device with:
-  select.govee_light_show_show    pick a show
-  button.govee_light_show_play    play the selected show (on its saved speaker)
-  button.govee_light_show_stop    stop
-  sensor.govee_light_show_status  idle, or the name of the show playing
+Creates a "HA-liday Show" device with:
+  select.ha_liday_show_show    pick a show
+  button.ha_liday_show_play    play the selected show (on its saved speaker)
+  button.ha_liday_show_stop    stop
+  sensor.ha_liday_show_status  idle, or the name of the show playing
 
-Publishing a show id or name to govee_show/play also plays it directly.
+Publishing a show id or name to haliday_show/play also plays it directly.
 """
 import asyncio
 import json
 import logging
 
-from . import __version__
+from . import __version__, migrate
 from .commands import find_show
 from .runner import Runner, RunnerError
 
 log = logging.getLogger(__name__)
 
-BASE = "govee_show"
+BASE = "haliday_show"
 DISCOVERY = "homeassistant"
-DEVICE = {"identifiers": ["govee_show"], "name": "Govee Light Show",
-          "manufacturer": "govee-ha-show", "model": "Light show sequencer", "sw_version": __version__}
+DEVICE = {"identifiers": ["haliday_show"], "name": "HA-liday Show",
+          "manufacturer": "ha-liday-show", "model": "Light show sequencer", "sw_version": __version__}
 
 
 def show_options(shows: list[dict]) -> dict[str, str]:
@@ -34,18 +34,18 @@ def show_options(shows: list[dict]) -> dict[str, str]:
 def discovery_configs(options: list[str]) -> dict[str, dict]:
     avail = {"availability_topic": f"{BASE}/availability"}
     return {
-        f"{DISCOVERY}/select/govee_show/show/config": {
-            "name": "Show", "unique_id": "govee_show_show", "icon": "mdi:playlist-music",
+        f"{DISCOVERY}/select/haliday_show/show/config": {
+            "name": "Show", "unique_id": "haliday_show_show", "icon": "mdi:playlist-music",
             "command_topic": f"{BASE}/show/set", "state_topic": f"{BASE}/show/state",
             "options": options or ["(no shows yet)"], "device": DEVICE, **avail},
-        f"{DISCOVERY}/button/govee_show/play/config": {
-            "name": "Play", "unique_id": "govee_show_play", "icon": "mdi:play",
+        f"{DISCOVERY}/button/haliday_show/play/config": {
+            "name": "Play", "unique_id": "haliday_show_play", "icon": "mdi:play",
             "command_topic": f"{BASE}/play", "payload_press": "PRESS", "device": DEVICE, **avail},
-        f"{DISCOVERY}/button/govee_show/stop/config": {
-            "name": "Stop", "unique_id": "govee_show_stop", "icon": "mdi:stop",
+        f"{DISCOVERY}/button/haliday_show/stop/config": {
+            "name": "Stop", "unique_id": "haliday_show_stop", "icon": "mdi:stop",
             "command_topic": f"{BASE}/stop", "payload_press": "PRESS", "device": DEVICE, **avail},
-        f"{DISCOVERY}/sensor/govee_show/status/config": {
-            "name": "Status", "unique_id": "govee_show_status", "icon": "mdi:string-lights",
+        f"{DISCOVERY}/sensor/haliday_show/status/config": {
+            "name": "Status", "unique_id": "haliday_show_status", "icon": "mdi:string-lights",
             "state_topic": f"{BASE}/status", "device": DEVICE, **avail},
     }
 
@@ -81,7 +81,7 @@ class MqttBridge:
                 async with aiomqtt.Client(
                         hostname=config["host"], port=int(config.get("port", 1883)),
                         username=config.get("username"), password=config.get("password"),
-                        identifier="govee_show",
+                        identifier="haliday_show",
                         will=aiomqtt.Will(f"{BASE}/availability", "offline", retain=True)) as client:
                     self.client = client
                     delay = 5
@@ -102,7 +102,23 @@ class MqttBridge:
             await asyncio.sleep(delay)
             delay = min(delay * 2, 300)
 
+    async def _clear_old_entities(self):
+        """After importing from Govee Light Show, remove its entities so they aren't left dangling."""
+        cfg = self.storage.config_dir
+        done = cfg / migrate.OLD_MQTT_CLEARED
+        if done.exists() or not (migrate.imported(cfg) or {}).get("files"):
+            return
+        old = migrate.OLD_SLUG
+        topics = [f"{DISCOVERY}/{kind}/{old}/{name}/config" for kind, name in
+                  (("select", "show"), ("button", "play"), ("button", "stop"), ("sensor", "status"))]
+        topics += [f"{old}/{t}" for t in ("availability", "status", "show/state")]
+        for topic in topics:
+            await self.client.publish(topic, b"", retain=True)
+        done.touch()
+        log.info("removed the old Govee Light Show entities")
+
     async def _publish_all(self):
+        await self._clear_old_entities()
         self.options = show_options(self.storage.list_shows())
         for topic, cfg in discovery_configs(list(self.options)).items():
             await self.client.publish(topic, json.dumps(cfg), retain=True)

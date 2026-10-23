@@ -17,7 +17,7 @@ from .ha import HAError, HomeAssistant
 log = logging.getLogger(__name__)
 
 CLAUDE_MODEL = "claude-opus-5-5"
-OPTIONS = Path(os.environ.get("GOVEE_SHOW_OPTIONS", "/data/options.json"))
+OPTIONS = Path(os.environ.get("HALIDAY_SHOW_OPTIONS", "/data/options.json"))
 MAX_REQUEST = 2000  # characters the user can type
 MAX_CONTEXT = 200_000  # bytes of show context
 

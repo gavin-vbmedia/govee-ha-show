@@ -3,12 +3,12 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from goveeshow import baked, commands, mqtt
-from goveeshow.ha import media_content_id, position_now
-from goveeshow.output import Output
-from goveeshow.player import Player
-from goveeshow.runner import Runner, RunnerError
-from goveeshow.storage import Storage
+from halidayshow import baked, commands, migrate, mqtt
+from halidayshow.ha import media_content_id, position_now
+from halidayshow.output import Output
+from halidayshow.player import Player
+from halidayshow.runner import Runner, RunnerError
+from halidayshow.storage import Storage
 
 
 class FakeHA:
@@ -88,7 +88,7 @@ async def test_automation_falls_back_to_the_default_show_speaker(runner):
 
 
 async def test_lights_stop_when_speaker_stops(runner, monkeypatch):
-    monkeypatch.setattr("goveeshow.runner.FOLLOW_EVERY_S", 0.05)
+    monkeypatch.setattr("halidayshow.runner.FOLLOW_EVERY_S", 0.05)
     await runner.play("party", use_show_speaker=True)
     runner.ha.state_value = "paused"
     await asyncio.sleep(0.2)
@@ -109,10 +109,10 @@ def test_mqtt_options_and_discovery():
     opts = mqtt.show_options([{"id": "a", "name": "Xmas"}, {"id": "b", "name": "Xmas"}, {"id": "c", "name": "Boo"}])
     assert opts == {"Xmas (a)": "a", "Xmas (b)": "b", "Boo": "c"}
     cfgs = mqtt.discovery_configs(list(opts))
-    select = cfgs["homeassistant/select/govee_show/show/config"]
+    select = cfgs["homeassistant/select/haliday_show/show/config"]
     assert select["options"] == ["Xmas (a)", "Xmas (b)", "Boo"]
     assert {c["unique_id"] for c in cfgs.values()} == {
-        "govee_show_show", "govee_show_play", "govee_show_stop", "govee_show_status"}
+        "haliday_show_show", "haliday_show_play", "haliday_show_stop", "haliday_show_status"}
 
 
 class FakeClient:
@@ -127,16 +127,31 @@ async def test_mqtt_select_then_press_plays(runner):
     bridge = mqtt.MqttBridge(runner)
     bridge.client = FakeClient()
     await bridge._publish_all()
-    assert bridge.client.published["govee_show/status"] == "idle"
-    await bridge._on_message("govee_show/show/set", b"Party")
-    assert bridge.client.published["govee_show/show/state"] == "Party"
-    await bridge._on_message("govee_show/play", b"PRESS")
+    assert bridge.client.published["haliday_show/status"] == "idle"
+    await bridge._on_message("haliday_show/show/set", b"Party")
+    assert bridge.client.published["haliday_show/show/state"] == "Party"
+    await bridge._on_message("haliday_show/play", b"PRESS")
     await asyncio.sleep(0.05)
     assert runner.status()["media_player"] == "media_player.garden"
     await bridge._publish_status()
-    assert bridge.client.published["govee_show/status"] == "Party"
-    await bridge._on_message("govee_show/stop", b"PRESS")
+    assert bridge.client.published["haliday_show/status"] == "Party"
+    await bridge._on_message("haliday_show/stop", b"PRESS")
     assert not runner.status()["playing"]
+
+
+async def test_mqtt_clears_old_entities_once_after_import(runner):
+    cfg = runner.storage.config_dir
+    bridge = mqtt.MqttBridge(runner)
+    bridge.client = FakeClient()
+    await bridge._publish_all()
+    assert "homeassistant/select/govee_show/show/config" not in bridge.client.published
+    (cfg / migrate.MARKER).write_text('{"files": 3}')
+    await bridge._publish_all()
+    assert bridge.client.published["homeassistant/select/govee_show/show/config"] == b""
+    assert bridge.client.published["govee_show/availability"] == b""
+    bridge.client = FakeClient()
+    await bridge._publish_all()
+    assert "homeassistant/select/govee_show/show/config" not in bridge.client.published
 
 
 def test_stdin_stream_splitting():

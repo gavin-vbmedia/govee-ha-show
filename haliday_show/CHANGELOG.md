@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.87
+
+- The add-on is now called **HA-liday Show**, ready for lights other than Govee. Home Assistant sees
+  it as a new add-on, so install **HA-liday Show** and start it: it copies your shows, lights,
+  palettes, presets, settings, house photo and songs across from **Govee Light Show** the first time.
+  The **Documentation** tab's **Moving from Govee Light Show** section has the steps, including the
+  few things to set again (your Claude API key, **Show in sidebar**, and MQTT automations).
+- The sidebar entry is now **HA-liday Show**.
+
 ## 0.2.86
 
 - The model list under **Setup → Devices** now comes from Govee's own list of lights with LAN Control,

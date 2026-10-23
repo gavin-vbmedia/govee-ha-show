@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { analyse, toMono } from "../../govee_show/app/goveeshow/static/js/analysis.js";
+import { analyse, toMono } from "../../haliday_show/app/halidayshow/static/js/analysis.js";
 
 const RATE = 11025;
 

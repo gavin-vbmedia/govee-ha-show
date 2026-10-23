@@ -1,9 +1,9 @@
 ---
 name: steward
-description: How much to decide alone on govee-ha-show, and how to work the GitHub issue queue. Use when picking up work from issues, driving a PR to merge, or deciding whether to ask the owner first.
+description: How much to decide alone on ha-liday-show, and how to work the GitHub issue queue. Use when picking up work from issues, driving a PR to merge, or deciding whether to ask the owner first.
 ---
 
-# Stewarding govee-ha-show
+# Stewarding ha-liday-show
 
 Gavin (GitHub `gavin-vbmedia`) owns this add-on and wants it run with as little input from them as
 possible. **Little things you decide and ship. Big choices go to Gavin.**

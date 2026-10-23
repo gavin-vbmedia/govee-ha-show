@@ -1,7 +1,7 @@
 """Devices, shows and settings live in the add-on config folder; songs in /media.
 
 /config is the add-on's own folder (addon_config:rw), so it is included in Home
-Assistant backups. Uploaded songs go to /media/govee_show so Home Assistant media
+Assistant backups. Uploaded songs go to /media/haliday_show so Home Assistant media
 players can play them through the media source.
 """
 import hashlib
@@ -15,7 +15,7 @@ import wave
 from pathlib import Path
 
 PHOTO_EXT = {".jpg", ".jpeg", ".png", ".webp"}
-SPEAKER_TEST = "govee-show-speaker-test.wav"  # the chime that tests a speaker; not listed as a song
+SPEAKER_TEST = "haliday-show-speaker-test.wav"  # the chime that tests a speaker; not listed as a song
 AUDIO_EXT = {".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".flac", ".webm"}
 _SLUG = re.compile(r"[^a-z0-9]+")
 _UNSAFE_NAME = re.compile(r"[^\w .()-]+")
@@ -69,7 +69,7 @@ class Storage:
         self.media_dir = media_dir
         self.shows_dir = config_dir / "shows"
         self.songs_dir = config_dir / "songs"
-        self.upload_dir = media_dir / "govee_show"
+        self.upload_dir = media_dir / "haliday_show"
         self.devices_file = config_dir / "devices.json"
         self.settings_file = config_dir / "settings.json"
         self.shows_dir.mkdir(parents=True, exist_ok=True)

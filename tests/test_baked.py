@@ -1,6 +1,6 @@
 import pytest
 
-from goveeshow import baked
+from halidayshow import baked
 
 
 def test_round_trip():

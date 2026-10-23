@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { LAB_TEMPLATES } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+import { LAB_TEMPLATES } from "../../haliday_show/app/halidayshow/static/js/labtemplates.js";
 
 const bytes = (text) => text.split(/\s+/).filter(Boolean).map((h) => parseInt(h, 16));
 
@@ -26,7 +26,7 @@ test("json templates are valid JSON", () => {
   for (const t of Object.values(LAB_TEMPLATES).filter((t) => t.kind === "json")) JSON.parse(t.text(5, [1, 2, 3]));
 });
 
-import { windowSweep } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+import { windowSweep } from "../../haliday_show/app/halidayshow/static/js/labtemplates.js";
 
 test("window sweep: one colour per guess, each asking for the next w bulbs", () => {
   const steps = windowSweep(44);
@@ -40,7 +40,7 @@ test("window sweep: one colour per guess, each asking for the next w bulbs", () 
   assert.equal(bytes(steps[7].text).length, 3 + 44 * 4);
 });
 
-import { startSweep } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+import { startSweep } from "../../haliday_show/app/halidayshow/static/js/labtemplates.js";
 
 test("switch-on sweep: each guess sends its set-up, then the usual rainbow", () => {
   const steps = startSweep(44);
@@ -55,7 +55,7 @@ test("switch-on sweep: each guess sends its set-up, then the usual rainbow", () 
   assert.ok(steps[4].realtime_on && steps[4].before[0].kind === "ptreal");
 });
 
-import { SETTLE, flagSweep, modeSweep } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+import { SETTLE, flagSweep, modeSweep } from "../../haliday_show/app/halidayshow/static/js/labtemplates.js";
 
 test("flag sweep: a whole frame of its own colour for each untried flag", () => {
   const steps = flagSweep(44);
@@ -87,7 +87,7 @@ test("mode sweep: each app mode but 00 and 0a first, then a frame, then back to 
   assert.equal(JSON.parse(SETTLE).msg.cmd, "colorwc");
 });
 
-import { sweepWindow } from "../../govee_show/app/goveeshow/static/js/labtemplates.js";
+import { sweepWindow } from "../../haliday_show/app/halidayshow/static/js/labtemplates.js";
 
 test("sweeps use the model's known realtime window over Segments", () => {
   assert.equal(sweepWindow({ sku: "H70C5", reach: 44 }, 300), 44); // Pillars on Per bulb shows 300

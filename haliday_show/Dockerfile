@@ -10,4 +10,4 @@ WORKDIR /app
 
 # Run directly rather than under the base image's s6-overlay /init, which starts the
 # command with a reset environment and would drop SUPERVISOR_TOKEN.
-ENTRYPOINT ["python3", "-m", "goveeshow"]
+ENTRYPOINT ["python3", "-m", "halidayshow"]
