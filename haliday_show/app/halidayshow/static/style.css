@@ -476,3 +476,34 @@ table.devices td > span > .seg-num { width: 5.4em; }
 .hint.ok { color: #16a34a; }
 #speaker-filter { width: 100%; }
 #speaker-filter[hidden] { display: none; }
+
+/* Setup → Devices: one line per light; pressing it opens Edit light. */
+table.device-list tr.device-line { cursor: pointer; }
+table.device-list tr.device-line:hover td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+table.device-list td.device-actions { text-align: right; width: 1%; }
+.device-preview { width: 40%; min-width: 160px; }
+.seg-preview { display: flex; flex-direction: column; gap: 3px; }
+.seg-preview .hint { font-size: 12px; }
+.parts-map.mini { height: 6px; gap: 0; max-width: 260px; }
+.light-dialog { width: min(680px, calc(100vw - 32px)); }
+#light-body { max-height: calc(100vh - 180px); overflow-y: auto; }
+.light-fields { display: grid; grid-template-columns: max-content 1fr; gap: 10px 16px; align-items: start; }
+.light-field { display: contents; }
+.light-label { font-weight: 600; padding-top: 6px; }
+.light-value { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.light-value > .hint { margin: 0; font-size: 12px; }
+.light-value input[type="number"] { width: 6em; }
+.light-value input[type="checkbox"] { margin-top: 8px; }
+.light-value .seg-num { width: 5.4em; }
+.light-parts { border-top: 1px solid var(--line); padding-top: 12px; max-width: none; }
+.light-parts .part-chip .seg-num { width: 5.4em; }
+@media (max-width: 560px) {
+  .light-fields { grid-template-columns: 1fr; gap: 4px; }
+  .light-label { padding-top: 8px; }
+  table.device-list th:nth-child(3), table.device-list td:nth-child(3),
+  table.device-list th:nth-child(4), table.device-list td:nth-child(4) { display: none; }
+  table.device-list .device-preview { min-width: 90px; width: auto; }
+  table.device-list th, table.device-list td { padding: 6px; }
+  table.device-list .device-edit { display: none; }
+  table.device-list td.device-preview { white-space: normal; }
+}

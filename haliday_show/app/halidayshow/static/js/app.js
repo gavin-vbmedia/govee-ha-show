@@ -306,12 +306,72 @@ function renderDevices() {
   const rows = $("device-rows");
   rows.replaceChildren();
   if (!app.deviceList.length) {
-    rows.innerHTML = `<tr><td colspan="11" class="hint">No lights yet. Press <b>+ Add a light</b> to add one.</td></tr>`;
-    return;
+    rows.innerHTML = `<tr><td colspan="7" class="hint">No lights yet. Press <b>+ Add a light</b> to add one.</td></tr>`;
   }
   for (const d of app.deviceList) {
     d.brightness ??= 100; // saved before per-light brightness existed
     const tr = document.createElement("tr");
+    tr.className = "device-line";
+    tr.title = `Edit ${d.name}`;
+    const cell = (...kids) => { const td = document.createElement("td"); td.append(...kids); tr.append(td); return td; };
+    cell(orderControls(d));
+    cell(Object.assign(document.createElement("b"), { textContent: d.name }));
+    cell(Object.assign(document.createElement("span"), { className: d.ip || isHa(d) ? "" : "hint",
+      textContent: isHa(d) ? (d.entity || "Not picked yet") : d.ip || "Planned" }));
+    const model = document.createElement("span");
+    if (isWled(d)) model.append("WLED");
+    else if (d.kind === "twinkly") model.append("Twinkly");
+    else if (isHa(d)) model.append(d.protocol === "ha_switch" ? "HA switch" : "HA light");
+    else if (d.kind === "ddp") model.append("DDP");
+    else if (d.kind === "e131") model.append("E1.31");
+    else model.append(d.sku || "–", modelBadge(d.sku));
+    const clash = ["ddp", "e131"].includes(d.kind) && overlapping(app.deviceList, d);
+    if (clash) model.append(Object.assign(document.createElement("div"), { className: "hint warn", textContent: `Shares LEDs with ${clash.name}` }));
+    cell(model);
+    const preview = cell(segmentPreview(d));
+    preview.className = "device-preview";
+    const test = button(linked(d) ? "Test" : "Planned", async () => {
+      if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`);
+    }, "ghost");
+    test.disabled = !linked(d);
+    const edit = button("Edit", () => openLightEditor(d), "ghost device-edit");
+    cell(test, " ", edit).className = "device-actions";
+    tr.addEventListener("click", (e) => {
+      if (!e.target.closest("button, input, select, .order")) openLightEditor(d);
+    });
+    rows.append(tr);
+    dropTarget(tr, d);
+  }
+  if ($("light-dialog").open) renderLightEditor();
+}
+
+// A thin bar of the light's segments, each part in its colour, plus a short summary under it.
+function segmentPreview(d) {
+  const box = document.createElement("span");
+  box.className = "seg-preview";
+  const map = document.createElement("span");
+  map.className = "parts-map mini";
+  const parts = d.parts || [];
+  const colourOf = (k) => `rgb(${partRgb(k).join()})`;
+  // Long lights are drawn in at most 120 cells, so the bar stays readable.
+  const n = Math.max(1, d.segments || 1), cells = Math.min(n, 120);
+  for (let c = 0; c < cells; c++) {
+    const s = Math.floor((c + 0.5) * n / cells) + 1;
+    const span = document.createElement("span");
+    const k = parts.findIndex((p) => p.from <= s && s <= p.to);
+    span.style.background = k >= 0 ? colourOf(k) : parts.length ? "" : "var(--accent)";
+    map.append(span);
+  }
+  const what = isHa(d) ? "one colour" : `${d.segments} segment${d.segments === 1 ? "" : "s"}`;
+  const text = Object.assign(document.createElement("span"), { className: "hint",
+    textContent: parts.length ? `${what} · ${parts.length} part${parts.length === 1 ? "" : "s"}` : what });
+  box.title = parts.length ? parts.map((p) => `${p.name}: ${p.from}–${p.to}`).join("\n") : "";
+  box.append(map, text);
+  return box;
+}
+
+// The settings and parts for one light, built fresh each time the list changes.
+function lightFields(d) {
     const input = (type, key, attrs = {}) => {
       const el = document.createElement("input");
       el.type = type;
@@ -323,9 +383,9 @@ function renderDevices() {
       });
       return el;
     };
-    const cell = (child) => { const td = document.createElement("td"); td.append(child); tr.append(td); };
-    cell(orderControls(d));
-    cell(input("text", "name", { size: 14 }));
+    const out = [];
+    const cell = (child, label, hint) => out.push({ child, label, hint });
+    cell(input("text", "name", { size: 20 }), "Name");
     const ip = document.createElement("input");
     Object.assign(ip, { value: d.ip, placeholder: "Not linked yet", size: 13, title: "The light's IP address. Leave blank for a planned light." });
     ip.addEventListener("change", () => {
@@ -343,8 +403,8 @@ function renderDevices() {
         d.protocol = pick.value.startsWith("switch.") ? "ha_switch" : "ha_light";
         saveDevices();
       });
-      cell(pick);
-    } else cell(ip);
+      cell(pick, "Light or switch");
+    } else cell(ip, "IP address", "Leave blank for a planned light.");
     const wled = isPixels(d) || isHa(d);
     const model = document.createElement("span");
     if (isWled(d)) model.append("WLED");
@@ -373,7 +433,7 @@ function renderDevices() {
         model.append(warn);
       }
     }
-    cell(model);
+    cell(model, "Model");
     const segs = document.createElement("span");
     const find = button("Find", () => findSegments(d), "ghost");
     find.disabled = !d.ip || LONG_PROTOCOLS.includes(d.protocol);
@@ -383,7 +443,7 @@ function renderDevices() {
     if (wled) count.title = "How many LEDs the light has. Each one is a segment.";
     segs.append(count);
     if (!wled) segs.append(" ", find);
-    cell(segs);
+    cell(segs, "Segments", isHa(d) ? "" : wled ? "How many LEDs it has." : "Press <b>Find</b> to work it out with a few yes or no questions, or use <b>Test</b>.");
     const bulbs = document.createElement("input");
     Object.assign(bulbs, { type: "number", min: 1, max: 2000, value: d.bulbs ?? "", placeholder: `${d.segments * 4}?`,
       title: "How many bulbs the light has, so the House view draws each one. Blank guesses 4 per segment." });
@@ -392,10 +452,11 @@ function renderDevices() {
       d.bulbs = v >= 1 ? Math.min(v, 2000) : null;
       saveDevices();
     });
-    cell(bulbs);
-    cell(input("number", "brightness", { min: 1, max: 100, title: "Caps this light in every show. 100 is full brightness." }));
-    if (isHa(d)) cell(document.createTextNode("")); else cell(input("checkbox", "reverse"));
-    if (wled) cell(document.createTextNode("")); else cell(input("checkbox", "gradient"));
+    cell(bulbs, "Bulbs", "So the House view draws each one. Blank guesses 4 per segment.");
+    cell(input("number", "brightness", { min: 1, max: 100, title: "Caps this light in every show. 100 is full brightness." }),
+      "Brightness %", "Caps this light in every show.");
+    if (!isHa(d)) cell(input("checkbox", "reverse"), "Reverse", "Tick if Test's white dot runs the wrong way.");
+    if (!wled) cell(input("checkbox", "gradient"), "Blend", "Ask the light to blend between segments.");
     if (wled) {
       const how = document.createElement("span");
       how.className = "hint";
@@ -405,30 +466,55 @@ function renderDevices() {
         : isWled(d) ? "Colours go to the strip over DDP, which WLED listens for with no setup"
         : d.kind === "e131" ? "Colours go straight to the controller's IP over E1.31 (sACN)"
         : "Colours go to the controller over DDP. Turn DDP on in the controller's settings if it has a switch for it.";
-      cell(how);
+      cell(how, "Sent by");
     } else {
       const proto = document.createElement("select");
       for (const [v, label] of Object.entries(PROTOCOLS)) proto.add(new Option(label, v, false, v === (d.protocol || "standard")));
       proto.title = "How colours are sent. If Test only turns the light on, try the next one.";
       proto.addEventListener("change", () => { d.protocol = proto.value; saveDevices(); });
-      cell(proto);
+      cell(proto, "Protocol", "How colours are sent. If <b>Test</b> only turns the light on, try the next one.");
     }
-    const actions = document.createElement("td");
-    const test = button(linked(d) ? "Test" : "Planned", async () => {
-      if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`);
-    });
-    const remove = button("Remove", () => {
-      if (!confirm(`Remove ${d.name}? Its clips stay in your shows.`)) return;
-      app.deviceList = app.deviceList.filter((x) => x !== d);
-      saveDevices();
-    }, "ghost danger");
-    test.disabled = !linked(d);
-    actions.append(test, " ", remove);
-    tr.append(actions);
-    rows.append(tr);
-    if (!isHa(d)) rows.append(partsRow(d)); // one segment: nothing to split
-    dropTarget(tr, d);
+    return out;
+}
+
+// The Edit light window. Saving swaps in fresh light objects, so it follows the light by id.
+const lightEdit = { id: null };
+
+function openLightEditor(d) {
+  lightEdit.id = d.id;
+  renderLightEditor();
+  $("light-dialog").showModal();
+}
+
+function renderLightEditor() {
+  const d = app.lights[lightEdit.id];
+  const dlg = $("light-dialog");
+  if (!d) { dlg.close(); return; }
+  $("light-title").textContent = d.name;
+  const body = $("light-body"), scroll = body.scrollTop;
+  const grid = document.createElement("div");
+  grid.className = "light-fields";
+  for (const f of lightFields(d)) {
+    const row = document.createElement("div");
+    row.className = "light-field";
+    const label = Object.assign(document.createElement("span"), { className: "light-label", textContent: f.label });
+    const val = document.createElement("div");
+    val.className = "light-value";
+    val.append(f.child);
+    if (f.hint) val.append(Object.assign(document.createElement("span"), { className: "hint", innerHTML: f.hint }));
+    row.append(label, val);
+    grid.append(row);
   }
+  body.replaceChildren(grid);
+  if (!isHa(d)) {
+    const parts = partsPanel(d);
+    parts.classList.add("light-parts");
+    body.append(parts);
+  }
+  body.scrollTop = scroll;
+  const test = $("light-test");
+  test.disabled = !linked(d);
+  test.textContent = linked(d) ? "Test" : "Planned";
 }
 
 // Moves light `d` to position `to` in the list. Every show's tracks follow the list's order.
@@ -441,7 +527,7 @@ function moveDevice(d, to) {
   saveDevices();
 }
 
-// A drag handle and up and down buttons. Rows (and their parts rows) take a drop above or below.
+// A drag handle and up and down buttons. Rows take a drop above or below.
 const deviceDrag = { from: null };
 function orderControls(d) {
   const box = document.createElement("span");
@@ -477,9 +563,9 @@ const dropMarks = (keep) => {
   }
 };
 
-// Drops onto the device row `tr` or its parts row: above the light if in its top half, else below.
+// Drops onto the device row `tr`: above the light if in its top half, else below.
 function dropTarget(tr, d) {
-  const rowsOf = () => [tr, tr.nextElementSibling?.classList.contains("parts-row") ? tr.nextElementSibling : null];
+  const rowsOf = () => [tr, null];
   const where = (e) => {
     const [top, bottom] = rowsOf();
     const a = top.getBoundingClientRect().top, b = (bottom || top).getBoundingClientRect().bottom;
@@ -523,13 +609,9 @@ const runText = (runs) => runs.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`
 
 // Parts split a light into pieces that each get their own track, like a roof line that runs
 // round a corner. Segments outside every part stay off in shows.
-function partsRow(d) {
-  const tr = document.createElement("tr");
-  tr.className = "parts-row";
-  const td = document.createElement("td");
-  td.colSpan = 10;
-  tr.prepend(document.createElement("td"));
-  tr.append(td);
+function partsPanel(d) {
+  const tr = document.createElement("section");
+  const td = tr;
   const parts = d.parts || [];
   const add = () => {
     // The first gap after the last part, so parts go on round the light in order.
@@ -738,6 +820,18 @@ async function stopFinder(close = true) {
   try { await probe(0, d); } catch { /* the light falls back to its own scene within a minute anyway */ }
 }
 
+$("light-dialog").addEventListener("click", async (e) => {
+  const what = e.target.closest("[data-light]")?.dataset.light;
+  const d = app.lights[lightEdit.id];
+  if (what === "close" || !d) $("light-dialog").close();
+  else if (what === "test") { if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`); }
+  else if (what === "remove") {
+    if (!confirm(`Remove ${d.name}? Its clips stay in your shows.`)) return;
+    $("light-dialog").close();
+    app.deviceList = app.deviceList.filter((x) => x.id !== d.id);
+    saveDevices();
+  }
+});
 $("finder-yes").addEventListener("click", () => answerFinder(true));
 $("finder-no").addEventListener("click", () => answerFinder(false));
 $("finder").addEventListener("click", (e) => {

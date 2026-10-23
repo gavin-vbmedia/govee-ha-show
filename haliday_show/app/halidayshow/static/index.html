@@ -319,12 +319,8 @@
   <section class="toolbar">
     <button id="btn-add-light" class="primary">+ Add a light</button>
   </section>
-  <p class="hint">Press <b>Test</b> on a light to check it: a rainbow runs with a white dot stepping along it. Set
-    <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
-    Govee doesn't report segment counts, so for a Govee light press <b>Find</b> next to <b>Segments</b> and answer a
-    few yes or no questions, which works even with the light still on its reel. If Test only turns a Govee light on,
-    change <b>Protocol</b> and test again.</p>
-  <dialog id="add-dialog" class="effect-dialog form-dialog add-dialog" aria-labelledby="add-title">
+  <p class="hint">Press a light to change its settings or split it into parts. <b>Test</b> runs a rainbow with a white
+    dot stepping along it: set <b>Segments</b> so the dot visits every segment once per lap.</p>  <dialog id="add-dialog" class="effect-dialog form-dialog add-dialog" aria-labelledby="add-title">
     <div class="effect-dialog-head"><h3 id="add-title">Add a light</h3>
       <span id="add-steps" class="hint"></span>
       <button class="ghost" data-add="close" aria-label="Close">✕</button></div>
@@ -382,6 +378,17 @@
       <button type="button" class="primary" data-add="close" id="add-finish" hidden>Done</button>
     </div>
   </dialog>
+  <dialog id="light-dialog" class="effect-dialog form-dialog light-dialog" aria-labelledby="light-title">
+    <div class="effect-dialog-head"><h3 id="light-title">Light</h3>
+      <button class="ghost" data-light="close" aria-label="Close">✕</button></div>
+    <div id="light-body" class="form-dialog-body"></div>
+    <div class="form-dialog-foot">
+      <button type="button" class="ghost danger" data-light="remove">Remove light</button>
+      <span class="spacer"></span>
+      <button type="button" id="light-test" data-light="test">Test</button>
+      <button type="button" class="primary" data-light="close">Done</button>
+    </div>
+  </dialog>
   <dialog id="finder" class="effect-dialog form-dialog finder-dialog" aria-labelledby="finder-title">
     <div class="effect-dialog-head"><h3 id="finder-title">Find segments</h3>
       <span id="finder-progress" class="hint"></span>
@@ -400,8 +407,8 @@
     </div>
   </dialog>
   <div class="table-scroll">
-  <table class="devices">
-    <thead><tr><th title="Drag to reorder. Shows, the timeline and the House tab follow this order."></th><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th title="How many bulbs the light has, for the House view. Blank guesses 4 per segment.">Bulbs</th><th title="Caps this light in every show">Brightness %</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th title="How colours are sent to the light">Protocol</th><th></th></tr></thead>
+  <table class="devices device-list">
+    <thead><tr><th title="Drag to reorder. Shows, the timeline and the House tab follow this order."></th><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th></th></tr></thead>
     <tbody id="device-rows"></tbody>
   </table>
   </div>
