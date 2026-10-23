@@ -53,7 +53,7 @@ photo of your house, then run it from an automation. No extra software, no separ
 ## 🚀 Installation
 
 **Requires** Home Assistant OS or Supervised, and Govee lights with **LAN Control** turned on in the
-Govee Home app, WLED strips, or pixel controllers that take DDP, in any mix.
+Govee Home app, WLED strips, or pixel controllers that take DDP or E1.31, in any mix.
 
 1. Press **Add repository** above. It opens your Home Assistant and offers to add this add-on
    repository.
@@ -78,8 +78,8 @@ entities in automations, also set up the Mosquitto broker add-on and the MQTT in
   and set its segments, bulb count, brightness, direction and blending
 - WLED strips alongside Govee lights: add one by IP and its LED count and WLED segments are filled in
   for you
-- Pixel controllers over DDP (Falcon Player, ESPixelStick, ESPHome, Tasmota, ESP32), with several
-  lights on one controller
+- Pixel controllers over DDP (Falcon Player, ESPixelStick, ESPHome, Tasmota, ESP32) or E1.31/sACN
+  (Falcon, Kulp, xLights set-ups), with several lights on one controller
 - Plan shows before your lights arrive: add planned lights by name and segment count, then link
   them to the real devices later
 - Put your lights in any order (drag them on the Devices tab) and every show's timeline follows
@@ -158,6 +158,7 @@ flowchart LR
     C -- save --> D
     E -- "razer packets over LAN UDP" --> F[💡 Govee lights]
     E -- "DDP over LAN UDP" --> W[💡 WLED strips · pixel controllers]
+    E -- "E1.31 unicast" --> X[💡 E1.31 controllers]
     E -- "start song" --> G[🔊 HA media player]
     H[Automations<br/>MQTT · addon_stdin] --> E
 ```
@@ -209,6 +210,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
   app/halidayshow/__main__.py             Entry point and environment settings
   app/halidayshow/protocol.py             Govee LAN and razer packet encoding
   app/halidayshow/wled.py                 WLED: DDP packets, and the light's name, LEDs and segments
+  app/halidayshow/e131.py                 E1.31 (sACN) packets and each controller's shared universes
   app/halidayshow/discovery.py            Multicast device scan
   app/halidayshow/listen.py               Records other Govee traffic (Settings → Listen)
   app/halidayshow/lab.py                  Packet lab: hand-made messages to one light
@@ -239,7 +241,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
     js/autogen.js                       Generates a draft show from the analysis
     js/lightspeed.js                    How fast each protocol can change a light, and previews at that pace
     js/compat.js                        Whether a clip's effect can show on its light, for marking and blocking
-    js/controllers.js                   Pixel controllers: where a new light starts, overlapping lights
+    js/controllers.js                   Pixel controllers (DDP, E1.31): where a new light starts, overlaps
     js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
     models.json                         Our list of Govee lights: tested status and default settings
 tools/build_models.py                   Adds new lights from Govee's LAN Control list to models.json
@@ -247,6 +249,7 @@ tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traff
 docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions
 docs/wled.md                            How WLED strips are driven: DDP, and how WLED segments become parts
 docs/ddp.md                             Pixel controllers over DDP: several lights on one controller
+docs/e131.md                            E1.31 (sACN) controllers: universes, shared universes, stopping
 tests/                                  pytest and node tests (tests/js)
 ```
 

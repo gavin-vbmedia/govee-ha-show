@@ -2,7 +2,7 @@
 # haliday_show/app/halidayshow/__init__.py; CI checks they match this one.
 [project]
 name = "haliday-show"
-version = "0.2.91"
+version = "0.2.92"
 requires-python = ">=3.12"
 dependencies = ["aiohttp"]
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.92
+
+- Pixel controllers that speak **E1.31** (also called sACN) now work: most Falcon and Kulp controllers, and
+  anything set up for xLights. Under **Setup → Devices**, pick **Pixel controller (E1.31)** next to
+  **Add by IP**, type its IP and how many **LEDs** the string has, and press **Add by IP**.
+- Each light has a **universe** and **channel** in its row, so it matches how the controller is set up.
+  Add the same IP again for the next string and it starts just after the last one. Lights can share a
+  universe without blanking each other.
+- When a show or test stops, the controller is told straight away, so it goes back to what it was doing
+  without waiting.
+- You can plan one before it arrives: type **E1.31** as the model next to **Add planned light**.
+
 ## 0.2.91
 
 - Nothing changes inside Home Assistant. This is groundwork for running HA-liday Show on its own, on a

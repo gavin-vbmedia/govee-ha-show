@@ -19,7 +19,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, ai, commands, discovery, migrate, scenes, wled
+from . import __version__, ai, commands, discovery, e131, migrate, scenes, wled
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError,
@@ -40,7 +40,7 @@ MAX_UPLOAD = 200 * 1024 * 1024
 MAX_BULBS = 2000  # bulbs on one light
 MAX_SEGMENTS = 1000  # per light; the Christmas String Lights 2 have 300 bulbs
 MAX_FIRST_LED = 100000  # where a light starts on a pixel controller; DDP offsets go far beyond this
-KINDS = ("govee", "wled", "ddp")
+KINDS = ("govee", "wled", "ddp", "e131")
 
 OUTPUT = web.AppKey("output", Output)
 PLAYER = web.AppKey("player", Player)
@@ -293,7 +293,7 @@ def _clean_device(d: dict) -> dict:
     # Saved before WLED existed (say, restored from an old backup), a device has no kind: it's a Govee
     # light. Start-up fills these in (migrate.fill_device_kinds).
     kind = d.get("kind") if d.get("kind") in KINDS else "govee"
-    protocol = "ddp" if kind in ("wled", "ddp") else str(d.get("protocol") or "standard")
+    protocol = {"wled": "ddp", "ddp": "ddp", "e131": "e131"}.get(kind) or str(d.get("protocol") or "standard")
     if kind == "govee" and protocol not in PROTOCOLS:
         raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
     # Realtime messages hold the segment count in one byte; the other protocols can go further.
@@ -325,6 +325,19 @@ def _clean_device(d: dict) -> dict:
         if not 1 <= first <= MAX_FIRST_LED:
             raise web.HTTPBadRequest(text=f"first must be 1-{MAX_FIRST_LED}")
         extra["first"] = first
+    if kind == "e131":
+        try:
+            universe = int(d["universe"]) if d.get("universe") is not None else 1
+            channel = int(d["channel"]) if d.get("channel") is not None else 1
+        except (TypeError, ValueError):
+            raise web.HTTPBadRequest(text="universe and channel must be numbers")
+        if not 1 <= universe <= e131.MAX_UNIVERSE:
+            raise web.HTTPBadRequest(text=f"universe must be 1-{e131.MAX_UNIVERSE}")
+        if not 1 <= channel <= e131.UNIVERSE_SIZE:
+            raise web.HTTPBadRequest(text=f"channel must be 1-{e131.UNIVERSE_SIZE}")
+        if e131.channel_of(universe, channel) + segments * 3 > e131.channel_of(e131.MAX_UNIVERSE + 1, 1):
+            raise web.HTTPBadRequest(text="the light runs past the last universe")
+        extra.update(universe=universe, channel=channel)
     return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64], "kind": kind,
             "ip": ip, "sku": "" if kind == "wled" else str(d.get("sku", "")), "segments": segments,
             "reverse": bool(d.get("reverse")), "gradient": kind == "govee" and bool(d.get("gradient")),
