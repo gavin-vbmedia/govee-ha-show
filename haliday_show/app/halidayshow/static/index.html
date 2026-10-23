@@ -310,6 +310,15 @@
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-palettes"/></svg>Your palettes</h2>
     <button id="btn-new-palette" class="primary">New palette</button>
   </section>
+  <section class="card ai-presets">
+    <form id="ai-palette-form" class="group ai-form">
+      <input id="ai-palette-request" maxlength="2000" autocomplete="off"
+        placeholder="Describe some colours, e.g. frosty winter night, or a tropical sunset">
+      <button id="btn-ai-palette" class="primary" type="submit" title="Ask the AI for palettes that match">✨ Make palettes</button>
+    </form>
+    <p id="ai-palette-hint" class="hint"></p>
+    <div id="ai-palette-ideas" class="ai-preset-ideas"></div>
+  </section>
   <div id="my-palettes" class="palette-list"></div>
   <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-swatches"/></svg>Built in</h2>
   <div id="preset-palettes" class="palette-list"></div>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.118
+
+- **Library → Palettes** can now make palettes with the AI, like **Presets** can. Describe some
+  colours, such as "frosty winter night" or "tropical sunset", and press **✨ Make palettes**: you get up to
+  three ideas, each shown as a colour bar. **Keep** adds one to your palettes, where you can rename it
+  and change its colours as usual. It needs an AI set up, as for **Describe it**.
+
 ## 0.2.117
 
 - The long instructions in **Selection**, at the top of **Music** and under **Settings → Layout** are

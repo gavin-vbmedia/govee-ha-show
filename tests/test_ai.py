@@ -141,3 +141,22 @@ async def test_ai_presets_endpoint(aiohttp_client, tmp_path, monkeypatch):
     client = await aiohttp_client(app)
     resp = await client.post("/api/ai/presets", json={"request": "fire", "context": {}})
     assert resp.status == 200 and (await resp.json())["presets"] == reply["presets"]
+
+
+async def test_palettes_use_their_own_instructions_and_schema():
+    reply = {"summary": "Two frosty sets", "palettes": [{"name": "Frosty night", "colors": ["#ffffff", "#0000ff"]}]}
+    ha = FakeHA(reply=json.dumps(reply))
+    out = await ai.create_palettes(ha, "frosty winter night", {"palettes": []})
+    assert out["via"] == "ha" and out["palettes"] == reply["palettes"]
+    instructions = ha.calls[0][2]["instructions"]
+    assert "colour palettes" in instructions and '"palettes"' in instructions and "frosty winter night" in instructions
+
+
+async def test_ai_palettes_endpoint(aiohttp_client, tmp_path, monkeypatch):
+    reply = {"summary": "x", "palettes": [{"name": "Fire", "colors": ["#ff0000", "#ff8800"]}]}
+    monkeypatch.setattr(server, "HomeAssistant", lambda: FakeHA(reply=json.dumps(reply)))
+    app = server.make_app(tmp_path / "config", tmp_path / "media", allow_all=True)
+    client = await aiohttp_client(app)
+    resp = await client.post("/api/ai/palettes", json={"request": "fire", "context": {}})
+    assert resp.status == 200 and (await resp.json())["palettes"] == reply["palettes"]
+    assert (await client.post("/api/ai/palettes", json={"request": "fire"})).status == 400

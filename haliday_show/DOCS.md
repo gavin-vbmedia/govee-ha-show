@@ -646,7 +646,10 @@ the colour field you last clicked, or press **Apply palette** to fill them all i
 light's name to **Recolour this light** or **Recolour all lights**: each light steps through the
 palette effect by effect, so the lights stay matched (backgrounds are left alone). **Library →
 Palettes** lists the built-in palettes and your own: press **New palette**, or **Copy** on a built-in one,
-then rename it and change its colours (up to 12). Your palettes are available in every show.
+then rename it and change its colours (up to 12). Or describe some colours in the box above, such as
+"frosty winter night" or "tropical sunset", and press **✨ Make palettes**: the AI suggests up to three, each
+shown as a colour bar, and **Keep** adds one to your palettes (it needs an AI set up, as for
+**Describe it**). Your palettes are available in every show.
 
 ### Lights that are gone
 
@@ -876,7 +879,7 @@ Home Assistant's own backups include all of this too, as the app's config folder
 
 ## Setting up the AI
 
-**Describe it**, **✨ Make presets** and Generate's **AI** option need one of these:
+**Describe it**, **✨ Make presets**, **✨ Make palettes** and Generate's **AI** option need one of these:
 
 - **Claude, with your own API key.** Create a key at console.anthropic.com, then in Home Assistant open
   **Settings → Apps → HA-liday Show → Configuration**, paste it into **Claude API key** and save.

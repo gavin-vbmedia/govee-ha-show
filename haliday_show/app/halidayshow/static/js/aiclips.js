@@ -128,3 +128,18 @@ export function checkPresets(reply) {
   }
   return { presets, skipped };
 }
+
+// Palettes from the AI: colours must be #rrggbb (a missing # is fine), at most 12 a palette, and a
+// palette needs two to be worth keeping.
+export function checkPalettes(reply) {
+  const palettes = [], skipped = [];
+  for (const p of Array.isArray(reply?.palettes) ? reply.palettes : []) {
+    const colors = (Array.isArray(p?.colors) ? p.colors : [])
+      .map((c) => String(c).trim().replace(/^#?/, "#").toLowerCase())
+      .filter((c) => /^#[0-9a-f]{6}$/.test(c)).slice(0, 12);
+    const name = String(p?.name || "").trim().slice(0, 60) || "AI palette";
+    if (colors.length < 2) { skipped.push(`"${name}" had too few colours`); continue; }
+    palettes.push({ name, colors });
+  }
+  return { palettes, skipped };
+}

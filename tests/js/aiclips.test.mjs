@@ -105,3 +105,19 @@ test("slow lights are marked for the AI", () => {
   assert.equal(ctx.lights.find((l) => l.name === "Pillars").slow, true);
   assert.equal(ctx.lights.find((l) => l.name === "Roof").slow, undefined);
 });
+
+test("palettes from the AI keep valid colours only, up to 12, and skip ones with too few", async () => {
+  const { checkPalettes } = await import("../../haliday_show/app/halidayshow/static/js/aiclips.js");
+  const { palettes, skipped } = checkPalettes({ palettes: [
+    { name: " Frosty night ", colors: ["#FFFFFF", "88ccff", "blue", "#0000ff"] },
+    { name: "", colors: Array.from({ length: 20 }, () => "#ff0000") },
+    { name: "Lonely", colors: ["#ff0000"] },
+    { colors: "nope" },
+  ] });
+  assert.equal(palettes.length, 2);
+  assert.deepEqual(palettes[0], { name: "Frosty night", colors: ["#ffffff", "#88ccff", "#0000ff"] });
+  assert.equal(palettes[1].name, "AI palette");
+  assert.equal(palettes[1].colors.length, 12);
+  assert.equal(skipped.length, 2);
+  assert.deepEqual(checkPalettes(null), { palettes: [], skipped: [] });
+});
