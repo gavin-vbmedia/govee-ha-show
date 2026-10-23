@@ -82,6 +82,12 @@ body {
 .section-body { flex: 1; min-width: 0; }
 .table-scroll { overflow-x: auto; }
 details.help summary { cursor: pointer; }
+/* "How to…": the longer help under a one-line hint, folded until you open it. */
+details.howto { margin: -2px 0 10px; font-size: 13px; color: var(--muted); }
+details.howto summary { cursor: pointer; color: var(--text); width: fit-content; }
+details.howto summary:hover { text-decoration: underline; }
+details.howto ul { margin: 6px 0 0; padding-left: 20px; }
+details.howto li { margin: 2px 0; }
 @media (max-width: 720px) {
   .section { flex-direction: column; align-items: stretch; }
   .subnav { position: static; width: auto; flex-direction: row; overflow-x: auto; scrollbar-width: none;

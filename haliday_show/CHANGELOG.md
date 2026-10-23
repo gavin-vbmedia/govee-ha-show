@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.117
+
+- The long instructions in **Selection**, at the top of **Music** and under **Settings → Layout** are
+  now one short line, with the rest under **How to…**. Press it to open or close it; it stays the way
+  you left it.
+- On a phone, **Preview** and **House** now start folded, so the timeline is near the top of the
+  editor. Open them with **▸** as before. Once you fold or unfold a panel yourself, your choice is kept.
+- **⚙ Settings…** in the **Show** panel is now **⚙ Show settings…**, so it isn't mixed up with
+  **Setup → Settings**. It opens the same window as before.
+
 ## 0.2.116
 
 - When a song won't load, the message now says why and what to do: the file has gone from your songs

@@ -443,7 +443,7 @@ timeline.
 
 ### Shows
 
-Pick a show in the Show panel, or **＋ New show** to start one. **⚙ Settings…** beside it
+Pick a show in the Show panel, or **＋ New show** to start one. **⚙ Show settings…** beside it
 opens the show's settings: its **Name**, its **Show speaker** (below), **Auto save**, and **Delete
 show…** to remove it.
 
@@ -748,7 +748,7 @@ and never changes where the real show plays:
 
 ### The real show
 
-**Show speaker** in the show's **⚙ Settings…** (Show panel) is where the song plays when the show is
+**Show speaker** in **⚙ Show settings…** (Show panel) is where the song plays when the show is
 started from an automation or the MQTT Play button. Leave it on **Default** to use the default show
 speaker from the Speakers tab, or pick a speaker for this show only. So you can design on a speaker
 indoors and the real show still plays outside. With no show speaker and no default, the lights play
@@ -806,7 +806,11 @@ bar shows where it will land. The **⋯** button in its corner does the same fro
 small picture of the page, so click the area you want the panel in. **Earlier** and **Later**
 change its order, which also works on a touch screen. Any panel except the Timeline can be
 **Hidden**. To keep a panel to hand but out of the way, press the **▾** before its name to
-collapse it to its title, and **▸** to open it again.
+collapse it to its title, and **▸** to open it again. On a phone, **Preview** and **House** start collapsed, so the
+timeline is near the top; open them with **▸** whenever you want them.
+
+Longer help under a page or panel sits under **How to…**. Press it to open or close it; it stays
+the way you left it.
 
 The **page layout** sets how those five areas fit together. Pick it at the bottom of any panel's
 **⋯** menu or under **Settings → Layout**:

@@ -35,11 +35,15 @@ const OLD_DEFAULT = {
   preview: "top", house: "top", timeline: "middle", inspector: "bottom",
 };
 const KEY = "halidayshow.layout";
+// On a phone the panels stack, and these two would fill the screen before the timeline, so they
+// start folded there until someone folds or unfolds a panel themselves.
+export const PHONE_FOLDED = ["preview", "house"];
+export const isPhone = () => typeof matchMedia === "function" && matchMedia("(max-width: 720px)").matches;
 
 // Saved as { place: {panel: dock}, order: [panels], frame, collapsed: [panels] }; panels sit in
 // their dock in `order`, and collapsed ones show just their title.
 // Older versions saved only the place map, which still loads with the default order.
-export function loadLayout() {
+export function loadLayout(phone = false) {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { /* private mode or bad data */ }
   let placed = saved.place || saved;
@@ -51,7 +55,8 @@ export function loadLayout() {
   const order = (Array.isArray(saved.order) ? saved.order : []).filter((k, i, a) => k in PANELS && a.indexOf(k) === i);
   for (const k of DEFAULT_ORDER) if (!order.includes(k)) order.push(k);
   const frame = saved.frame in FRAMES ? saved.frame : DEFAULT_FRAME;
-  const collapsed = (Array.isArray(saved.collapsed) ? saved.collapsed : []).filter((k) => k in PANELS && !ALWAYS_SHOWN.has(k));
+  const collapsed = (Array.isArray(saved.collapsed) ? saved.collapsed : phone ? PHONE_FOLDED : [])
+    .filter((k) => k in PANELS && !ALWAYS_SHOWN.has(k));
   return { place, order, frame, collapsed };
 }
 
@@ -81,7 +86,7 @@ export class Layout {
   // onChange runs after panels move, so the timeline and preview can resize.
   constructor(onChange) {
     this.onChange = onChange;
-    this.layout = loadLayout();
+    this.layout = loadLayout(isPhone());
     this.menu = null;
     this.docks = Object.fromEntries([...document.querySelectorAll(".dock[data-dock]")].map((d) => [d.dataset.dock, d]));
     this.marker = document.createElement("div");
@@ -148,7 +153,8 @@ export class Layout {
   }
 
   reset() {
-    this.layout = { place: { ...DEFAULT_LAYOUT }, order: [...DEFAULT_ORDER], frame: DEFAULT_FRAME, collapsed: [] };
+    this.layout = { place: { ...DEFAULT_LAYOUT }, order: [...DEFAULT_ORDER], frame: DEFAULT_FRAME,
+      collapsed: isPhone() ? [...PHONE_FOLDED] : [] };
     saveLayout(this.layout);
     this.apply();
   }
