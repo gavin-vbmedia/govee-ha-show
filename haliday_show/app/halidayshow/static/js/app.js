@@ -2816,6 +2816,7 @@ function renderPalettes() {
     const name = document.createElement("input");
     name.value = p.name;
     name.maxLength = 60;
+    name.setAttribute("aria-label", "Palette name");
     name.addEventListener("change", () => {
       const v = name.value.trim();
       if (!v || allPalettes().some((q) => q !== p && q.name === v)) {
@@ -2833,6 +2834,7 @@ function renderPalettes() {
       const el = document.createElement("input");
       el.type = "color";
       el.value = c;
+      el.setAttribute("aria-label", `${p.name}: colour ${k + 1}`);
       el.addEventListener("change", () => { p.colors[k] = el.value; savePalettes(); });
       sw.append(el);
     });
@@ -3651,6 +3653,7 @@ function renderSpeakers() {
   rows.replaceChildren(...app.speakers.map((s) => {
     const delay = document.createElement("input");
     Object.assign(delay, { type: "number", step: 10, value: s.delay_ms ?? 0 });
+    delay.setAttribute("aria-label", `Delay for ${s.name}, in milliseconds`);
     delay.addEventListener("change", async () => {
       try {
         await api("api/speakers/delay", { method: "PUT", json: { entity_id: s.entity_id, delay_ms: Number(delay.value) || 0 } });

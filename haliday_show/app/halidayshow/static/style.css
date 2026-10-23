@@ -2,11 +2,14 @@
   --bg: #f5f6f8;
   --panel: #ffffff;
   --text: #1c1f24;
-  --muted: #6b7280;
+  --muted: #5f6672;
   --line: #d9dce1;
   --accent: #0277bd;
   --accent-text: #ffffff;
-  --danger: #db4437;
+  /* Red, green and orange words stay at 4.5:1 or more on every ground, in both themes. */
+  --danger: #c62828;
+  --ok: #13733a;
+  --warn: #a84d08;
   --track: #eef0f3;
   --track-alt: #e6e9ed;
   --wave: #8aa4c0;
@@ -25,6 +28,9 @@
     --track: #20252c;
     --track-alt: #252b33;
     --wave: #4f6d8f;
+    --danger: #f2786d;
+    --ok: #4ade80;
+    --warn: #fbbf24;
     color-scheme: dark;
   }
 }
@@ -106,6 +112,12 @@ label { display: inline-flex; align-items: center; gap: 4px; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
 .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+/* On a phone, long pickers and text boxes shrink to the screen rather than pushing the page sideways. */
+@media (max-width: 720px) {
+  .group, .toolbar, .toolbar label { min-width: 0; }
+  select, input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]) {
+    max-width: 100%; min-width: 0; }
+}
 .clock { font-variant-numeric: tabular-nums; min-width: 6.5em; font-family: ui-monospace, monospace; }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 
@@ -192,13 +204,13 @@ table.devices td input[type="number"] { width: 5em; }
 #scan-results { display: flex; flex-direction: column; gap: 6px; }
 .scan-row { display: flex; gap: 10px; align-items: center; }
 .badge { font-size: 12px; margin-left: 6px; }
-.badge.ok { color: #16a34a; }
-.badge.warn { color: #d97706; }
+.badge.ok { color: var(--ok); }
+.badge.warn { color: var(--warn); }
 .badge.unknown { color: var(--muted); }
 .lab-grid { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 8px; }
 .lab-grid input[type="number"] { width: 6em; }
 #lab-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: 12px; }
-.fit-warning { color: #d97706; }
+.fit-warning { color: var(--warn); }
 .lab-now { font-size: 18px; font-weight: 600; }
 .lab-log { max-height: 320px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 
@@ -260,7 +272,12 @@ button.swatch:hover { border-color: var(--text); }
 .panel.collapsed > :not(.panel-head) { display: none; }
 .panel.collapsed { padding-bottom: 6px; }
 .panel-tools { display: flex; gap: 4px; margin-left: auto; }
-.panel-tools button { padding: 0 8px; line-height: 1.3; }
+/* The fold arrow and ⋯ are at least 24px square so they're easy to hit, and bigger on touch screens. */
+.panel-fold, .panel-move { min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
+@media (pointer: coarse) {
+  .panel-fold, .panel-move, .panel-tools button, .order .arrows button { min-width: 32px; min-height: 32px; }
+}
+.panel-tools button { padding: 0 8px; line-height: 1.3; min-width: 24px; min-height: 24px; }
 .dock { display: flex; gap: 8px; }
 .dock.empty { display: none; }
 /* Padding rather than margin on the top dock, so its background covers what scrolls under it. */
@@ -337,7 +354,7 @@ button.frame-cell:hover { color: var(--text); border-color: var(--accent); }
 .effect-dialog-note { flex-basis: 100%; margin: 0; }
 /* Effects that won't work on the light (compat.js) are greyed out; ones that only partly work are marked. */
 .effect-picker button.unfit { opacity: 0.45; }
-.effect-picker button.unfit span, .effect-picker button.limited span { color: #d97706; }
+.effect-picker button.unfit span, .effect-picker button.limited span { color: var(--warn); }
 .preset-groups { display: flex; flex-direction: column; gap: 10px; }
 .preset-group { margin: 0; padding: 6px 10px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .preset-group legend { padding: 0 6px; font-weight: 600; }
@@ -423,14 +440,14 @@ table.devices .part-chip .seg-num { width: 5.4em; }
 /* Reordering lights on the Devices tab. */
 .order { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
 .order .grip { cursor: grab; color: var(--muted); padding: 0 4px; font-size: 16px; user-select: none; }
-.order .arrows { display: inline-flex; flex-direction: column; }
-.order .arrows button { padding: 0 4px; font-size: 10px; line-height: 13px; border-radius: 3px; }
+.order .arrows { display: inline-flex; gap: 2px; }
+.order .arrows button { min-width: 24px; min-height: 24px; padding: 0 4px; font-size: 12px; line-height: 1; }
 table.devices td:has(> .order) { padding-right: 0; }
 table.devices td { white-space: nowrap; }
 table.devices .parts-row td { white-space: normal; }
 table.devices tr.drop-above td { box-shadow: inset 0 2px 0 var(--accent); }
 table.devices tr.drop-below + tr.parts-row td, table.devices tr.drop-below:not(:has(+ .parts-row)) td { box-shadow: inset 0 -2px 0 var(--accent); }
-.hint.warn { color: #d97706; }
+.hint.warn { color: var(--warn); }
 #add-leds { width: 5em; }
 table.devices td > span > .seg-num { width: 5.4em; }
 
@@ -473,7 +490,7 @@ table.devices td > span > .seg-num { width: 5.4em; }
 .speaker-who span { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .speaker-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
 .speaker-actions .hint { margin: 0; }
-.hint.ok { color: #16a34a; }
+.hint.ok { color: var(--ok); }
 #speaker-filter { width: 100%; }
 #speaker-filter[hidden] { display: none; }
 

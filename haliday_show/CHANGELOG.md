@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.114
+
+- On a phone, the **Editor** and **Music** pages no longer slide sideways: the song picker in
+  **Playback** and the **File name** box now fit the screen.
+- Red, green and orange words are easier to read, in both light and dark: the **works** and
+  **limited** badges, warnings, error messages, and buttons such as **Delete** and **Start afresh…**.
+  Grey hints are a touch darker too.
+- The small buttons are bigger and easier to hit: the ▾ and ⋯ on each panel, the timeline's − and +,
+  and the ↑ ↓ arrows under **Setup → Devices**. They're bigger again on a touch screen.
+- Screen readers now name every box: the **Describe it** box, each palette's name and colours in
+  **Library**, and each speaker's delay under **Setup → Speakers**. The ▾ and ⋯ panel buttons say
+  which panel they belong to.
+
 ## 0.2.113
 
 - HA-liday Show has moved on GitHub, to **github.com/gdeboos/ha-liday-show**. You don't need to change
