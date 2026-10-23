@@ -6,6 +6,8 @@ own effect by itself a few seconds after the frames stop. See docs/wled.md.
 """
 import asyncio
 import logging
+import socket
+import struct
 
 import aiohttp
 
@@ -75,3 +77,47 @@ async def fetch(ip: str, timeout: float = 4.0) -> dict:
     return {"name": str(info.get("name") or "WLED")[:64], "leds": leds,
             "version": str(info.get("ver") or ""),
             "parts": parts_from_segments(state.get("seg"), leds)}
+
+
+# Finding WLED lights: they announce themselves over mDNS as _wled._tcp, which is how the WLED app
+# finds them. One question to the mDNS group asks every WLED to answer, straight back to us (the "QU"
+# bit), and any answer that mentions _wled comes from a WLED, so its sender is the light's IP. Each one
+# is then asked for its name and LEDs, which also weeds out anything that isn't really a WLED.
+MDNS = ("224.0.0.251", 5353)
+SERVICE = b"_wled"
+
+
+def mdns_query() -> bytes:
+    name = b"".join(bytes([len(p)]) + p for p in (b"_wled", b"_tcp", b"local")) + b"\0"
+    return struct.pack(">6H", 0, 0, 1, 0, 0, 0) + name + struct.pack(">2H", 12, 0x8001)  # PTR, QU
+
+
+class _Answers(asyncio.DatagramProtocol):
+    def __init__(self):
+        self.ips: set[str] = set()
+
+    def datagram_received(self, data, addr):
+        # A response (QR bit set) that names the WLED service.
+        if len(data) > 12 and data[2] & 0x80 and SERVICE in data.lower():
+            self.ips.add(addr[0])
+
+
+async def scan(timeout: float = 2.5, to=MDNS) -> list[dict]:
+    """WLED lights on the network: [{ip, name, leds, parts, version}], in IP order."""
+    loop = asyncio.get_running_loop()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
+    sock.bind(("", 0))
+    sock.setblocking(False)
+    transport, answers = await loop.create_datagram_endpoint(_Answers, sock=sock)
+    try:
+        for _ in range(2):  # twice: busy Wi-Fi drops the odd multicast packet
+            transport.sendto(mdns_query(), to)
+            await asyncio.sleep(timeout / 2)
+    except OSError as e:
+        log.warning("WLED scan failed: %s", e)
+    finally:
+        transport.close()
+    found = await asyncio.gather(*(fetch(ip) for ip in answers.ips), return_exceptions=True)
+    lights = [{"ip": ip, **f} for ip, f in zip(answers.ips, found) if isinstance(f, dict)]
+    return sorted(lights, key=lambda d: socket.inet_aton(d["ip"]))

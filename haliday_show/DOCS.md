@@ -78,10 +78,11 @@ The copy only happens once, and only if **HA-liday Show** has no lights or shows
 
 ## 1. Devices
 
-On the **Devices** tab press **+ Add a light**. First pick what you're adding (a Govee light, a WLED
-strip, a pixel controller, a Home Assistant light or switch, a Twinkly, or a light that hasn't arrived
-yet), then fill in what that kind needs, and press **Add**. For a Govee light, press **Scan network** and
-**Add** each light it finds, or type its IP if it doesn't show up. When it's added, press **Add another**
+On the **Devices** tab press **+ Add a light**. First pick what you're adding under **A light you have**
+(a Govee light, a WLED strip, a pixel controller, a Home Assistant light or switch, or a Twinkly), or
+**Plan a light** for one that hasn't arrived yet. Then fill in what that kind needs and press **Add**. For a
+Govee light or a WLED strip, press **Scan network** and **Add** each light it finds, or type its IP if it
+doesn't show up. When it's added, press **Add another**
 for the next one, or **Done**. Each light has a row of settings:
 
 | Setting | What it does |
@@ -96,8 +97,8 @@ for the next one, or **Done**. Each light has a row of settings:
 
 ### WLED strips
 
-WLED strips work alongside your Govee lights. Press **+ Add a light**, pick **WLED strip**, type the
-strip's IP address (it's on the WLED app's **Info** page) and press **Add**. The add-on asks the
+WLED strips work alongside your Govee lights. Press **+ Add a light**, pick **WLED strip** and press
+**Scan network** to find it, or type its IP address (it's on the WLED app's **Info** page) and press **Add**. The add-on asks the
 strip for its name and number of LEDs, so there's nothing to work out: every LED is its own segment,
 up to 1000 a strip. **Find**, **Blend** and **Protocol** don't apply to WLED, so they're not shown.
 
@@ -113,7 +114,7 @@ left off. WLED's own brightness still applies, on top of **Brightness %** here. 
 strip lights up during a show, open WLED's **Config → Sync Interfaces** and untick **Use main segment
 only**.
 
-To plan a WLED strip before it arrives, pick **A light that hasn't arrived**, type **WLED** as the model and set
+To plan a WLED strip before it arrives, pick **Plan a light**, type **WLED** as the model and set
 **Segments** to its number of LEDs.
 
 ### Pixel controllers
@@ -130,7 +131,7 @@ light starts in the controller's LED order, so you can set it to match how you'v
 lights on one controller share LEDs, the row says *Shares LEDs with…*. You can also add the whole
 controller as one long light and split it into **parts** instead.
 
-To plan one before it arrives, pick **A light that hasn't arrived**, type **DDP** as the model and set
+To plan one before it arrives, pick **Plan a light**, type **DDP** as the model and set
 **Segments** to its number of LEDs.
 
 ### E1.31 controllers
@@ -147,7 +148,7 @@ again for the next string and it starts just after the last one. Lights on one c
 universe without blanking each other, and the row says *Shares LEDs with…* if two overlap.
 
 When a show or test stops, the add-on tells the controller, so it goes straight back to what it was
-doing. To plan one before it arrives, pick **A light that hasn't arrived** and type **E1.31** as the model.
+doing. To plan one before it arrives, pick **Plan a light** and type **E1.31** as the model.
 
 ### Home Assistant lights and switches
 
@@ -168,7 +169,7 @@ Effects that are too fast for one are marked on the timeline, as for other slow 
 show or test starts, the add-on remembers how each light and switch was, and puts it back when it ends.
 
 Running HA-liday Show without Home Assistant? These need `HA_URL` and `HA_TOKEN` set (see **Running
-without Home Assistant**). To plan one, pick **A light that hasn't arrived** and type **HA** as the model.
+without Home Assistant**). To plan one, pick **Plan a light** and type **HA** as the model.
 
 ### Twinkly lights (experimental)
 
@@ -216,7 +217,7 @@ Lights accept different forms of the realtime command. Change
 
 ### Lights not delivered yet?
 
-Press **+ Add a light** and pick **A light that hasn't arrived**. Pick the model (for example `H706A`),
+Press **+ Add a light** and pick **Plan a light**. Pick the model (for example `H706A`),
 give it a name and press **Add planned light**, then build shows with it straight away. The badge next to a model says what we've
 found on real lights: **✓ works** (tested, works on Realtime), **⚠ limited** (tested, only partly works;
 point at the badge to see what it can do) or **? untested** (not tried with this add-on yet: most

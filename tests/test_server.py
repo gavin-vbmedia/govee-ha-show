@@ -741,3 +741,14 @@ async def test_home_assistant_entities_are_listed(client, monkeypatch):
     assert found == [{"entity": "light.hall", "name": "Hall", "colour": False},
                      {"entity": "light.porch", "name": "Porch", "colour": True},
                      {"entity": "switch.snowman", "name": "snowman", "colour": False}]
+
+
+async def test_wled_scan_endpoint(client, monkeypatch):
+    from halidayshow import wled
+
+    async def scan():
+        return [{"ip": "192.168.1.70", "name": "Eaves", "leds": 1200, "version": "", "parts": []}]
+    monkeypatch.setattr(wled, "scan", scan)
+    body = await (await client.post("/api/wled/scan")).json()
+    assert body == {"found": [{"ip": "192.168.1.70", "name": "Eaves", "leds": 1200, "version": "", "parts": []}],
+                    "max": 1000}

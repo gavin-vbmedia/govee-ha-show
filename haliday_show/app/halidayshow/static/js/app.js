@@ -886,7 +886,7 @@ const ADD_KINDS = {
   govee: { title: "Govee light", ip: true,
     help: "Switch on <b>LAN Control</b> for the light in the Govee Home app first. Then scan for it, or type its IP." },
   wled: { title: "WLED strip", ip: true,
-    help: "Type the strip's IP (it's on the WLED app's <b>Info</b> page). Its name and LEDs are filled in for you, and any segments you've set up in WLED become its <b>parts</b>." },
+    help: "Scan for it, or type its IP (it's on the WLED app's <b>Info</b> page). Its name and LEDs are filled in for you, and any segments you've set up in WLED become its <b>parts</b>." },
   ddp: { title: "Pixel controller (DDP)", ip: true, leds: true,
     help: "Falcon Player, ESPixelStick, ESPHome, Tasmota or an ESP32: turn on DDP in the controller's settings if it has a switch for it. Add each string separately; the next one on the same controller starts just after the last." },
   e131: { title: "Pixel controller (E1.31)", ip: true, leds: true,
@@ -895,7 +895,7 @@ const ADD_KINDS = {
     help: "Any light, or a switch such as a smart plug for an inflatable. Lights take the show's colour a few times a second; switches turn on when the show is bright, at most once a second. They go back as they were afterwards." },
   twinkly: { title: "Twinkly (experimental)", ip: true,
     help: "Type the light's IP (it's in the Twinkly app under <b>Device settings</b>). Twinkly support hasn't been tried on a real light yet, so press <b>Test</b> once it's added." },
-  plan: { title: "A light that hasn't arrived", plan: true,
+  plan: { title: "Plan a light", plan: true,
     help: "Build shows with it now. Pick the <b>model</b> if you know it: ✓ means it's known to work, ? that it's untested, so Test one before buying more. Segment counts aren't published, so 15 is a guess. When it arrives, scan and choose <b>Link to</b>, or type its IP into its row." },
 };
 const addFlow = { kind: null };
@@ -914,7 +914,7 @@ function addStep(step) {
   $("add-error").hidden = true;
   if (step !== "details") return;
   $("add-help").innerHTML = k.help;
-  $("add-scan").hidden = addFlow.kind !== "govee";
+  $("add-scan").hidden = !["govee", "wled"].includes(addFlow.kind);
   $("add-ip-field").hidden = !k.ip;
   $("add-leds-field").hidden = !k.leds;
   $("add-entity-field").hidden = !k.entity;
@@ -1036,6 +1036,33 @@ async function scan() {
           row.replaceChildren(`${f.sku || "Govee"} at ${f.ip} (${p.name})`);
         }), sel);
       }
+      box.append(row);
+    }
+  } catch (e) { box.textContent = ""; status(`Scan failed: ${e.message}`, true); }
+}
+
+// WLED lights announce themselves on the network (server.py wled_scan); each found one can be added.
+async function scanWled() {
+  const box = $("scan-results");
+  box.textContent = "Scanning…";
+  try {
+    const { found } = await api("api/wled/scan", { method: "POST" });
+    box.replaceChildren();
+    if (!found.length) {
+      box.innerHTML = `<p class="hint">No WLED lights answered. Check they're switched on and on the same network as
+        HA-liday Show.</p>`;
+      return;
+    }
+    for (const f of found) {
+      const row = document.createElement("div");
+      row.className = "scan-row";
+      const label = `${f.name} at ${f.ip}, ${f.leds} LEDs`;
+      row.append(label);
+      const known = app.deviceList.find((d) => d.ip === f.ip);
+      if (known) { row.append(` (${known.name})`); box.append(row); continue; }
+      row.append(button("Add", async () => {
+        try { await addWled(f.ip); row.replaceChildren(`${label} (added)`); } catch (e) { status(e.message, true); }
+      }));
       box.append(row);
     }
   } catch (e) { box.textContent = ""; status(`Scan failed: ${e.message}`, true); }
@@ -3816,7 +3843,7 @@ function wire() {
   $("btn-zoom-in").addEventListener("click", () => timeline.zoom(1.5));
   $("btn-zoom-out").addEventListener("click", () => timeline.zoom(1 / 1.5));
 
-  $("btn-scan").addEventListener("click", scan);
+  $("btn-scan").addEventListener("click", () => (addFlow.kind === "wled" ? scanWled() : scan()));
   $("btn-add-light").addEventListener("click", openAddLight);
   for (const b of $("add-dialog").querySelectorAll("[data-kind]")) {
     b.addEventListener("click", () => { addFlow.kind = b.dataset.kind; addStep("details"); });

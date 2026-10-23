@@ -390,6 +390,11 @@ async def wled_info(request):
     return web.json_response({**found, "max": MAX_SEGMENTS})
 
 
+async def wled_scan(request):
+    """WLED lights that answer on the network, with their names and LEDs."""
+    return web.json_response({"found": await wled.scan(), "max": MAX_SEGMENTS})
+
+
 async def twinkly_info(request):
     """Ask a Twinkly light (experimental) for its name and LED count, to fill in a new light."""
     body = await request.json()
@@ -1121,6 +1126,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, pass
     r.add_put("/api/devices", put_devices)
     r.add_post("/api/devices/scan", scan_devices)
     r.add_post("/api/wled/info", wled_info)
+    r.add_post("/api/wled/scan", wled_scan)
     r.add_post("/api/twinkly/info", twinkly_info)
     r.add_get("/api/ha/entities", ha_entities)
     r.add_post("/api/devices/test", test_device)
