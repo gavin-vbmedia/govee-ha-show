@@ -24,6 +24,8 @@ npm-debug.log*
 
 # Local test assets (show files and audio stay out of the repo)
 *.mp3
+# The demo's sample song ships with the add-on (tools/make_sample_song.py makes it).
+!haliday_show/app/halidayshow/static/sample-song.mp3
 *.wav
 *.ogg
 *.flac

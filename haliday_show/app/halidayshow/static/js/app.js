@@ -14,6 +14,7 @@ import { asShown, isSlow } from "./lightspeed.js";
 import { LAB_TEMPLATES, flagSweep, modeSweep, startSweep, sweepWindow, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
 import { placeOnSample } from "./samplehouse.js";
+import { DEMO_LIGHTS, DEMO_SHOW, DEMO_SONG, DEMO_SONG_NAME, canStartDemo, hasDemo, isDemoId, withoutDemo } from "./demo.js";
 import { Layout } from "./layout.js";
 import { STATUS, modelSummary, newLight, statusOf } from "./models.js";
 import { MusicEditor } from "./music.js";
@@ -307,8 +308,11 @@ function renderDevices() {
   const rows = $("device-rows");
   rows.replaceChildren();
   if (!app.deviceList.length) {
-    rows.innerHTML = `<tr><td colspan="7" class="hint">No lights yet. Press <b>+ Add a light</b> to add one.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="7" class="hint">No lights yet. Press <b>+ Add a light</b> to add one, or
+      <button class="ghost small" data-demo>Try the demo</button> to see it working with lights on a sample house.</td></tr>`;
+    rows.querySelector("[data-demo]").addEventListener("click", tryDemo);
   }
+  renderDemo();
   for (const d of app.deviceList) {
     d.brightness ??= 100; // saved before per-light brightness existed
     const tr = document.createElement("tr");
@@ -2985,6 +2989,70 @@ function duplicateSelected() {
   app.changed();
 }
 
+// demo ------------------------------------------------------------------------
+function renderDemo() {
+  const on = hasDemo(app.deviceList), can = canStartDemo(app.deviceList);
+  $("btn-demo").hidden = on;
+  $("btn-demo").disabled = !can;
+  $("btn-demo-remove").hidden = !on;
+  $("demo-hint").innerHTML = on
+    ? `The demo is set up: ${DEMO_LIGHTS.length} planned lights on the sample house, a sample song and <b>${DEMO_SHOW}</b>. `
+      + "Remove it when you're ready to add your own lights. The sample song stays in your songs."
+    : can
+      ? `Adds ${DEMO_LIGHTS.length} planned lights on the sample house, a sample song and a show ready to play, so you `
+        + "can try everything before your lights are up. Nothing is sent to real lights."
+      : "The demo is for a fresh start, before you add lights of your own.";
+}
+
+async function tryDemo() {
+  if (!canStartDemo(app.deviceList)) { status("The demo is only for a fresh start, with no lights yet", true); return; }
+  if (!(await confirmDiscard())) return;
+  showView("editor");
+  try {
+    status("Setting up the demo…");
+    app.deviceList = DEMO_LIGHTS.map((d) => ({ ...d }));
+    await saveDevices();
+    if (house.sample) {
+      const { paths, styles } = placeOnSample(app.deviceList, house.paths);
+      Object.assign(house.paths, paths);
+      Object.assign(house.styles, styles);
+      await api("api/house", { method: "PUT", json: { paths: house.paths, styles: house.styles, pins: house.pins, dim: house.dim } });
+    }
+    status("Adding the sample song…");
+    const song = await (await fetch(DEMO_SONG)).blob();
+    const form = new FormData();
+    form.append("file", new File([song], DEMO_SONG_NAME, { type: "audio/mpeg" }));
+    const ref = await api("api/audio", { method: "POST", body: form });
+    await openShow(null);
+    app.show.name = DEMO_SHOW;
+    $("show-name").value = DEMO_SHOW;
+    app.show.audio = ref;
+    await loadAudio(ref);
+    if (!songBuffer || !(await analyseSong())) throw new Error("the sample song didn't load");
+    const christmas = allPalettes().find((p) => p.name === "Christmas") || currentPalette();
+    await generate({ colors: christmas.colors, style: "balanced", house: true });
+    await save();
+    status("The demo is ready: press ▶ Play");
+  } catch (e) {
+    status(`Couldn't set up the demo: ${e.message}`, true);
+  }
+}
+
+async function removeDemo() {
+  if (!confirm("Remove the demo's lights and its show? Your own shows and songs are kept.")) return;
+  const shows = await api("api/shows");
+  for (const s of shows.filter((x) => x.name === DEMO_SHOW)) {
+    await api(`api/shows/${encodeURIComponent(s.id)}`, { method: "DELETE" });
+  }
+  if (app.show.name === DEMO_SHOW) { app.dirty = false; await openShow(null); }
+  Object.assign(house, withoutDemo(house));
+  await api("api/house", { method: "PUT", json: { paths: house.paths, styles: house.styles, pins: house.pins, dim: house.dim } });
+  app.deviceList = app.deviceList.filter((d) => !isDemoId(d.id));
+  await saveDevices();
+  await refreshShows();
+  status("Removed the demo");
+}
+
 // shows -----------------------------------------------------------------------
 async function refreshShows() {
   const shows = await api("api/shows");
@@ -4052,6 +4120,8 @@ function wire() {
   $("btn-scan").addEventListener("click", () => (addFlow.kind === "wled" ? scanWled() : scan()));
   $("btn-add-light").addEventListener("click", openAddLight);
   $("btn-add-speaker").addEventListener("click", openAddSpeaker);
+  $("btn-demo").addEventListener("click", tryDemo);
+  $("btn-demo-remove").addEventListener("click", removeDemo);
   $("speaker-filter").addEventListener("input", renderSpeakerCandidates);
   $("speaker-dialog").addEventListener("click", (e) => {
     if (e.target.closest('[data-speaker="close"]')) $("speaker-dialog").close();

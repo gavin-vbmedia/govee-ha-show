@@ -136,6 +136,8 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
   bulb by bulb
 - No photo yet? A drawn sample house stands in, and one button puts your lights on its roof, porch,
   windows and tree
+- **Try the demo**: seven planned lights on the sample house, a sample song and a show ready to play,
+  in one press, with no lights needed
 - Draw icicle lights as hanging drops and spotlights as beams aimed at the wall
 - Mark stretches that run out of view (round a corner, or an extension lead) so the bulb count
   still lines up; those bulbs still play in the real show
@@ -304,6 +306,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
     js/aiclips.js                       Describe it: context for the AI, checking its clips and presets
     models.json                         Our list of Govee lights: tested status and default settings
 tools/build_models.py                   Adds new lights from Govee's LAN Control list to models.json
+tools/make_sample_song.py               Renders the demo's music-box Jingle Bells (static/sample-song.mp3)
 tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traffic from an Android log
 docs/README.md                          Index of the notes below, one per kind of light
 docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions

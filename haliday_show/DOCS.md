@@ -60,9 +60,25 @@ page you last had open. Below, "the House tab" and so on mean that page.
    Space to play.
 5. Run it from an automation with the MQTT **Play** button or the `hassio.addon_stdin` action.
 
+> **Just want to see it working?** On a fresh install, press **Try the demo** under **Setup → Devices**
+> (or **Setup → Settings → Demo**). See [The demo](#the-demo).
+
 > **Tip:** lights not here yet? Add them as [planned lights](#lights-not-delivered-yet) and start
 > designing now. Once a song is picked, **✨ Generate** in the Show panel makes a whole first draft
 > to build on.
+
+## The demo
+
+**Try the demo** sets everything up in one press, so you can try the add-on before your lights are up,
+or test it without any lights at all. It adds seven planned lights (Roof, Icicles, Porch, Windows,
+Tree, Garage and Path) already placed on the [sample house](#the-sample-house), adds a sample song (a
+music-box *Jingle Bells* made for the add-on, free to use) to your songs, and generates **Demo show**
+in Christmas colours. Press **▶ Play** to watch it on the House panel. Nothing is sent to real lights.
+
+It's only offered while you have no lights, so it never mixes with your own. When you're done, press
+**Remove the demo** under **Setup → Settings → Demo**: the demo's lights, their places on the house and
+**Demo show** go, and your own shows are kept. The sample song stays in your songs, to use in your own
+shows if you like.
 
 ## Moving from Govee Light Show
 
