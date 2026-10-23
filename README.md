@@ -8,6 +8,8 @@ A simple alternative to xLights, made for Govee: design a show in your browser, 
 photo of your house, then run it from an automation. Install it as a Home Assistant add-on, or run it on
 its own with Docker or Python.
 
+<sub>A hobby project, written almost entirely by AI. See [How this is made](#-how-this-is-made).</sub>
+
 [![CI](https://github.com/gavin-vbmedia/ha-liday-show/actions/workflows/ci.yml/badge.svg)](https://github.com/gavin-vbmedia/ha-liday-show/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgavin-vbmedia%2Fha-liday-show%2Fmain%2Fhaliday_show%2Fconfig.yaml&query=%24.version&label=version&color=blue)](haliday_show/CHANGELOG.md)
 ![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-informational)
@@ -291,6 +293,14 @@ tests/                                  pytest and node tests (tests/js)
 ```
 
 </details>
+
+## 🤖 How this is made
+
+HA-liday Show is a hobby project, and almost all of its code is written by AI (Anthropic's Claude), with
+a person deciding what to build and trying it on real lights. Every change runs through automated tests
+and a test build before it's released. Models with a **✓ works** or **⚠ limited** badge in the add-on's
+model list have been tried on real lights; ones marked **? untested** are best effort. If something doesn't work on yours, please
+[open an issue](https://github.com/gavin-vbmedia/ha-liday-show/issues).
 
 ## 📄 Licence
 
