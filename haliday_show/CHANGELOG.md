@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.103
+
+- The documentation now covers every kind of light, not just Govee. **Requirements** lists them all, and
+  the **Devices** section has the Govee-only steps (setting the segment count, picking a **Protocol**)
+  under their own **Govee lights** heading, next to the sections for WLED, pixel controllers, Home
+  Assistant lights and Twinkly.
+- **Troubleshooting** has new rows for WLED strips, pixel controllers, Home Assistant lights and Twinkly.
+- The **Packet lab** only offers Govee lights, since it speaks Govee's language.
+- The add-on's description in the Add-on Store now lists the kinds of light it drives.
+
 ## 0.2.102
 
 - Adding a speaker now happens in its own window, like adding a light: press **+ Add a speaker** under
