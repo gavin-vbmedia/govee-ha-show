@@ -5,7 +5,7 @@
 //   no       the light can't show it: it comes out as one steady colour, or not at all
 // The editor won't pick a "no" effect unless you allow it, and marks clips that are "limited" or "no".
 
-import { EFFECTS, renderTrack } from "./effects.js";
+import { EFFECTS, applyHouse, renderTrack } from "./effects.js";
 import { clipPace, switchOn } from "./lightspeed.js";
 
 export const REALTIME_PROTOCOLS = ["standard", "razer", "v2"];
@@ -47,18 +47,12 @@ function average(frame) {
 const result = (level, ...reasons) => ({ level, reasons });
 
 // clip on the light `dev` (as app.devices holds it: segments, protocol, ip, sku). For the House lane
-// pass house: {lights: [{name, placed}]}, every light and whether it's traced on the house photo.
+// pass house: {lights: [{name, placed, device, positions}]}, every light, whether it's traced on the
+// house photo, and for a traced one its settings and each segment's place on the photo.
 export function clipFit(clip, dev, { house = null } = {}) {
   const fx = EFFECTS[clip.effect];
   if (!fx) return result("ok");
-  if (house) {
-    const left = house.lights.filter((l) => !l.placed).map((l) => l.name);
-    if (!house.lights.length || !left.length) return result("ok");
-    if (left.length === house.lights.length) {
-      return result("no", "None of your lights are on the house photo yet, so this shows nowhere. Trace them under Setup → House.");
-    }
-    return result("limited", `Not on the house photo, so this leaves out ${left.join(", ")}.`);
-  }
+  if (house) return houseFit(clip, house.lights);
   if (!dev) return result("ok");
   if (clip.effect === "scene") {
     if (!dev.ip && !dev.entity) return result("no", "This light isn't linked yet, so it can't play a Govee scene.");
@@ -94,6 +88,33 @@ export function clipFit(clip, dev, { house = null } = {}) {
       + "times a second, so this will look steppy. Slow it down, or use a fade, pulse or colour change.");
   }
   return result("ok");
+}
+
+// A House lane clip: shown only on traced lights, and like any clip, too fast for a slow one if
+// what it paints on that light changes more often than the light can.
+function houseFit(clip, lights) {
+  const left = lights.filter((l) => !l.placed).map((l) => l.name);
+  if (lights.length && left.length === lights.length) {
+    return result("no", "None of your lights are on the house photo yet, so this shows nowhere. Trace them under Setup → House.");
+  }
+  const reasons = [];
+  if (left.length) reasons.push(`Not on the house photo, so this leaves out ${left.join(", ")}.`);
+  const slow = [];
+  for (const l of lights) {
+    if (!l.placed || !l.positions?.length || !l.device) continue;
+    const n = l.positions.length;
+    const pace = clipPace(clip, { ...l.device, segments: n },
+      { render: (time) => applyHouse([clip], time, l.positions, new Uint8Array(n * 3)) });
+    if (pace?.tooFast) slow.push({ name: l.name, pace });
+  }
+  if (slow.length) {
+    const names = slow.map((s) => `${s.name} (${s.pace.label})`);
+    const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+    reasons.push(`Too fast for ${list}: ${slow.length === 1 ? "it changes" : "they change"} about `
+      + `${Math.max(1, Math.round(Math.min(...slow.map((s) => s.pace.can))))} times a second, so this will look steppy there. `
+      + "Slow it down, or use a fade, pulse or colour change.");
+  }
+  return reasons.length ? result("limited", ...reasons) : result("ok");
 }
 
 // Of several results, the one that matters most.
