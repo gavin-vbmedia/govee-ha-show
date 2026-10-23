@@ -323,6 +323,17 @@ The **House** tab puts your lights on a photo of your house. The editor's **Hous
 the show on it, so you can design without standing outside, and the **House** lane uses it for
 effects that sweep across the whole house.
 
+### The sample house
+
+Until you upload a photo, the **House** tab and panel show a drawn **sample house**, so you can try
+the House view and the **House** lane straight away. Press **Put my lights on it** and each light that
+isn't traced yet goes on the roofline, the eaves, the porch, the windows, the tree, the garage or the
+path. A light whose name says where it is (*Porch*, *Icicles*, *Tree*) goes there; the rest fill the
+places in order. There's room for eight lights. You can retrace any of them by hand.
+
+When you upload a photo of your own, you're asked whether to clear the lights you put on the sample
+house so you can trace them on your photo. **Remove photo** goes back to the sample house.
+
 ### Tracing a light
 
 1. Take a photo from where people will watch, ideally at dusk, and press **Upload photo**. It's

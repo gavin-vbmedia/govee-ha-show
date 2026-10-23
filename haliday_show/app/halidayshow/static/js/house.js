@@ -2,6 +2,8 @@
 // path, from the end with the plug to the far end, and drawn as a row of bulbs in its segments'
 // colours. The House tab sets it up; the House panel in the editor plays the show on it.
 
+import { SAMPLE_HOUSE } from "./samplehouse.js";
+
 const BULBS_PER_SEGMENT = 4; // the guess when a light's bulb count isn't set on the Devices tab
 const MAX_BULBS = 2000;
 const HIT_PX = 10;
@@ -243,6 +245,7 @@ export class House {
     this.pins = {}; // id -> {segment: how far along its path, 0 to 1} (see pinBulbs)
     this.dim = 0.5;
     this.photo = null;
+    this.sample = false; // true while the sample house stands in for a photo
     this.devices = [];
     this.active = null; // id of the light being drawn on the House tab
     this.selected = null; // id of the light picked in the House tab's list
@@ -264,7 +267,7 @@ export class House {
       this.styles = h.styles || {};
       this.pins = h.pins || {};
       this.dim = h.dim ?? 0.5;
-      if (h.photo) await this.loadPhoto();
+      if (h.photo) await this.loadPhoto(); else await this.loadSample();
     } catch (e) {
       this.status(`Couldn't load the house view: ${e.message}`, true);
     }
@@ -273,7 +276,14 @@ export class House {
   async loadPhoto() {
     const img = new Image();
     img.src = `api/house/photo?v=${Date.now()}`;
-    try { await img.decode(); this.photo = img; } catch { this.photo = null; }
+    try { await img.decode(); this.photo = img; this.sample = false; } catch { this.photo = null; }
+  }
+
+  // With no photo of their own, everyone gets the sample house, so the House view works from the start.
+  async loadSample() {
+    const img = new Image();
+    img.src = SAMPLE_HOUSE;
+    try { await img.decode(); this.photo = img; this.sample = true; } catch { this.photo = null; this.sample = false; }
   }
 
   // Phone photos are large, so they are scaled down to 2000 pixels across before upload.
@@ -296,7 +306,7 @@ export class House {
 
   async removePhoto() {
     await this.api("api/house/photo", { method: "DELETE" });
-    this.photo = null;
+    await this.loadSample();
   }
 
   save() {
@@ -454,7 +464,11 @@ export class House {
       hint.textContent = "Add a photo of your house under Setup → House to see the show on it.";
       return;
     }
-    if (!placed) hint.textContent = "Trace your lights on the photo under Setup → House.";
+    if (!placed) {
+      hint.textContent = this.sample
+        ? "Put your lights on the sample house under Setup → House, or add a photo of your own there."
+        : "Trace your lights on the photo under Setup → House.";
+    }
     this.paint(canvas, Math.max(window.innerHeight * 0.45, 200), (dev) => this.frameFor(dev));
   }
 

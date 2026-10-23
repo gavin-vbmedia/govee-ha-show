@@ -134,6 +134,8 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
 
 - See the show on a photo of your house: trace where each light runs and the editor plays it there,
   bulb by bulb
+- No photo yet? A drawn sample house stands in, and one button puts your lights on its roof, porch,
+  windows and tree
 - Draw icicle lights as hanging drops and spotlights as beams aimed at the wall
 - Mark stretches that run out of view (round a corner, or an extension lead) so the bulb count
   still lines up; those bulbs still play in the real show

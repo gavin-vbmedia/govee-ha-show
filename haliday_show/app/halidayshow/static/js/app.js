@@ -13,6 +13,7 @@ import { partsFrame } from "./devicetest.js";
 import { asShown, isSlow } from "./lightspeed.js";
 import { LAB_TEMPLATES, flagSweep, modeSweep, startSweep, sweepWindow, windowSweep } from "./labtemplates.js";
 import { House, partRgb } from "./house.js";
+import { placeOnSample } from "./samplehouse.js";
 import { Layout } from "./layout.js";
 import { STATUS, modelSummary, newLight, statusOf } from "./models.js";
 import { MusicEditor } from "./music.js";
@@ -1589,19 +1590,21 @@ function houseLights() {
 }
 
 function renderHouseLights() {
-  $("house-remove").hidden = !house.photo;
+  $("house-remove").hidden = !house.photo || house.sample;
   $("house-dim").value = house.dim;
   const box = $("house-lights");
   if (!house.photo) {
     box.innerHTML = `<p class="hint">Upload a photo of your house to start.</p>`;
     return;
   }
+  const intro = house.sample ? [sampleHouseCard()] : [];
   if (!app.deviceList.length) {
-    box.innerHTML = `<p class="hint">Add your lights under Setup → Devices first.</p>`;
+    box.replaceChildren(...intro, Object.assign(document.createElement("p"), { className: "hint",
+      innerHTML: "Add your lights under <b>Setup → Devices</b> first." }));
     return;
   }
   const current = house.active || house.selected;
-  box.replaceChildren(...houseLights().flatMap((d) => {
+  box.replaceChildren(...intro, ...houseLights().flatMap((d) => {
     const card = document.createElement("div");
     const open = current === d.id;
     card.className = `house-card${open ? " selected" : ""}${d.parent ? " house-part" : ""}`;
@@ -1705,12 +1708,46 @@ function renderHouseLights() {
   box.querySelector(".house-card.selected")?.scrollIntoView({ block: "nearest" });
 }
 
+// Shown above the lights while the sample house stands in for a photo.
+function sampleHouseCard() {
+  const card = document.createElement("div");
+  card.className = "house-sample";
+  card.append(Object.assign(document.createElement("p"), { innerHTML: "This is a <b>sample house</b>, so you "
+    + "can try the House view before you take a photo of yours. <b>Upload photo</b> above to use your own." }));
+  const todo = houseLights().filter((d) => !house.paths[d.id]?.length);
+  if (todo.length) {
+    const place = button("Put my lights on it", () => placeLightsOnSample(todo), "primary");
+    place.title = "Put each light that isn't traced yet on the roof, porch, windows, tree and so on";
+    card.append(place);
+  }
+  return card;
+}
+
+function placeLightsOnSample(lights) {
+  const { paths, styles } = placeOnSample(lights, house.paths);
+  const n = Object.keys(paths).length;
+  Object.assign(house.paths, paths);
+  for (const [id, st] of Object.entries(styles)) if (!house.styles[id]) house.styles[id] = st;
+  house.save();
+  renderHouseLights();
+  status(n === lights.length ? `Put ${n} light${n === 1 ? "" : "s"} on the sample house`
+    : `Put ${n} of your lights on the sample house; there's no room left for the rest`, n < lights.length);
+}
+
 function wireHouse() {
   house.wireSetup($("house-setup"), renderHouseLights);
   $("house-upload").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     e.target.value = "";
-    if (file) await house.upload(file);
+    if (!file) return;
+    // Lines drawn for the sample house won't match a real photo.
+    const wasSample = house.sample && Object.keys(house.paths).length;
+    await house.upload(file);
+    if (wasSample && !house.sample && confirm("Clear the lights you put on the sample house, so you can trace them on your photo?")) {
+      house.paths = {};
+      house.pins = {};
+      house.save();
+    }
     renderHouseLights();
   });
   $("house-remove").addEventListener("click", async () => {

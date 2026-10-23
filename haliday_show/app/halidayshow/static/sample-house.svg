@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070b1d"/><stop offset="0.7" stop-color="#16204a"/><stop offset="1" stop-color="#253166"/>
+    </linearGradient>
+    <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b4670"/><stop offset="1" stop-color="#232b4c"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3f58"/><stop offset="1" stop-color="#2d3147"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2030"/><stop offset="1" stop-color="#262a3d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0" stop-color="#ffcf7a"/><stop offset="1" stop-color="#c98a3a"/>
+    </radialGradient>
+    <radialGradient id="moonglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6d8" stop-opacity="0.35"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <!-- stars -->
+  <g fill="#dfe6ff">
+    <circle cx="90" cy="70" r="2"/><circle cx="230" cy="140" r="1.5"/><circle cx="350" cy="60" r="2.2"/>
+    <circle cx="520" cy="110" r="1.4"/><circle cx="640" cy="40" r="1.8"/><circle cx="980" cy="90" r="1.6"/>
+    <circle cx="1080" cy="160" r="2"/><circle cx="1180" cy="50" r="1.4"/><circle cx="1500" cy="200" r="1.8"/>
+    <circle cx="1440" cy="80" r="1.4"/><circle cx="160" cy="260" r="1.3"/><circle cx="1560" cy="320" r="1.3"/>
+    <circle cx="460" cy="230" r="1.2"/><circle cx="1260" cy="240" r="1.5"/><circle cx="60" cy="380" r="1.2"/>
+  </g>
+  <circle cx="1330" cy="140" r="120" fill="url(#moonglow)"/>
+  <circle cx="1330" cy="140" r="44" fill="#f3ecd2"/>
+  <circle cx="1348" cy="128" r="40" fill="#0a0f27"/>
+  <!-- distant hills -->
+  <path d="M0 720 C200 660 380 690 560 700 S900 660 1100 690 S1450 650 1600 690 V1000 H0z" fill="#1a2247"/>
+  <!-- ground -->
+  <path d="M0 800 C300 780 600 790 800 792 S1300 778 1600 795 V1000 H0z" fill="url(#snow)"/>
+  <!-- path to the door -->
+  <path d="M760 820 L840 820 L980 1000 L620 1000z" fill="#4a5582"/>
+  <!-- garage -->
+  <rect x="1180" y="580" width="270" height="240" fill="url(#wall)"/>
+  <path d="M1160 586 L1315 520 L1470 586z" fill="url(#roof)"/>
+  <rect x="1215" y="640" width="200" height="180" rx="4" fill="#232638"/>
+  <g stroke="#2e3248" stroke-width="3"><path d="M1215 685h200M1215 730h200M1215 775h200"/></g>
+  <!-- house body -->
+  <rect x="420" y="380" width="760" height="440" fill="url(#wall)"/>
+  <!-- roof -->
+  <path d="M380 388 L800 196 L1220 388z" fill="url(#roof)"/>
+  <rect x="980" y="230" width="56" height="110" fill="#30344a"/><rect x="972" y="222" width="72" height="16" fill="#3b3f56"/>
+  <!-- upstairs windows -->
+  <g>
+    <rect x="490" y="440" width="150" height="120" rx="3" fill="url(#glow)" opacity="0.9"/>
+    <rect x="725" y="440" width="150" height="120" rx="3" fill="url(#glow)" opacity="0.75"/>
+    <rect x="960" y="440" width="150" height="120" rx="3" fill="url(#glow)" opacity="0.9"/>
+    <g stroke="#2d3147" stroke-width="6"><path d="M565 440v120M490 500h150M800 440v120M725 500h150M1035 440v120M960 500h150"/></g>
+  </g>
+  <!-- downstairs windows -->
+  <rect x="490" y="640" width="170" height="130" rx="3" fill="url(#glow)" opacity="0.85"/>
+  <rect x="940" y="640" width="170" height="130" rx="3" fill="url(#glow)" opacity="0.85"/>
+  <g stroke="#2d3147" stroke-width="6"><path d="M575 640v130M490 705h170M1025 640v130M940 705h170"/></g>
+  <!-- porch: beam on two columns, door between -->
+  <rect x="690" y="596" width="220" height="16" fill="#4a4f6a"/>
+  <path d="M680 600 L800 560 L920 600z" fill="#24283a"/>
+  <rect x="700" y="612" width="14" height="208" fill="#d8dcea"/><rect x="886" y="612" width="14" height="208" fill="#d8dcea"/>
+  <rect x="755" y="640" width="90" height="180" rx="3" fill="#6b2230"/>
+  <circle cx="830" cy="735" r="5" fill="#e8c46a"/>
+  <rect x="770" y="655" width="60" height="30" rx="2" fill="url(#glow)" opacity="0.7"/>
+  <!-- wreath -->
+  <circle cx="800" cy="710" r="18" fill="none" stroke="#2f5c3a" stroke-width="9"/>
+  <!-- tree -->
+  <rect x="236" y="760" width="22" height="60" fill="#3a2b22"/>
+  <path d="M247 430 L330 600 L298 600 L360 700 L318 700 L380 790 L114 790 L176 700 L134 700 L196 600 L164 600z" fill="#173826"/>
+  <!-- bushes -->
+  <ellipse cx="540" cy="815" rx="80" ry="26" fill="#173826"/><ellipse cx="1060" cy="815" rx="80" ry="26" fill="#173826"/>
+  <!-- snow on roof edges -->
+  <path d="M380 388 L800 196 L1220 388 L1210 392 L800 206 L390 392z" fill="#c9d3f0" opacity="0.6"/>
+  <path d="M1160 586 L1315 520 L1470 586 L1462 590 L1315 528 L1168 590z" fill="#c9d3f0" opacity="0.6"/>
+</svg>
