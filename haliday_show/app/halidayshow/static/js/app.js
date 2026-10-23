@@ -3153,31 +3153,69 @@ function renderSpeakers() {
     return cells(document.createElement("tr"), s.name, s.entity_id, s.state, delay, actions);
   }));
   if (!app.speakers.length) {
-    rows.innerHTML = `<tr><td colspan="5" class="hint">None yet. Test a media player below to add it.</td></tr>`;
+    rows.innerHTML = `<tr><td colspan="5" class="hint">None yet. Press <b>+ Add a speaker</b> to add one.</td></tr>`;
   }
-  const others = (app.speakerCandidates || []).filter((c) => !c.added);
-  const cand = $("candidate-rows");
-  cand.replaceChildren(...others.map((c) => {
+  renderSpeakerCandidates();
+}
+
+// The Add a speaker window. Speakers added while it's open stay in its list with their tick, so you can see it worked.
+const addedHere = new Set();
+
+function renderSpeakerCandidates() {
+  const q = $("speaker-filter").value.trim().toLowerCase();
+  const all = (app.speakerCandidates || []).filter((c) => !c.added || addedHere.has(c.entity_id));
+  $("speaker-filter").hidden = all.length < 8;
+  const shown = all.filter((c) => !q || `${c.name} ${c.entity_id}`.toLowerCase().includes(q));
+  const list = $("candidate-rows");
+  list.replaceChildren(...shown.map((c) => {
+    const row = document.createElement("div");
+    row.className = "speaker-row";
+    const who = document.createElement("span");
+    who.className = "speaker-who";
+    who.append(Object.assign(document.createElement("b"), { textContent: c.name }),
+      Object.assign(document.createElement("span"), { textContent: c.state ? `${c.entity_id} · ${c.state}` : c.entity_id }));
     const actions = document.createElement("span");
-    actions.className = "group";
-    if (c.can_play) actions.append(testButton(c.entity_id, "Test and add", "primary"), result(c.entity_id));
-    else actions.append(Object.assign(document.createElement("span"), { className: "hint", textContent: "Can't be sent a song to play" }));
-    return cells(document.createElement("tr"), c.name, c.entity_id, c.state, actions);
+    actions.className = "speaker-actions";
+    const t = speakerTests[c.entity_id];
+    if (c.added) {
+      actions.append(Object.assign(document.createElement("span"), { className: "hint ok", textContent: t?.text || "✓ Added" }));
+    } else if (c.can_play) {
+      const b = button(t?.busy ? "Testing…" : t && !t.ok ? "Try again" : "Test and add", () => testSpeaker(c.entity_id, true),
+        t && !t.ok ? "" : "primary");
+      b.disabled = !!t?.busy;
+      b.title = "Plays a short chime on it";
+      actions.append(b);
+      if (t) actions.append(Object.assign(document.createElement("span"), { className: `hint${t.busy ? "" : " error"}`, textContent: t.text }));
+    } else {
+      actions.append(Object.assign(document.createElement("span"), { className: "hint", textContent: "Can't be sent a song to play" }));
+    }
+    row.append(who, actions);
+    return row;
   }));
-  if (!others.length) {
-    cand.innerHTML = `<tr><td colspan="4" class="hint">${app.haAvailable === false ? "Home Assistant isn't reachable."
-      : "No other media players in Home Assistant."}</td></tr>`;
+  if (!shown.length) {
+    list.innerHTML = `<p class="hint">${app.haAvailable === false ? "Home Assistant isn't reachable, so speakers can't be listed right now."
+      : q ? "No speakers match that." : "No other media players in Home Assistant."}</p>`;
   }
 }
 
-async function testSpeaker(entity) {
+function openAddSpeaker() {
+  addedHere.clear();
+  $("speaker-filter").value = "";
+  for (const c of app.speakerCandidates || []) if (!c.added) delete speakerTests[c.entity_id];
+  renderSpeakerCandidates();
+  $("speaker-dialog").showModal();
+  loadSpeakers();
+}
+
+async function testSpeaker(entity, adding = false) {
   speakerTests[entity] = { busy: true, text: "Playing a chime…" };
   renderSpeakers();
   try {
     const r = await api("api/speakers/test", { method: "POST", json: { entity_id: entity } });
     speakerTests[entity] = r.ok
-      ? { ok: true, text: `✓ Works. It took ${r.start_s} s to start.` }
+      ? { ok: true, text: `✓ ${adding ? "Added" : "Works"}. It took ${r.start_s} s to start.` }
       : { ok: false, text: `✗ ${r.error}` };
+    if (r.ok && adding) addedHere.add(entity);
   } catch (e) {
     speakerTests[entity] = { ok: false, text: `✗ ${e.message}` };
   }
@@ -3845,6 +3883,11 @@ function wire() {
 
   $("btn-scan").addEventListener("click", () => (addFlow.kind === "wled" ? scanWled() : scan()));
   $("btn-add-light").addEventListener("click", openAddLight);
+  $("btn-add-speaker").addEventListener("click", openAddSpeaker);
+  $("speaker-filter").addEventListener("input", renderSpeakerCandidates);
+  $("speaker-dialog").addEventListener("click", (e) => {
+    if (e.target.closest('[data-speaker="close"]')) $("speaker-dialog").close();
+  });
   for (const b of $("add-dialog").querySelectorAll("[data-kind]")) {
     b.addEventListener("click", () => { addFlow.kind = b.dataset.kind; addStep("details"); });
   }

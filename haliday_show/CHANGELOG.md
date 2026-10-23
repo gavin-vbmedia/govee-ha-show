@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.102
+
+- Adding a speaker now happens in its own window, like adding a light: press **+ Add a speaker** under
+  **Setup → Speakers**, then **Test and add** next to the one you want. The long list of every media
+  player in Home Assistant no longer fills the page.
+- With lots of media players, type in **Find a speaker** at the top of the window to narrow the list.
+- A speaker you add stays in the window with a green tick, so you can see it worked before pressing
+  **Done**. If the test fails, the reason shows next to **Try again**.
+
 ## 0.2.101
 
 - **Scan network** now finds WLED strips too: in **+ Add a light**, pick **WLED strip** and press **Scan

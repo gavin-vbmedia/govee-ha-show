@@ -404,6 +404,7 @@
   <p id="speakers-ha" class="hint"></p>
   <section class="toolbar">
     <h2>Your speakers</h2>
+    <button id="btn-add-speaker" class="primary">+ Add a speaker</button>
     <label title="Where shows play when started from an automation, unless a show picks its own in its Show settings">Default
       show speaker <select id="default-speaker"></select></label>
   </section>
@@ -413,18 +414,27 @@
       <th></th></tr></thead>
     <tbody id="speaker-rows"></tbody>
   </table>
-  <h2>Add a speaker</h2>
-  <table class="devices">
-    <thead><tr><th>Media player</th><th>Entity</th><th>State</th><th></th></tr></thead>
-    <tbody id="candidate-rows"></tbody>
-  </table>
-  <details class="hint help">
-    <summary>Why can't some speakers play shows?</summary>
-    <p>Only speakers added here are offered in the editor. Adding one plays a short chime on it the same way a show
-      starts, so a speaker that can't play the add-on's songs is caught here rather than when the show should start.
-      Some media players, like Echo devices through Alexa Media Player or Emby clients, can't play files from Home
-      Assistant's media folder.</p>
-  </details>
+  <dialog id="speaker-dialog" class="effect-dialog form-dialog add-dialog" aria-labelledby="speaker-title">
+    <div class="effect-dialog-head"><h3 id="speaker-title">Add a speaker</h3>
+      <button class="ghost" data-speaker="close" aria-label="Close">✕</button></div>
+    <div class="form-dialog-body">
+      <p class="hint speaker-help">Press <b>Test and add</b> next to a speaker. It plays a short chime the same way a show
+        starts, and the speaker is added only if that works.</p>
+      <input id="speaker-filter" type="search" placeholder="Find a speaker" autocomplete="off" aria-label="Find a speaker">
+      <div id="candidate-rows" class="speaker-list"></div>
+      <details class="hint help">
+        <summary>Why can't some speakers play shows?</summary>
+        <p>Only speakers added here are offered in the editor. Adding one plays a short chime on it the same way a show
+          starts, so a speaker that can't play the add-on's songs is caught here rather than when the show should start.
+          Some media players, like Echo devices through Alexa Media Player or Emby clients, can't play files from Home
+          Assistant's media folder.</p>
+      </details>
+    </div>
+    <div class="form-dialog-foot">
+      <span class="spacer"></span>
+      <button type="button" class="primary" data-speaker="close">Done</button>
+    </div>
+  </dialog>
   <section class="card">
     <h2>Timing</h2>
     <p><label title="Positive values delay the lights relative to the audio"><span id="offset-label">Light offset</span>
