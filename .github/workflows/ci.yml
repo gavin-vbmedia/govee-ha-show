@@ -40,6 +40,16 @@ jobs:
           docker logs gs
           # 200 (not 403) also proves the container's environment reaches the app.
           curl -fsS localhost:8099/api/info
+      - name: Runs standalone, as the compose file does
+        run: |
+          docker compose -f standalone/docker-compose.yml config -q
+          docker run -d --name solo --network host -e HALIDAY_SHOW_PORT=8098 -e HALIDAY_SHOW_PASSWORD=pw \
+            -e HALIDAY_SHOW_CONFIG=/tmp/c -e HALIDAY_SHOW_MEDIA=/tmp/m haliday-show-test
+          ip=$(hostname -I | awk '{print $1}')
+          for i in $(seq 1 20); do curl -s -o /dev/null "$ip:8098/" && break; sleep 1; done
+          docker logs solo
+          [ "$(curl -s -o /dev/null -w '%{http_code}' "$ip:8098/api/info")" = 401 ]
+          curl -fsS -u any:pw "$ip:8098/api/info"
       - name: aarch64 base image exists
         run: |
           base=$(sed -n 's/^FROM \(.*\)$/\1/p' haliday_show/Dockerfile | sed 's/${BUILD_ARCH}/aarch64/')

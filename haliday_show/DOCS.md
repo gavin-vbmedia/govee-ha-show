@@ -835,7 +835,8 @@ and the experimental switch are kept in each browser.
 
 You don't need this if you use the add-on. It's for running HA-liday Show on another always-on
 machine, such as a NAS, a Raspberry Pi or a Linux PC, for example if your Home Assistant can't
-install add-ons. Instructions for Docker and a Python install follow in the next updates.
+install add-ons. You can run it [with Docker](#with-docker); a Python install follows in the next
+update.
 
 It works the same as the add-on, with a few differences:
 
@@ -864,6 +865,28 @@ You set everything with these settings (environment variables). All are optional
 > **Speakers:** Home Assistant plays songs from its own **media** folder, so a speaker can only play
 > a song if `HALIDAY_SHOW_MEDIA` is that same folder (shared over the network, for example).
 > Otherwise, play the music in your browser.
+
+### With Docker
+
+This works on Linux, most NAS boxes (Synology, Unraid, QNAP) and a Raspberry Pi. It doesn't work
+with Docker Desktop on a Mac or Windows PC, because that can't give it the network access the
+lights need. On a Raspberry Pi, use the 64-bit Raspberry Pi OS (a Pi 3 or newer) and
+[install Docker](https://docs.docker.com/engine/install/raspberry-pi-os/) first.
+
+1. Make a folder for it, for example `haliday-show`.
+2. Download [docker-compose.yml](https://github.com/gavin-vbmedia/ha-liday-show/blob/main/standalone/docker-compose.yml)
+   into that folder.
+3. Open the file and change `change-me` to your own password. Uncomment any optional settings
+   you want (remove the `#`).
+4. In that folder, run `docker compose up -d`.
+5. Open `http://<that machine's address>:8099/` and type your password when your browser asks.
+
+Your shows go in the `config` folder next to the file and your songs in `media`. To bring shows
+across from the add-on, copy the files from its folder (see
+[Where things are stored](#where-things-are-stored)) into `config`, and its `haliday_show` songs
+folder into `media`.
+
+To update, run `docker compose pull` and then `docker compose up -d` in that folder.
 
 ## Notes
 

@@ -1,0 +1,59 @@
+name: publish
+# The same image the add-on builds, published for running HA-liday Show without Home Assistant
+# (see "Running without Home Assistant" in DOCS.md). Free, and lives with the repo.
+on:
+  push:
+    branches: [main]
+    paths: ["haliday_show/**", ".github/workflows/publish.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+env:
+  IMAGE: ghcr.io/gavin-vbmedia/ha-liday-show
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - {arch: amd64, platform: linux/amd64}
+          - {arch: aarch64, platform: linux/arm64}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: haliday_show
+          platforms: ${{ matrix.platform }}
+          build-args: BUILD_ARCH=${{ matrix.arch }}
+          provenance: false
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=HA-liday Show without Home Assistant
+            org.opencontainers.image.licenses=MIT
+          push: true
+          tags: ${{ env.IMAGE }}:build-${{ github.sha }}-${{ matrix.arch }}
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag latest and the version
+        run: |
+          v=$(sed -n 's/^version: "\(.*\)"/\1/p' haliday_show/config.yaml)
+          docker buildx imagetools create -t "$IMAGE:latest" -t "$IMAGE:$v" \
+            "$IMAGE:build-$GITHUB_SHA-amd64" "$IMAGE:build-$GITHUB_SHA-aarch64"

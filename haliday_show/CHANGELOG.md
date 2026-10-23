@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.92
+
+- Nothing changes inside Home Assistant.
+- You can now run HA-liday Show with Docker on a NAS, a Raspberry Pi or a Linux PC, without Home
+  Assistant add-ons. See **Running without Home Assistant → With Docker** in the documentation.
+
 ## 0.2.91
 
 - Nothing changes inside Home Assistant. This is groundwork for running HA-liday Show on its own, on a

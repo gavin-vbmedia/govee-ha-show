@@ -1,0 +1,21 @@
+# HA-liday Show without Home Assistant. See "Running without Home Assistant" in haliday_show/DOCS.md.
+#   docker compose up -d     then open http://<this machine>:8099/
+services:
+  haliday-show:
+    image: ghcr.io/gavin-vbmedia/ha-liday-show:latest
+    container_name: haliday-show
+    # The lights are found and driven with multicast and fixed ports, which need the host network.
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./config:/config   # shows, lights and settings (same files as the add-on's)
+      - ./media:/media     # songs
+    environment:
+      HALIDAY_SHOW_PASSWORD: "change-me"
+      # Optional, uncomment what you use:
+      # HA_URL: "http://homeassistant.local:8123"
+      # HA_TOKEN: "your long-lived access token"
+      # ANTHROPIC_API_KEY: ""
+      # HALIDAY_SHOW_MQTT_HOST: "192.168.1.10"
+      # HALIDAY_SHOW_MQTT_USERNAME: ""
+      # HALIDAY_SHOW_MQTT_PASSWORD: ""
