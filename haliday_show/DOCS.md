@@ -32,7 +32,8 @@ page you last had open. Below, "the House tab" and so on mean that page.
 
 ## Requirements
 
-- Home Assistant OS or Supervised (anything with **Settings → Add-ons**).
+- Home Assistant OS or Supervised (anything with **Settings → Add-ons**). No add-ons? You can
+  [run it without them](#running-without-home-assistant), with Docker or Python.
 - Govee lights with **LAN Control** switched on in the Govee Home app, on the same network as
   Home Assistant, with multicast allowed. The model needs Govee's per-segment realtime mode (the
   Devices tab tells you whether a model is known to have it).
