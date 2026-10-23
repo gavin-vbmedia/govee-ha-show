@@ -32,7 +32,8 @@ page you last had open. Below, "the House tab" and so on mean that page.
 
 ## Requirements
 
-- Home Assistant OS or Supervised (anything with **Settings → Add-ons**).
+- Home Assistant OS or Supervised (anything with **Settings → Add-ons**). No add-ons? You can
+  [run it without them](#running-without-home-assistant), with Docker or Python.
 - Govee lights with **LAN Control** switched on in the Govee Home app, on the same network as
   Home Assistant, with multicast allowed. The model needs Govee's per-segment realtime mode (the
   Devices tab tells you whether a model is known to have it).
@@ -872,8 +873,7 @@ and the experimental switch are kept in each browser.
 
 You don't need this if you use the add-on. It's for running HA-liday Show on another always-on
 machine, such as a NAS, a Raspberry Pi or a Linux PC, for example if your Home Assistant can't
-install add-ons. You can run it [with Docker](#with-docker); a Python install follows in the next
-update.
+install add-ons. You can run it [with Docker](#with-docker) or [with Python](#with-python).
 
 It works the same as the add-on, with a few differences:
 
@@ -924,6 +924,25 @@ across from the add-on, copy the files from its folder (see
 folder into `media`.
 
 To update, run `docker compose pull` and then `docker compose up -d` in that folder.
+
+### With Python
+
+This works on a Mac, Linux and a Raspberry Pi, without Docker. Windows may work but isn't tested,
+because Windows often blocks the network traffic the lights use. It needs Python 3.12 or newer and
+[pipx](https://pipx.pypa.io/stable/installation/).
+
+1. Install it:
+   `pipx install git+https://github.com/gavin-vbmedia/ha-liday-show`
+2. Start it with your own password:
+   `HALIDAY_SHOW_PASSWORD=your-password haliday-show`
+3. Open `http://localhost:8099/` on that computer, or `http://<its address>:8099/` from another
+   device, and type your password when your browser asks.
+
+It keeps your shows in `haliday-show/config` and your songs in `haliday-show/media`, in your home
+folder. It runs while that window is open; to keep it running, start it the way your computer
+starts other programs (on Linux, a systemd service).
+
+To update, run `pipx upgrade haliday-show`.
 
 ## Notes
 

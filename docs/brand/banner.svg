@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="100%" height="100%">
+    <defs>
+        <linearGradient id="bannerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#06b6d4" />
+            <stop offset="100%" stop-color="#d946ef" />
+        </linearGradient>
+        <filter id="soft" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="40"/></filter>
+        <clipPath id="card"><rect width="600" height="200" rx="16"/></clipPath>
+        <linearGradient id="gradPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#06b6d4" />
+            <stop offset="100%" stop-color="#d946ef" />
+        </linearGradient>
+        <linearGradient id="gradSecondary" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#d946ef" />
+            <stop offset="100%" stop-color="#06b6d4" />
+        </linearGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="6" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <rect width="600" height="200" rx="16" fill="#090d16" />
+    <rect width="600" height="200" rx="16" fill="url(#bannerGrad)" opacity="0.12" />
+    <g clip-path="url(#card)">
+        <circle cx="500" cy="50" r="80" fill="#06b6d4" opacity="0.2" filter="url(#soft)" />
+        <circle cx="100" cy="150" r="70" fill="#d946ef" opacity="0.2" filter="url(#soft)" />
+    </g>
+    <g transform="translate(40, 50)">
+        <!-- The same tree as icon.svg -->
+        <rect width="100" height="100" rx="22" fill="url(#gradPrimary)" opacity="0.15" />
+        <g filter="url(#glow)">
+            <polygon points="50,15 75,60 25,60" fill="url(#gradPrimary)" />
+            <polygon points="50,30 80,75 20,75" fill="url(#gradSecondary)" />
+            <rect x="44" y="75" width="12" height="15" rx="3" fill="#78350f" />
+            <circle cx="50" cy="22" r="4" fill="#fef08a" />
+        </g>
+    </g>
+    <text x="160" y="90" font-family="Inter, sans-serif" font-weight="700" font-size="28" fill="#ffffff">HA-liday Show</text>
+    <text x="160" y="125" font-family="Inter, sans-serif" font-weight="400" font-size="14" fill="#94a3b8">Music-synchronised light shows for Home Assistant</text>
+</svg>

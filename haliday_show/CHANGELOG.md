@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.94
+## 0.2.98
 
 - Any **light or switch in Home Assistant** can now be in your shows: Zigbee and Hue bulbs, LIFX, or a
   smart plug for an inflatable or a lit-up prop. Under **Setup → Devices**, pick **Home Assistant light or
@@ -10,6 +10,28 @@
   plug and the prop; it suits beats in slower songs and changes between sections. Effects that are too
   fast for one are marked on the timeline.
 - When the show or a test ends, each light and switch goes back to how it was before.
+
+## 0.2.97
+
+- The logo in the **Add-on Store** now shows the same Christmas tree as the add-on's icon.
+
+## 0.2.96
+
+- Nothing changes inside Home Assistant.
+- The documentation now mentions, under **Requirements**, that you can run HA-liday Show without
+  Home Assistant add-ons, and the front page explains the three ways to install it.
+
+## 0.2.95
+
+- A new look: **HA-liday Show** has its own icon and logo in the **Add-on Store**, and the icon also
+  appears next to the name at the top of the editor and on its browser tab.
+
+## 0.2.94
+
+- Nothing changes inside Home Assistant.
+- You can now install HA-liday Show with Python on a Mac, a Linux PC or a Raspberry Pi, with no Docker
+  and no Home Assistant add-ons. See **Running without Home Assistant → With Python** in the
+  documentation.
 
 ## 0.2.93
 

@@ -28,5 +28,13 @@ def main():
                 access_log=None, print=None)
 
 
+def standalone():
+    """The haliday-show command (a pipx install): keep everything under ~/haliday-show unless told otherwise."""
+    home = Path.home() / "haliday-show"
+    os.environ.setdefault("HALIDAY_SHOW_CONFIG", str(home / "config"))
+    os.environ.setdefault("HALIDAY_SHOW_MEDIA", str(home / "media"))
+    main()
+
+
 if __name__ == "__main__":
     main()
