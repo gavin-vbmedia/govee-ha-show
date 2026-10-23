@@ -173,7 +173,7 @@ async def ask_claude(key: str, text: str, instructions: str = INSTRUCTIONS, sche
             fallbacks="default",
         )
     except anthropic.AuthenticationError as e:
-        raise AIError("Claude didn't accept the API key; check it on the add-on's Configuration tab") from e
+        raise AIError("Claude didn't accept the API key; check it on the app's Configuration tab") from e
     except anthropic.RateLimitError as e:
         raise AIError("Claude is busy or the account is out of credit; try again shortly") from e
     except anthropic.APIStatusError as e:
@@ -235,7 +235,7 @@ async def _create(ha: HomeAssistant, request: str, context: dict, instructions: 
         return {**await ask_claude(key, text, instructions, schema, field), "via": "claude"}
     st = await status(ha)
     if not st["via"]:
-        raise AIError("no AI is set up: add a Claude API key on the add-on's Configuration tab, "
+        raise AIError("no AI is set up: add a Claude API key on the app's Configuration tab, "
                       "or set up an AI integration with an AI Task entity in Home Assistant")
     return {**await ask_home_assistant(ha, text, st["entity"], instructions, schema, field), "via": "ha"}
 

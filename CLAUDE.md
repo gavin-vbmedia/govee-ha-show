@@ -1,8 +1,8 @@
 # HA-liday Show
 
-A Home Assistant add-on for making and playing music-synchronised light shows on Govee lights, WLED
-strips, pixel controllers (DDP and E1.31), Home Assistant lights and switches, and Twinkly
-(experimental). One Python service (aiohttp) in `haliday_show/app/halidayshow/` serves a browser editor
+A Home Assistant app (formerly an add-on) for making and playing music-synchronised light shows on
+Govee lights, WLED strips, pixel controllers (DDP and E1.31), Home Assistant lights and switches, and
+Twinkly (experimental). One Python service (aiohttp) in `haliday_show/app/halidayshow/` serves a browser editor
 (plain ES modules in `static/`, no build step) and streams baked frames to each light in its own
 protocol: Govee's LAN "razer" protocol, DDP, E1.31, Home Assistant actions or Twinkly's realtime mode.
 It also runs without Home Assistant, as a Docker container or a `pipx` install (see "Running
@@ -57,7 +57,7 @@ user gets (code or docs) carries its own release:
    `haliday_show/app/halidayshow/__init__.py`.
 2. Add a section at the top of `haliday_show/CHANGELOG.md`: `## 0.2.N`, then bullets written for the
    user (what they'll notice and where), not for developers.
-3. Update `haliday_show/DOCS.md` (the user guide, shown on the add-on's Documentation tab and linked
+3. Update `haliday_show/DOCS.md` (the user guide, shown on the app's Documentation tab and linked
    for Docker and pipx installs) for any behaviour, button or setting that changed. Update README.md's feature list for new features.
 4. Title the PR and commit `What changed (0.2.N)`, e.g. `Collapse editor panels to their title (0.2.65)`.
 
@@ -66,22 +66,22 @@ Changes that only touch tests, CI or `.claude/` don't need a release.
 
 ## Running without Home Assistant
 
-Three ways to run it, one codebase: the **add-on** (the main one), **Docker** (the add-on's own image
+Three ways to run it, one codebase: the **app** (the main one), **Docker** (the app's own image
 from ghcr.io, with `standalone/docker-compose.yml`) and **pipx** (`pyproject.toml` builds the package;
 its dependencies are read from `haliday_show/requirements.txt`; the `haliday-show` command defaults its
 data to `~/haliday-show/`). User guide: "Running without Home Assistant" in DOCS.md.
 
-- **The add-on must behave exactly as before.** Anything only for standalone installs is switched on
+- **The app must behave exactly as before.** Anything only for standalone installs is switched on
   by an environment setting and/or only when `SUPERVISOR_TOKEN` is absent (as `HALIDAY_SHOW_PASSWORD`
-  is). Don't change the Dockerfile, `config.yaml` or the add-on's `/config` and `/media` defaults for
+  is). Don't change the Dockerfile, `config.yaml` or the app's `/config` and `/media` defaults for
   standalone reasons.
 - Who may connect is decided in `server.py`'s `ingress_only`: the ingress proxy and this machine always,
   everyone with `HALIDAY_SHOW_ALLOW_ALL=1`, otherwise other devices only with the password (HTTP Basic,
   any user name). New routes are covered automatically; don't add ways round it.
 - Settings for standalone installs are environment variables (`HALIDAY_SHOW_*`, `HA_URL`/`HA_TOKEN`,
-  `ANTHROPIC_API_KEY`). A new add-on option needs an environment fallback too, listed in DOCS.md's
+  `ANTHROPIC_API_KEY`). A new app option needs an environment fallback too, listed in DOCS.md's
   settings table.
-- Outside Home Assistant there's no `hassio.addon_stdin`, and speakers only play songs if Home
+- Outside Home Assistant there's no `hassio.app_stdin`, and speakers only play songs if Home
   Assistant can see the same songs folder. Features that need Home Assistant should say so rather
   than break when `ha.available` is false.
 - Saved files are the same in every install, so shows copy across. The data-format rule below covers
@@ -92,7 +92,7 @@ data to `~/haliday-show/`). User guide: "Running without Home Assistant" in DOCS
 
 - Effects are written once, in `static/js/effects.js`, and used both for previews and for baking.
   The Python player never computes effects; it only plays baked frames. Keep it that way.
-- Saved data lives in the add-on's config folder (`HALIDAY_SHOW_CONFIG` elsewhere) (shows, devices, palettes, presets, settings,
+- Saved data lives in the app's config folder (`HALIDAY_SHOW_CONFIG` elsewhere) (shows, devices, palettes, presets, settings,
   house photo) and is part of users' backups. Old saved shows and settings must keep loading:
   read missing fields with defaults rather than changing the format in place.
 - Server input is validated in `server.py` (`_clean_*` helpers); follow that pattern for new
@@ -100,5 +100,8 @@ data to `~/haliday-show/`). User guide: "Running without Home Assistant" in DOCS
 - New editor logic that can be tested without a DOM goes in its own module with a node test,
   like `autogen.js` and `tests/js/autogen.test.mjs`.
 - Comments are sparse and explain why. Match the surrounding code.
+- Home Assistant renamed add-ons to **apps** in 2026.2 (**Settings → Apps**, **App store**). Say "app"
+  in anything users read, or "HA-liday Show" where Docker and pipx installs are meant too. Names in
+  code and config (`addon_config`, `/addons`, the `addon` in Supervisor API paths) stay as they are.
 - Writing for users (DOCS.md, CHANGELOG.md, UI text): plain British English ("colour"), second
   person, bold for on-screen names (**Save**, **Setup → Devices**), no jargon.

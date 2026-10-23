@@ -186,7 +186,7 @@
           <input id="duration" type="number" min="1" step="1" value="60"> s</label>
       </div>
       <div class="form-dialog-foot">
-        <label class="button ghost" title="Upload a song to the add-on">Upload a song…<input id="audio-upload" type="file" accept="audio/*" hidden></label>
+        <label class="button ghost" title="Upload a song to HA-liday Show">Upload a song…<input id="audio-upload" type="file" accept="audio/*" hidden></label>
         <button id="btn-song-music" type="button" class="ghost" title="Cut, shorten or join songs">Edit on Music</button>
         <span class="spacer"></span>
         <button value="close">Cancel</button>
@@ -205,7 +205,7 @@
     wheel to zoom (Shift + wheel scrolls). Space plays, Delete cuts the selection, Ctrl+Z undoes.</p>
   <section class="toolbar">
     <label>Song <select id="music-src"></select></label>
-    <label class="button ghost" title="Upload a song to the add-on and start editing it">Upload<input id="music-upload" type="file" accept="audio/*" hidden></label>
+    <label class="button ghost" title="Upload a song to HA-liday Show and start editing it">Upload<input id="music-upload" type="file" accept="audio/*" hidden></label>
     <span id="music-info" class="hint"></span>
   </section>
   <section class="card music-card">
@@ -282,7 +282,7 @@
   </section>
   <section class="toolbar">
     <label>File name <input id="music-name" size="32" placeholder="song (edit).wav"></label>
-    <button id="music-save" class="primary" title="Save the result as a new song in the add-on's folder (Ctrl+S)">Save as new file</button>
+    <button id="music-save" class="primary" title="Save the result as a new song in HA-liday Show's songs folder (Ctrl+S)">Save as new file</button>
     <span class="hint">Saved as WAV in /media/haliday_show, so it plays on every speaker.</span>
   </section>
 </main>
@@ -464,7 +464,7 @@
       <details class="hint help">
         <summary>Why can't some speakers play shows?</summary>
         <p>Only speakers added here are offered in the editor. Adding one plays a short chime on it the same way a show
-          starts, so a speaker that can't play the add-on's songs is caught here rather than when the show should start.
+          starts, so a speaker that can't play HA-liday Show's songs is caught here rather than when the show should start.
           Some media players, like Echo devices through Alexa Media Player or Emby clients, can't play files from Home
           Assistant's media folder.</p>
       </details>
@@ -483,7 +483,7 @@
   <section class="card">
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-automations"/></svg>Automations</h2>
     <p class="hint">To play <b id="automation-show">this show</b> from an automation, use the <b>HA-liday Show</b> MQTT
-      entities (pick the show, then press Play), or the <code>hassio.addon_stdin</code> action with input
+      entities (pick the show, then press Play), or the <code>hassio.app_stdin</code> action with input
       <code id="automation-input">{"action": "play", "show": "…"}</code>. The song plays on the show's
       <b>Show speaker</b> (in the editor's <b>⚙ Settings…</b> for the show), or on the <b>Default show speaker</b> above when a show
       doesn't pick one. The
@@ -529,14 +529,14 @@
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-ai"/></svg>AI</h2>
     <p class="hint" id="ai-status">Checking…</p>
     <p class="hint">The <b>Describe it</b> panel turns a request in words into effects, using either Claude with
-      your own API key (set it on the add-on's <b>Configuration</b> tab in Home Assistant), or else Home
+      your own API key (set it on the app's <b>Configuration</b> tab in Home Assistant), or else Home
       Assistant's <b>AI Task</b>, which uses whichever AI integration you have set up there, including a local
       one such as Ollama. It sends the AI your lights' names, the effect list, the song's beats and sections,
       and the selection; never the song itself.</p>
   </section>
   <section class="card">
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-data"/></svg>Your data</h2>
-    <p class="hint">Everything the add-on saves: your lights, shows, palettes, presets, settings and house photo, in
+    <p class="hint">Everything HA-liday Show saves: your lights, shows, palettes, presets, settings and house photo, in
       one file. Songs stay in your songs folder and aren't in it.</p>
     <p class="row"><a id="btn-export" class="button" href="api/backup" download>Export…</a>
       <label class="button">Import…<input id="import-file" type="file" accept=".zip,application/zip" hidden></label>
@@ -570,7 +570,7 @@
 <main id="view-labs" class="view settings" hidden>
   <section class="card">
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-packet"/></svg>Packet lab</h2>
-    <p class="hint">For trying out commands the add-on doesn't use yet. Pick one of your lights and a starting
+    <p class="hint">For trying out commands HA-liday Show doesn't use yet. Pick one of your lights and a starting
       point, edit the message if you like, and press <b>Send</b>. Anything the light sends back is listed below.
       A playing show is stopped first. Only lights on the Devices tab can be sent to.</p>
     <div class="lab-grid">
@@ -625,7 +625,7 @@
   <section class="card">
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-listen"/></svg>Listen for Govee traffic</h2>
     <p class="hint">Records the messages your Govee lights send each other that reach Home Assistant, so a way of
-      driving them that the add-on doesn't know yet can be worked out. For example, start <b>Scene Stage</b> in the
+      driving them that HA-liday Show doesn't know yet can be worked out. For example, start <b>Scene Stage</b> in the
       Govee Home app, then press <b>Listen</b>. Nothing is sent to your lights, and a playing show is stopped
       first. Afterwards, <b>Download</b> the recording and attach it to a GitHub issue.</p>
     <p><button id="btn-listen">Listen for 60 seconds</button>

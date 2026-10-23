@@ -6,7 +6,7 @@
 
 A simple alternative to xLights for Govee lights, WLED strips, pixel controllers, Twinkly and any Home
 Assistant light: design a show in your browser, watch it play on a photo of your house, then run it from
-an automation. Install it as a Home Assistant add-on, or run it on
+an automation. Install it as a Home Assistant app (formerly called an add-on), or run it on
 its own with Docker or Python.
 
 <sub>A hobby project, written almost entirely by AI. See [How this is made](#-how-this-is-made).</sub>
@@ -17,7 +17,7 @@ its own with Docker or Python.
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 [![Coded with Claude](https://img.shields.io/badge/coded%20with-Claude-d97757)](#-how-this-is-made)
 
-[![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgdeboos%2Fha-liday-show)
+[![Open HA-liday Show in your Home Assistant](https://my.home-assistant.io/badges/supervisor_app.svg)](https://my.home-assistant.io/redirect/supervisor_app/?app=5aa48a95_haliday_show&repository_url=https%3A%2F%2Fgithub.com%2Fgdeboos%2Fha-liday-show)
 
 [Install](#-installation) · [Features](#-features) · [User guide](haliday_show/DOCS.md) ·
 [Changelog](haliday_show/CHANGELOG.md) · [Development](#-development)
@@ -40,8 +40,8 @@ its own with Docker or Python.
   any Home Assistant light or smart plug, all in one show.
 - 📦 **Plan before you buy.** Add lights that haven't arrived yet and link them to the real ones later.
 - ⏯️ **Runs itself.** Shows play on any Home Assistant speaker and start from automations through MQTT
-  entities or the `hassio.addon_stdin` action.
-- 🐳 **Runs where you want.** A Home Assistant add-on, or on its own with Docker or Python.
+  entities or the `hassio.app_stdin` action.
+- 🐳 **Runs where you want.** A Home Assistant app, or on its own with Docker or Python.
 
 ## 📸 A closer look
 
@@ -70,27 +70,29 @@ its own with Docker or Python.
 | Home Assistant | Any light or switch, such as Zigbee or Hue bulbs, or a smart plug for a prop |
 | Twinkly | Experimental: not tried on a real Twinkly yet |
 
-### As a Home Assistant add-on (recommended)
+### As a Home Assistant app (recommended)
 
-Needs Home Assistant OS or Supervised (anything with **Settings → Add-ons**).
+Apps were called add-ons before Home Assistant 2026.2. You need Home Assistant OS or Supervised
+(anything with **Settings → Apps**).
 
-1. Press **Add repository** above. It opens your Home Assistant and offers to add this add-on
-   repository.
+1. Press **Show app on My Home Assistant** above. It opens your Home Assistant, offers to add this
+   repository, then opens the **HA-liday Show** page.
    <details><summary>Adding it by hand</summary>
 
-   Go to **Settings → Add-ons → Add-on Store**, open the ⋮ menu, choose **Repositories** and add
-   `https://github.com/gdeboos/ha-liday-show`.
+   Go to **Settings → Apps** and press **Install app** to open the **App store**. Open the ⋮ menu,
+   choose **Repositories** and add `https://github.com/gdeboos/ha-liday-show`. Then find
+   **HA-liday Show** in the store.
    </details>
-2. Install **HA-liday Show**, turn on **Show in sidebar**, and start it.
+2. Press **Install**, turn on **Show in sidebar**, and start it.
 3. Open **HA-liday Show** from the sidebar and follow the
    [quick start](haliday_show/DOCS.md#quick-start).
 
-Home Assistant builds the add-on on your machine the first time, which takes a few minutes. For show
-entities in automations, also set up the Mosquitto broker add-on and the MQTT integration (optional).
+Home Assistant builds the app on your machine the first time, which takes a few minutes. For show
+entities in automations, also set up the Mosquitto broker app and the MQTT integration (optional).
 
-### Without Home Assistant add-ons
+### Without Home Assistant apps
 
-If your Home Assistant can't install add-ons (a "Container" or "Core" install), or you don't use Home
+If your Home Assistant can't install apps (a "Container" or "Core" install), or you don't use Home
 Assistant at all, run it on any always-on machine on your network instead:
 
 - **[With Docker](haliday_show/DOCS.md#with-docker)** on a NAS, Raspberry Pi or Linux PC, with the
@@ -182,12 +184,12 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
 - Save and load shows, with auto save; each show is baked into precomputed frames for reliable playback
 - Play the song on any Home Assistant media player (with a per-speaker delay), or in the browser
 - Schedule or trigger shows from automations: MQTT entities (show select, play/stop buttons,
-  status), or the `hassio.addon_stdin` action
+  status), or the `hassio.app_stdin` action
 
 </details>
 
-The full walkthrough is in the **[user guide](haliday_show/DOCS.md)**, which is also on the add-on's
-Documentation tab in Home Assistant.
+The full walkthrough is in the **[user guide](haliday_show/DOCS.md)**, which is also on the app's
+**Documentation** tab in Home Assistant.
 
 ## ⚙️ How it works
 
@@ -197,7 +199,7 @@ flowchart LR
         A[Song analysis<br/>tempo · beats · sections] --> B[Timeline &amp; effects]
         B --> C[Baker<br/>renders every frame]
     end
-    subgraph Addon["Service (Python, aiohttp): HA add-on, Docker or pipx"]
+    subgraph Addon["Service (Python, aiohttp): HA app, Docker or pipx"]
         D[(Baked show)] --> E[Player]
     end
     C -- save --> D
@@ -207,10 +209,10 @@ flowchart LR
     E -- "light and switch actions" --> Y[💡 HA lights and plugs]
     E -- "realtime over LAN UDP" --> Z[💡 Twinkly, experimental]
     E -- "start song" --> G[🔊 HA media player]
-    H[Automations<br/>MQTT · addon_stdin] --> E
+    H[Automations<br/>MQTT · app_stdin] --> E
 ```
 
-One Python service (aiohttp) serves the editor and plays shows. As an add-on it is reached only through
+One Python service (aiohttp) serves the editor and plays shows. As an app it is reached only through
 Home Assistant ingress; run on its own (Docker or pipx) it answers its own port, and other devices need
 the password set in `HALIDAY_SHOW_PASSWORD`.
 Effects are written once, in JavaScript: the editor uses them for the live preview and, on save,
@@ -242,12 +244,12 @@ HALIDAY_SHOW_CONFIG=/tmp/gs/config HALIDAY_SHOW_MEDIA=/tmp/gs/media python -m ha
 ```
 
 To try it the way people run it without Home Assistant: `pipx install .` then
-`HALIDAY_SHOW_PASSWORD=pw haliday-show` (data goes in `~/haliday-show/`), or build the add-on image
+`HALIDAY_SHOW_PASSWORD=pw haliday-show` (data goes in `~/haliday-show/`), or build the app image
 and run it with `--network host`, as [`standalone/docker-compose.yml`](standalone/docker-compose.yml) does.
 
 No lights to hand? Add planned lights on **Setup → Devices** and everything except the real output
-works. To try it in Home Assistant, copy the `haliday_show` folder into `/addons` (Samba or SSH add-on),
-then reload the Add-on Store; it appears under **Local add-ons** and builds on your machine.
+works. To try it in Home Assistant, copy the `haliday_show` folder into `/addons` (Samba or SSH app),
+then press **Check for updates** in the **App store**; it appears as a local app and builds on your machine.
 
 **Releasing:** bump the version in `pyproject.toml`, `haliday_show/config.yaml` and
 `haliday_show/app/halidayshow/__init__.py` together (CI checks they match), and add an entry to
@@ -258,19 +260,19 @@ then reload the Add-on Store; it appears under **Local add-ons** and builds on y
 <summary><b>Repository layout</b></summary>
 
 ```
-repository.yaml                         Home Assistant add-on repository metadata
+repository.yaml                         Home Assistant app repository metadata
 pyproject.toml                          Version, test settings, and the pipx install (haliday-show command)
 standalone/docker-compose.yml           Running without Home Assistant, with Docker
-.github/workflows/ci.yml                Tests, versions, add-on image, standalone and pipx checks
+.github/workflows/ci.yml                Tests, versions, app image, standalone and pipx checks
 .github/workflows/publish.yml           Publishes the image to ghcr.io for Docker installs
 docs/images/                            Screenshots for the README
-docs/brand/                             Logo, icon and favicon (SVG originals; the add-on's PNGs are made from them)
-haliday_show/                             The add-on (config, Dockerfile, docs, changelog)
-  README.md                             Intro shown on the add-on's Info tab
-  DOCS.md                               User guide (shown on the add-on's Documentation tab)
+docs/brand/                             Logo, icon and favicon (SVG originals; the app's PNGs are made from them)
+haliday_show/                             The app (config, Dockerfile, docs, changelog)
+  README.md                             Intro shown on the app's Info tab
+  DOCS.md                               User guide (shown on the app's Documentation tab)
   CHANGELOG.md                          What changed in each version
-  icon.png, logo.png                    Pictures shown in the Add-on Store (from docs/brand)
-  app/halidayshow/__main__.py             Entry points (add-on and haliday-show) and environment settings
+  icon.png, logo.png                    Pictures shown in the App store (from docs/brand)
+  app/halidayshow/__main__.py             Entry points (app and haliday-show) and environment settings
   app/halidayshow/protocol.py             Govee LAN and razer packet encoding
   app/halidayshow/wled.py                 WLED and DDP: packets, the light's name, LEDs and segments, and the scan
   app/halidayshow/e131.py                 E1.31 (sACN) packets and each controller's shared universes
@@ -286,7 +288,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
   app/halidayshow/storage.py              Shows, settings, songs and the house photo on disk
   app/halidayshow/backup.py               Export, import and start afresh, with copies kept first
   app/halidayshow/ha.py                   Home Assistant API (media players, lights and switches, MQTT details)
-  app/halidayshow/commands.py             Automation commands over add-on stdin
+  app/halidayshow/commands.py             Automation commands over app stdin
   app/halidayshow/mqtt.py                 MQTT discovery entities
   app/halidayshow/server.py               HTTP API for the editor; who may connect (ingress or password)
   app/halidayshow/ai.py                   Describe it and AI presets: asks Claude or HA's AI Task
@@ -332,7 +334,7 @@ tests/                                  pytest and node tests (tests/js)
 HA-liday Show is a hobby project, and almost all of its code is written by AI (Anthropic's Claude), with
 a person deciding what to build and trying it on real lights. Every change runs through automated tests
 and a test build before it's released. Govee models with a **✓ works** or **⚠ limited** badge in the
-add-on's model list have been tried on real lights; ones marked **? untested** are best effort. WLED,
+model list have been tried on real lights; ones marked **? untested** are best effort. WLED,
 pixel controllers, Home Assistant lights and Twinkly have so far only been tested against pretend
 devices on the wire, so reports from real ones are especially welcome. If something doesn't work on yours, please
 [open an issue](https://github.com/gdeboos/ha-liday-show/issues).

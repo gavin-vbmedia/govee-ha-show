@@ -34,8 +34,9 @@ page you last had open. Below, "the House tab" and so on mean that page.
 
 ## Requirements
 
-- Home Assistant OS or Supervised (anything with **Settings → Add-ons**). No add-ons? You can
-  [run it without them](#running-without-home-assistant), with Docker or Python.
+- Home Assistant OS or Supervised (anything with **Settings → Apps**). Apps were called add-ons before
+  Home Assistant 2026.2. No apps? You can [run it without them](#running-without-home-assistant), with
+  Docker or Python.
 - Lights on the same network as Home Assistant, any of:
   - **Govee** lights with **LAN Control** switched on in the Govee Home app, with multicast allowed. The
     model needs Govee's per-segment realtime mode (the Devices tab tells you whether a model is known
@@ -47,11 +48,11 @@ page you last had open. Below, "the House tab" and so on mean that page.
   - **Twinkly** lights (experimental).
 - Optional: a Home Assistant media player for the music. Without one, songs play in your browser
   while you edit, and shows started from automations play the lights only.
-- Optional: the Mosquitto broker add-on and MQTT integration, for show entities in automations.
+- Optional: the Mosquitto broker app and MQTT integration, for show entities in automations.
 
 ## Quick start
 
-The first time you open the add-on, the **setup guide** opens and walks you through these steps in one
+The first time you open HA-liday Show, the **setup guide** opens and walks you through these steps in one
 window: add your lights, check each one, pick a speaker, choose the sample house or your own photo, and
 make your first show from a song. Every step can be skipped, **← Back** goes back, and you can run it
 again any time with **Run the setup guide** under **Setup → Settings**. Its first page also offers
@@ -64,7 +65,7 @@ again any time with **Run the setup guide** under **Setup → Settings**. Its fi
 3. **Setup → House** (optional): upload a photo of your house and trace each light on it.
 4. **Editor** tab: pick or upload a song, drag across a light's track, press **＋ Add effect…** and pick one. Press
    Space to play.
-5. Run it from an automation with the MQTT **Play** button or the `hassio.addon_stdin` action.
+5. Run it from an automation with the MQTT **Play** button or the `hassio.app_stdin` action.
 
 > **Just want to see it working?** On a fresh install, press **Try the demo** under **Setup → Devices**
 > (or **Setup → Settings → Demo**). See [The demo](#the-demo).
@@ -75,10 +76,10 @@ again any time with **Run the setup guide** under **Setup → Settings**. Its fi
 
 ## The demo
 
-**Try the demo** sets everything up in one press, so you can try the add-on before your lights are up,
+**Try the demo** sets everything up in one press, so you can try HA-liday Show before your lights are up,
 or test it without any lights at all. It adds seven planned lights (Roof, Icicles, Porch, Windows,
 Tree, Garage and Path) already placed on the [sample house](#the-sample-house), adds a sample song (a
-music-box *Jingle Bells* made for the add-on, free to use) to your songs, and generates **Demo show**
+music-box *Jingle Bells* made for HA-liday Show, free to use) to your songs, and generates **Demo show**
 in Christmas colours. Press **▶ Play** to watch it on the House panel. Nothing is sent to real lights.
 
 It's only offered while you have no lights, so it never mixes with your own. When you're done, press
@@ -88,20 +89,20 @@ shows if you like.
 
 ## Moving from Govee Light Show
 
-This add-on used to be called **Govee Light Show**. Home Assistant treats the renamed add-on as a new
+This app used to be called **Govee Light Show**. Home Assistant treats the renamed app as a new
 one, so you install **HA-liday Show** alongside the old one:
 
-1. Stop **Govee Light Show**, so only one add-on drives your lights.
+1. Stop **Govee Light Show**, so only one app drives your lights.
 2. Install **HA-liday Show** and start it. The first time it starts, it copies your shows, lights,
-   palettes, presets, settings, house photo and songs across from the old add-on. The old add-on's
+   palettes, presets, settings, house photo and songs across from the old app. The old app's
    copy isn't changed.
 3. In **HA-liday Show**'s **Configuration** tab, paste your **Claude API key** again if you use one,
    and turn on **Show in sidebar** and **Start on boot**.
 4. If you use MQTT, the old **Govee Light Show** entities are removed and new **HA-liday Show** ones
    appear (for example `select.ha_liday_show_show`). Point your automations at the new ones, and
-   change `addon:` in any `hassio.addon_stdin` action to **HA-liday Show**.
+   change the app in any `hassio.app_stdin` (or older `hassio.addon_stdin`) action to **HA-liday Show**.
 5. Once your shows play as before, uninstall **Govee Light Show**. Your songs stay in
-   `/media/govee_show` until you delete them; the new add-on uses its own copies in
+   `/media/govee_show` until you delete them; the new app uses its own copies in
    `/media/haliday_show`.
 
 The copy only happens once, and only if **HA-liday Show** has no lights or shows of its own yet.
@@ -170,7 +171,7 @@ Lights accept different forms of the realtime command. Change
 ### WLED strips
 
 WLED strips work like any other light. Press **+ Add a light**, pick **WLED strip** and press
-**Scan network** to find it, or type its IP address (it's on the WLED app's **Info** page) and press **Add**. The add-on asks the
+**Scan network** to find it, or type its IP address (it's on the WLED app's **Info** page) and press **Add**. HA-liday Show asks the
 strip for its name and number of LEDs, so there's nothing to work out: every LED is its own segment,
 up to 1000 a strip. **Find**, **Blend** and **Protocol** don't apply to WLED, so they're not shown.
 
@@ -180,7 +181,7 @@ parts* below). Change them in WLED later? Press **Use WLED segments** under the 
 again: a part keeps its clips as long as its WLED segment is still there. You can also split the strip
 here by hand, without touching WLED.
 
-During a show the add-on sets every LED itself, so the effect you picked in WLED, and its segments'
+During a show HA-liday Show sets every LED itself, so the effect you picked in WLED, and its segments'
 own effects, are paused until a couple of seconds after the show stops, then WLED carries on where it
 left off. WLED's own brightness still applies, on top of **Brightness %** here. If only part of the
 strip lights up during a show, open WLED's **Config → Sync Interfaces** and untick **Use main segment
@@ -211,7 +212,7 @@ To plan one before it arrives, pick **Plan a light**, type **DDP** as the model 
 Most Falcon and Kulp controllers, and anything set up for xLights, speak **E1.31** (also called sACN).
 Press **+ Add a light**, pick **Pixel controller (E1.31)**, type the controller's IP and how many **LEDs**
 the string has, and press **Add**. Set the controller to take E1.31 as **unicast** (straight to
-its IP); the add-on doesn't use multicast.
+its IP); HA-liday Show doesn't use multicast.
 
 Each light has a **universe** and **channel** in the **Model** column: where it starts in the
 controller's set-up. Each LED takes 3 channels, a universe holds 510 (170 LEDs), and a light carries on
@@ -219,7 +220,7 @@ into the next universe when it runs past the end of one, the way xLights numbers
 again for the next string and it starts just after the last one. Lights on one controller can share a
 universe without blanking each other, and their line says *Shares LEDs with…* if two overlap.
 
-When a show or test stops, the add-on tells the controller, so it goes straight back to what it was
+When a show or test stops, HA-liday Show tells the controller, so it goes straight back to what it was
 doing. To plan one before it arrives, pick **Plan a light** and type **E1.31** as the model.
 
 ### Home Assistant lights and switches
@@ -243,7 +244,7 @@ Changes go through Home Assistant, so these are slow, and each is one colour at 
 Effects that are too fast for one are marked on the timeline, as for other slow lights. All your Home
 Assistant lights and switches share about 10 changes a second between them, as that's what a Hue bridge
 or a Zigbee network keeps up with, so with lots of them each one changes a little less often and none
-fall behind. Just before a show or test starts, the add-on remembers how each light and switch was, and
+fall behind. Just before a show or test starts, HA-liday Show remembers how each light and switch was, and
 puts it back when it ends.
 
 Running HA-liday Show without Home Assistant? These need `HA_URL` and `HA_TOKEN` set (see **Running
@@ -255,7 +256,7 @@ Press **+ Add a light**, pick **Twinkly** and type the light's IP (it's in the T
 light's **Device settings**). Its name and number of LEDs are filled in for you, and you can
 split it into **parts** like any other light.
 
-During a show the add-on switches the light into Twinkly's realtime mode and sets every LED itself; when
+During a show HA-liday Show switches the light into Twinkly's realtime mode and sets every LED itself; when
 the show or a test ends, the light goes back to what it was playing. Twinkly doesn't officially support
 this mode, and it hasn't been tried on a real Twinkly yet, so press **Test** first: a rainbow with a
 white dot should run along the whole light. If nothing happens, or the colours are wrong, say so on
@@ -274,7 +275,7 @@ light**, then build shows with it straight away. The model can be a Govee one (f
 **WLED**, **DDP**, **E1.31**, **HA** or **Twinkly** for the other kinds, with **Segments** set to the
 number of LEDs. For Govee models, the badge next to a model says what we've
 found on real lights: **✓ works** (tested, works on Realtime), **⚠ limited** (tested, only partly works;
-point at the badge to see what it can do) or **? untested** (not tried with this add-on yet: most
+point at the badge to see what it can do) or **? untested** (not tried with HA-liday Show yet: most
 Govee lights with LAN Control work, so add one and press **Test** before buying more; the badge's
 tooltip says whether Govee lists the model as having LAN Control). A tested model
 starts with the settings that suit it, such as **Per bulb** with 300 segments for the 30 m Christmas
@@ -330,7 +331,7 @@ The song can play on any Home Assistant media player that can play files from th
 Speakers are added on the **Speakers** tab first, and only those are offered in the editor.
 
 - Press **+ Add a speaker**, then **Test and add** next to a media player in the window that opens
-  (type in **Find a speaker** to narrow a long list). The add-on plays a short chime on it the same way
+  (type in **Find a speaker** to narrow a long list). HA-liday Show plays a short chime on it the same way
   a show starts and only adds it if that works. Media players that can't be sent a song are listed
   but can't be added, and a failed test shows Home Assistant's reason. Echo devices through Alexa
   Media Player and Emby clients, for example, often can't play files from the media folder.
@@ -359,7 +360,7 @@ house so you can trace them on your photo. **Remove photo** goes back to the sam
 ### Tracing a light
 
 1. Take a photo from where people will watch, ideally at dusk, and press **Upload photo**. It's
-   scaled to 2000 pixels across and kept in the add-on's config folder. **Darken** dims it so the
+   scaled to 2000 pixels across and kept in the app's config folder. **Darken** dims it so the
    lights stand out.
 2. Pick a light in the list beside the photo, press **Trace** and click along where it runs,
    **starting at the end with the plug**. Click once at each corner or bend. The light's bulbs
@@ -623,7 +624,7 @@ starts one from scratch: pick an effect, or any built-in preset, to start from. 
 the box above, such as "slow icy shimmer" or "warm fire flicker", and press **✨ Make presets**: the AI
 suggests up to three, each with a live preview, and **Keep** adds one to your presets (it needs an AI
 set up, as for **Describe it**). Changing or deleting
-a preset doesn't change clips that already used it. They're saved in the add-on, so every browser
+a preset doesn't change clips that already used it. They're saved in HA-liday Show, so every browser
 sees the same ones.
 
 Tick **Show on the light** to loop it on the real light too while the show is
@@ -738,10 +739,10 @@ A new show is saved once it has its first effect. Auto save waits while a show i
 The Playback panel chooses where the song plays. This is kept in your browser
 and never changes where the real show plays:
 
-- **Song in this browser**: the song plays in your browser and the add-on streams the lights in
+- **Song in this browser**: the song plays in your browser and HA-liday Show streams the lights in
   sync. Untick **Lights** to preview in the browser only. If the lights lead or lag, adjust
   **Light offset** under **Setup → Speakers**.
-- **Speaker: …**: the add-on starts the song on that speaker and the lights with it, and the
+- **Speaker: …**: HA-liday Show starts the song on that speaker and the lights with it, and the
   playhead follows along. Line the lights up with the speaker's **Delay ms** under **Setup →
   Speakers** (also shown under Timing there while that speaker is picked).
 
@@ -757,7 +758,7 @@ on their own.
 
 ### With MQTT
 
-With the Mosquitto broker add-on and MQTT integration set up, the add-on creates an **HA-liday
+With the Mosquitto broker app and MQTT integration set up, HA-liday Show creates an **HA-liday
 Show** device with a **Show** select, **Play** and **Stop** buttons, and a **Status** sensor
 (the playing show's name, or `idle`). For example, to play a show at sunset:
 
@@ -780,13 +781,13 @@ You can also publish a show's name or id to the `haliday_show/play` MQTT topic.
 
 ### Without MQTT
 
-Without MQTT, use the add-on's stdin:
+Without MQTT, use the app's stdin:
 
 ```yaml
 actions:
-  - action: hassio.addon_stdin
+  - action: hassio.app_stdin
     data:
-      addon: <slug>_haliday_show   # pick HA-liday Show in the UI editor
+      app: <slug>_haliday_show   # pick HA-liday Show in the UI editor
       input:
         action: play
         show: Halloween
@@ -794,6 +795,8 @@ actions:
 ```
 
 Send `input: {action: stop}` to stop. **Setup → Speakers** shows the exact input for the open show, under Automations.
+Automations that use the older `hassio.addon_stdin` action with `addon:` keep working, and that's
+the one to use on Home Assistant before 2026.2.
 
 ## Arrange the editor
 
@@ -827,7 +830,7 @@ browser, so each computer or phone keeps its own.
 
 **Setup → Settings** holds the rest. Timing and Automations sit with the speakers, under **Setup →
 Speakers**: **Light offset** for playing in the browser (positive values delay the lights), or the
-picked speaker's delay, and the exact `hassio.addon_stdin` input for the open show.
+picked speaker's delay, and the exact `hassio.app_stdin` input for the open show.
 
 | Section | What's there |
 | --- | --- |
@@ -849,32 +852,32 @@ phone has its own. It holds:
 
 ## Your data
 
-**Setup → Settings → Your data** puts everything the add-on saves in one file, and back:
+**Setup → Settings → Your data** puts everything HA-liday Show saves in one file, and back:
 
 - **Export…** downloads a `.zip` of your lights (with their parts), shows, palettes, presets, settings,
   the house photo and where each light is traced on it. Your songs stay in your songs folder and aren't
   in it. It's the same on every install, so you can move your shows to another Home Assistant, or
-  between the add-on and a Docker or pipx install.
+  between HA-liday Show and a Docker or pipx install.
 - **Import…** replaces all of that with what's in an exported file. A file that isn't an HA-liday Show
   export is refused and nothing changes.
-- **Start afresh…** removes it all, so the add-on is like new and the setup guide opens. It also resets
+- **Start afresh…** removes it all, so HA-liday Show is like new and the setup guide opens. It also resets
   this browser's layout and choices (like **Show the Labs tab**). Your songs are kept.
 
-Before an import or a fresh start, the add-on keeps a copy of what you had, listed under **Your data**
+Before an import or a fresh start, HA-liday Show keeps a copy of what you had, listed under **Your data**
 (the newest five). **Put back** restores one, and **Download** saves it as an export. So to try the
 setup guide without losing anything: **Start afresh…**, try it, then **Put back** the copy *Before a
 fresh start* (or **Import…** your export).
 
-Home Assistant's own backups include all of this too, as the add-on's config folder.
+Home Assistant's own backups include all of this too, as the app's config folder.
 
 ## Setting up the AI
 
 **Describe it**, **✨ Make presets** and Generate's **AI** option need one of these:
 
 - **Claude, with your own API key.** Create a key at console.anthropic.com, then in Home Assistant open
-  **Settings → Add-ons → HA-liday Show → Configuration**, paste it into **Claude API key** and save.
+  **Settings → Apps → HA-liday Show → Configuration**, paste it into **Claude API key** and save.
   Each request costs a few US cents on your Anthropic account (it uses Claude Opus 5.5 at low effort).
-- **Home Assistant's AI Task.** With no key, the add-on asks Home Assistant, which uses whichever AI
+- **Home Assistant's AI Task.** With no key, HA-liday Show asks Home Assistant, which uses whichever AI
   integration you've set up there with an AI Task entity: Anthropic, OpenAI, Google Gemini, or a local
   model through Ollama, which keeps everything on your network. If you have several, set **AI Task
   entity** on the Configuration tab, or Home Assistant's preferred one is used. Smaller local models
@@ -936,14 +939,14 @@ rate; if it skips or stalls, it doesn't.
 
 ## Listen for Govee traffic
 
-Some Govee features drive lights in more detail than the add-on can. In **Scene Stage**, for example,
+Some Govee features drive lights in more detail than HA-liday Show can. In **Scene Stage**, for example,
 one light (the sync centre) plays a picture across all the others. **Setup → Labs → Listen for
-Govee traffic** helps work out how, so the add-on can learn to do the same:
+Govee traffic** helps work out how, so HA-liday Show can learn to do the same:
 
 1. Start Scene Stage (or whatever you want recorded) in the Govee Home app.
 2. Press **Listen for 60 seconds**. Nothing is sent to your lights, and a playing show is stopped.
 3. When it finishes, the table shows which lights sent what. Press **Download** and attach the file to
-   an issue on the add-on's GitHub page.
+   an issue on HA-liday Show's GitHub page.
 
 If it hears nothing, the lights are talking to each other directly, where Home Assistant can't hear.
 
@@ -982,26 +985,26 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 
 ## Where things are stored
 
-Shows, devices, palettes, your presets, the house photo and settings live in the add-on's config folder
+Shows, devices, palettes, your presets, the house photo and settings live in the app's config folder
 (`/addon_configs/<slug>_haliday_show/`), so they are included in Home Assistant backups. Uploaded songs
 go to `/media/haliday_show/` so media players can play them. The editor layout, the editing speaker
 and the experimental switch are kept in each browser.
 
 ## Running without Home Assistant
 
-You don't need this if you use the add-on. It's for running HA-liday Show on another always-on
+You don't need this if you use the app. It's for running HA-liday Show on another always-on
 machine, such as a NAS, a Raspberry Pi or a Linux PC, for example if your Home Assistant can't
-install add-ons. You can run it [with Docker](#with-docker) or [with Python](#with-python).
+install apps. You can run it [with Docker](#with-docker) or [with Python](#with-python).
 
-It works the same as the add-on, with a few differences:
+It works the same as the Home Assistant app, with a few differences:
 
 - There's no sidebar panel. Open `http://<that machine's address>:8099/` in your browser.
 - On that machine itself it opens straight away. From any other device you need a password, which
   you set with `HALIDAY_SHOW_PASSWORD`. Your browser asks for it once; any user name works.
   Or set `HALIDAY_SHOW_ALLOW_ALL=1` to let anyone on your home network in without one.
 - It must be on the same network as your lights, with full network access (for Docker, host
-  networking), as the add-on is.
-- There's no `hassio.addon_stdin` action. Use the MQTT entities in automations instead.
+  networking), as the app is.
+- There's no `hassio.app_stdin` action. Use the MQTT entities in automations instead.
 
 You set everything with these settings (environment variables). All are optional.
 
@@ -1009,7 +1012,7 @@ You set everything with these settings (environment variables). All are optional
 | --- | --- |
 | `HALIDAY_SHOW_PASSWORD` | The password other devices need. |
 | `HALIDAY_SHOW_ALLOW_ALL` | `1` lets anyone on your network in, with no password. |
-| `HALIDAY_SHOW_CONFIG` | The folder your shows, lights and settings are kept in. It holds the same files as the add-on's, so you can copy shows across. |
+| `HALIDAY_SHOW_CONFIG` | The folder your shows, lights and settings are kept in. It holds the same files as the app's, so you can copy shows across. |
 | `HALIDAY_SHOW_MEDIA` | The folder your songs are kept in. |
 | `HALIDAY_SHOW_PORT` | The web port, `8099` unless you change it. |
 | `HA_URL`, `HA_TOKEN` | Your Home Assistant address (e.g. `http://homeassistant.local:8123`) and a long-lived access token (your profile in Home Assistant → **Security**). Needed for speakers, Home Assistant's AI, and Home Assistant lights and switches in shows. |
@@ -1037,7 +1040,7 @@ lights need. On a Raspberry Pi, use the 64-bit Raspberry Pi OS (a Pi 3 or newer)
 5. Open `http://<that machine's address>:8099/` and type your password when your browser asks.
 
 Your shows go in the `config` folder next to the file and your songs in `media`. To bring shows
-across from the add-on, copy the files from its folder (see
+across from the app, copy the files from its folder (see
 [Where things are stored](#where-things-are-stored)) into `config`, and its `haliday_show` songs
 folder into `media`.
 
@@ -1072,5 +1075,5 @@ To update, run `pipx upgrade haliday-show`.
   controllers with E1.31 sent straight to their IP; Home Assistant lights and switches through Home
   Assistant; and Twinkly lights with Twinkly's own realtime mode. While a show plays, the lights ignore
   other commands; they go back to what they were doing when it stops.
-- The add-on uses the host network to find Govee and WLED lights and to send to every light, but its web
+- As a Home Assistant app, HA-liday Show uses the host network to find Govee and WLED lights and to send to every light, but its web
   server only answers Home Assistant's ingress proxy, so the editor isn't reachable directly on your LAN.

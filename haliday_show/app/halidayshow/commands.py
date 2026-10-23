@@ -1,4 +1,4 @@
-"""Commands from automations: the hassio.addon_stdin action and MQTT.
+"""Commands from automations: the hassio.app_stdin action (hassio.addon_stdin before HA 2026.2) and MQTT.
 
   {"action": "play", "show": "halloween", "media_player": "media_player.garden"}
   {"action": "stop"}
@@ -87,7 +87,7 @@ async def handle(runner: Runner, raw) -> str:
 
 
 async def read_stdin(runner: Runner):
-    """Run commands sent with the hassio.addon_stdin action.
+    """Run commands sent with the hassio.app_stdin action.
 
     A daemon thread does the reading, so any kind of stdin works (pipe, socket,
     /dev/null) and a blocked read never holds up shutdown.

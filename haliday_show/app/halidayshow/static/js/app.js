@@ -3117,7 +3117,7 @@ function wireData() {
       + "settings and house photo with the ones in the file. A copy of what you have now is kept first, under Your data.");
   });
   $("btn-afresh").addEventListener("click", () => replaceData("api/backup/reset", null, "Start afresh? This removes your "
-    + "lights, shows, palettes, presets, settings and house photo, and resets this browser's layout, so the add-on is "
+    + "lights, shows, palettes, presets, settings and house photo, and resets this browser's layout, so HA-liday Show is "
     + "like new and the setup guide opens. Your songs are kept, and so is a copy of everything, under Your data."));
   $("btn-export").addEventListener("click", () => status("Exporting… check your downloads"));
 }
@@ -3240,7 +3240,7 @@ function renderWizardCheck() {
 function renderWizardSpeakers() {
   const off = app.haAvailable === false;
   $("wz-speaker-help").innerHTML = off
-    ? "Home Assistant isn't reachable from the add-on, so songs play in this browser for now. You can add a speaker later under <b>Setup → Speakers</b>."
+    ? "Home Assistant isn't reachable from HA-liday Show, so songs play in this browser for now. You can add a speaker later under <b>Setup → Speakers</b>."
     : "Add the speaker the music should play on, and the lights follow it. Or skip this and play songs in this browser while you design.";
   $("wz-add-speaker").hidden = off;
   $("wz-speakers").replaceChildren(...(off ? [] : app.speakers.map((s) => wizardRow(s.name, s.entity_id,
@@ -3627,7 +3627,7 @@ const speakerTests = {}; // entity -> {busy, ok, text}
 
 function renderSpeakers() {
   $("speakers-ha").textContent = app.haAvailable === false
-    ? "Home Assistant isn't reachable from the add-on, so speakers can't be listed or tested right now." : "";
+    ? "Home Assistant isn't reachable from HA-liday Show, so speakers can't be listed or tested right now." : "";
   const cells = (tr, ...items) => {
     for (const it of items) {
       const td = document.createElement("td");
@@ -4139,9 +4139,9 @@ async function loadAiStatus() {
   let st = { via: null };
   try { st = await api("api/ai"); } catch { /* older add-on or offline */ }
   aiVia = st.via;
-  const text = st.via === "claude" ? `Using Claude (${st.model}) with the API key from the add-on's Configuration tab.`
+  const text = st.via === "claude" ? `Using Claude (${st.model}) with the API key from the app's Configuration tab.`
     : st.via === "ha" ? `Using Home Assistant's AI Task${st.entity ? ` (${st.entity})` : ""}.`
-      : "Not set up yet: add a Claude API key on the add-on's Configuration tab, or set up an AI integration with an AI Task entity in Home Assistant.";
+      : "Not set up yet: add a Claude API key on the app's Configuration tab, or set up an AI integration with an AI Task entity in Home Assistant.";
   $("ai-status").textContent = text;
   $("ai-hint").textContent = st.via ? "" : "Set up an AI under Setup → Settings to use this.";
   $("ai-hint").hidden = !!st.via;
@@ -4616,7 +4616,7 @@ async function init() {
     // A fresh install opens the setup guide, once.
     if (!app.deviceList.length && !shows.length && !prefs.get("wizard.done", false)) openWizard();
   } catch (e) {
-    status(`Couldn't reach the add-on: ${e.message}`, true);
+    status(`Couldn't reach HA-liday Show: ${e.message}`, true);
   }
   requestAnimationFrame(frame);
 }
