@@ -52,7 +52,7 @@ async def test_devices_round_trip_and_validation(client):
     resp = await client.put("/api/devices", json=[{"ip": "192.168.1.50", "name": "Porch", "segments": 12}])
     assert resp.status == 200
     devices = await (await client.get("/api/devices")).json()
-    assert devices == [{"id": "192.168.1.50", "name": "Porch", "ip": "192.168.1.50", "sku": "",
+    assert devices == [{"id": "192.168.1.50", "name": "Porch", "kind": "govee", "ip": "192.168.1.50", "sku": "",
                         "segments": 12, "reverse": False, "gradient": False,
                         "protocol": "standard", "brightness": 100, "bulbs": None, "parts": [], "whole": True}]
     resp = await client.put("/api/devices", json=[{"ip": "192.168.1.50", "segments": 12, "bulbs": 200}])
@@ -563,3 +563,49 @@ async def test_packet_lab_sends_a_steps_after_messages_once_it_is_done(client):
         rx.close()
     bad = {"kind": "razer", "text": "b1 01", "after": [{"kind": "nope", "text": ""}]}
     assert (await client.post("/api/lab/send", json={"ip": "127.0.0.1", "steps": [bad]})).status == 400
+
+
+async def test_wled_devices_send_over_ddp(client):
+    strip = {"id": "wled-1", "kind": "wled", "ip": "192.168.1.70", "name": "Eaves", "segments": 900,
+             "protocol": "standard", "gradient": True, "sku": "H706A"}
+    resp = await client.put("/api/devices", json=[strip, {"ip": "192.168.1.71", "segments": 20}])
+    assert resp.status == 200
+    wled, govee = await resp.json()
+    # WLED strips always go over DDP, can be long, and have no Govee model or blending.
+    assert (wled["kind"], wled["protocol"], wled["segments"], wled["sku"], wled["gradient"]) == \
+        ("wled", "ddp", 900, "", False)
+    assert (govee["kind"], govee["protocol"]) == ("govee", "standard")  # no kind saved: a Govee light
+    # "ddp" is only for WLED lights.
+    assert (await client.put("/api/devices", json=[{"ip": "1.2.3.4", "protocol": "ddp"}])).status == 400
+    assert (await client.put("/api/devices", json=[{**strip, "segments": 1001}])).status == 400
+
+
+async def test_wled_info_reads_name_leds_and_segments(client, aiohttp_server, monkeypatch):
+    from aiohttp import web
+
+    from halidayshow import wled
+
+    async def handler(request):
+        return web.json_response({
+            "info": {"name": "Eaves", "ver": "0.15.0", "leds": {"count": 300}},
+            "state": {"seg": [{"id": 0, "start": 0, "stop": 100, "n": "Left"},
+                              {"id": 1, "start": 100, "stop": 200},
+                              {"id": 2, "start": 210, "stop": 300, "n": "Right"}]}})
+
+    app = web.Application()
+    app.router.add_get("/json", handler)
+    fake = await aiohttp_server(app, host="127.0.0.1")
+    monkeypatch.setattr(wled, "HTTP_PORT", fake.port)
+    resp = await client.post("/api/wled/info", json={"ip": "127.0.0.1"})
+    assert resp.status == 200
+    info = await resp.json()
+    assert (info["name"], info["leds"], info["max"]) == ("Eaves", 300, 1000)
+    assert info["parts"] == [{"id": "w0", "name": "Left", "from": 1, "to": 100},
+                             {"id": "w1", "name": "Segment 2", "from": 101, "to": 200},
+                             {"id": "w2", "name": "Right", "from": 211, "to": 300}]
+    # The parts are accepted as they are.
+    dev = {"kind": "wled", "ip": "192.168.1.70", "segments": 300, "parts": info["parts"]}
+    assert (await client.put("/api/devices", json=[dev])).status == 200
+    assert (await client.post("/api/wled/info", json={"ip": "nope"})).status == 400
+    await fake.close()
+    assert (await client.post("/api/wled/info", json={"ip": "127.0.0.1"})).status == 502

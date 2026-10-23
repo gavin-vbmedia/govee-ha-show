@@ -319,11 +319,12 @@
   <section class="toolbar">
     <button id="btn-scan" class="primary">Scan network</button>
     <form id="add-form" class="group">
+      <select id="add-kind" title="Govee lights or WLED strips"><option value="govee">Govee</option><option value="wled">WLED</option></select>
       <input id="add-ip" placeholder="IP address" pattern="\d+\.\d+\.\d+\.\d+" required size="14">
       <button>Add by IP</button>
     </form>
     <form id="plan-form" class="group" title="Build shows for lights you don't have yet, then link them when they arrive">
-      <input id="plan-model" list="model-list" placeholder="Model, e.g. H706A (optional)" size="26"
+      <input id="plan-model" list="model-list" placeholder="Model, e.g. H706A or WLED (optional)" size="26"
         title="Pick the Govee model to fill in its name and the settings that suit it">
       <datalist id="model-list"></datalist>
       <input id="plan-name" placeholder="Name, e.g. Porch" required size="14">
@@ -337,6 +338,8 @@
     even with the light still on its reel. Or press <b>Test</b>: a rainbow runs with a white dot stepping along it.
     Set <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
     If Test only turns the light on, change <b>Protocol</b> and test again.</p>
+  <p class="hint">For a <b>WLED</b> strip, pick <b>WLED</b> next to <b>Add by IP</b> and type its IP: its name and
+    number of LEDs are filled in for you, and any segments you've set up in WLED become its <b>parts</b>.</p>
   <section id="finder" class="finder" hidden>
     <b id="finder-title"></b>
     <p id="finder-question"></p>

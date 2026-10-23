@@ -89,6 +89,28 @@ show up, type its IP address and add it by hand. Each light has a row of setting
 | Blend | Asks the light to blend smoothly between neighbouring segments. |
 | Protocol | How colours are sent (see below). |
 
+### WLED strips
+
+WLED strips work alongside your Govee lights. Pick **WLED** in the box next to **Add by IP**, type the
+strip's IP address (it's on the WLED app's **Info** page) and press **Add by IP**. The add-on asks the
+strip for its name and number of LEDs, so there's nothing to work out: every LED is its own segment,
+up to 1000 a strip. **Find**, **Blend** and **Protocol** don't apply to WLED, so they're not shown.
+
+WLED has its own way of splitting a strip, **segments** in the WLED app. If you've set some up, they
+become the strip's **parts** here when you add it, with their names (see *Splitting a light into
+parts* below). Change them in WLED later? Press **Use WLED segments** under the strip to bring them in
+again: a part keeps its clips as long as its WLED segment is still there. You can also split the strip
+here by hand, without touching WLED.
+
+During a show the add-on sets every LED itself, so the effect you picked in WLED, and its segments'
+own effects, are paused until a couple of seconds after the show stops, then WLED carries on where it
+left off. WLED's own brightness still applies, on top of **Brightness %** here. If only part of the
+strip lights up during a show, open WLED's **Config → Sync Interfaces** and untick **Use main segment
+only**.
+
+To plan a WLED strip before it arrives, type **WLED** as the model next to **Add planned light** and set
+**Segments** to its number of LEDs.
+
 ### Putting lights in order
 
 Drag a light by its ⠿ handle, or use its ↑ and ↓ buttons. Every

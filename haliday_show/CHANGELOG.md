@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.88
+
+- **WLED strips** now work alongside your Govee lights. Under **Setup → Devices**, pick **WLED** next to
+  **Add by IP** and type the strip's IP: its name and number of LEDs are filled in for you, and each
+  LED is its own segment. Shows, tests, live previews and the House view all work as they do for Govee.
+- A WLED strip can be split into **parts** like any other light. If you've already set up segments in
+  WLED, they become its parts when you add it, with their names. Press **Use WLED segments** under the
+  strip to bring them in again after changing them in WLED; clips on a part stay with it.
+- You can plan a WLED strip before it arrives: type **WLED** as the model next to **Add planned light**
+  and set **Segments** to its number of LEDs.
+
 ## 0.2.87
 
 - The add-on is now called **HA-liday Show**, ready for lights other than Govee. Home Assistant sees
