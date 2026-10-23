@@ -1,10 +1,30 @@
-# Development tooling only. The add-on version lives in haliday_show/config.yaml and
-# haliday_show/app/halidayshow/__init__.py; CI checks they match this one.
+# The add-on version lives in haliday_show/config.yaml and haliday_show/app/halidayshow/__init__.py;
+# CI checks they match this one. The add-on's image doesn't use this file: it's for the tests and for
+# installing without Home Assistant (pipx install git+https://github.com/gavin-vbmedia/ha-liday-show).
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "haliday-show"
-version = "0.2.93"
+version = "0.2.94"
+description = "Music-synchronised light shows for Govee, WLED and pixel-controller lights"
+license = "MIT"
 requires-python = ">=3.12"
-dependencies = ["aiohttp"]
+dynamic = ["dependencies"]
+
+[project.scripts]
+haliday-show = "halidayshow.__main__:standalone"
+
+[tool.setuptools]
+package-dir = {"" = "haliday_show/app"}
+packages = ["halidayshow"]
+
+[tool.setuptools.package-data]
+halidayshow = ["static/**/*"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["haliday_show/requirements.txt"]}
 
 [tool.pytest.ini_options]
 pythonpath = ["haliday_show/app"]

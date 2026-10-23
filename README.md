@@ -70,7 +70,8 @@ Home Assistant builds the add-on on your machine the first time, which takes a f
 entities in automations, also set up the Mosquitto broker add-on and the MQTT integration (optional).
 
 **No add-ons?** If your Home Assistant can't install add-ons, or you don't use Home Assistant, you can
-run it [with Docker](haliday_show/DOCS.md#with-docker) on a NAS, Raspberry Pi or Linux PC instead.
+run it [with Docker](haliday_show/DOCS.md#with-docker) on a NAS, Raspberry Pi or Linux PC, or
+[with Python](haliday_show/DOCS.md#with-python) on a Mac or Linux, instead.
 
 ## 🧰 Features
 
