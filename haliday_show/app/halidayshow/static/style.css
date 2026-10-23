@@ -426,3 +426,6 @@ table.devices td { white-space: nowrap; }
 table.devices .parts-row td { white-space: normal; }
 table.devices tr.drop-above td { box-shadow: inset 0 2px 0 var(--accent); }
 table.devices tr.drop-below + tr.parts-row td, table.devices tr.drop-below:not(:has(+ .parts-row)) td { box-shadow: inset 0 -2px 0 var(--accent); }
+.hint.warn { color: #d97706; }
+#add-leds { width: 5em; }
+table.devices td > span > .seg-num { width: 5.4em; }

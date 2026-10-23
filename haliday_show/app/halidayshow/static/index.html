@@ -319,8 +319,9 @@
   <section class="toolbar">
     <button id="btn-scan" class="primary">Scan network</button>
     <form id="add-form" class="group">
-      <select id="add-kind" title="Govee lights or WLED strips"><option value="govee">Govee</option><option value="wled">WLED</option></select>
+      <select id="add-kind" title="What kind of light it is"><option value="govee">Govee</option><option value="wled">WLED</option><option value="ddp">Pixel controller (DDP)</option></select>
       <input id="add-ip" placeholder="IP address" pattern="\d+\.\d+\.\d+\.\d+" required size="14">
+      <label id="add-leds-label" hidden title="How many LEDs this light has on the controller">LEDs <input id="add-leds" type="number" min="1" max="1000" value="50"></label>
       <button>Add by IP</button>
     </form>
     <form id="plan-form" class="group" title="Build shows for lights you don't have yet, then link them when they arrive">
@@ -339,7 +340,9 @@
     Set <b>Segments</b> so the dot visits every segment once per lap, and tick <b>Reverse</b> if it runs the wrong way.
     If Test only turns the light on, change <b>Protocol</b> and test again.</p>
   <p class="hint">For a <b>WLED</b> strip, pick <b>WLED</b> next to <b>Add by IP</b> and type its IP: its name and
-    number of LEDs are filled in for you, and any segments you've set up in WLED become its <b>parts</b>.</p>
+    number of LEDs are filled in for you, and any segments you've set up in WLED become its <b>parts</b>.
+    For a string on a <b>pixel controller</b> (Falcon Player, ESPixelStick, ESPHome and the like), pick
+    <b>Pixel controller (DDP)</b>, type its IP and how many <b>LEDs</b> it has.</p>
   <section id="finder" class="finder" hidden>
     <b id="finder-title"></b>
     <p id="finder-question"></p>

@@ -8,6 +8,7 @@ import {
   EFFECTS, FPS, HOUSE, PRESETS, applyHouse, bake, composeLight, defaultParams, matchesPreset, presetParams,
   renderTrack, showDuration,
 } from "./effects.js";
+import { controllerId, nextFirstLed, overlapping } from "./controllers.js";
 import { partsFrame } from "./devicetest.js";
 import { asShown, isSlow } from "./lightspeed.js";
 import { LAB_TEMPLATES, flagSweep, modeSweep, startSweep, sweepWindow, windowSweep } from "./labtemplates.js";
@@ -334,16 +335,29 @@ function renderDevices() {
       saveDevices();
     });
     cell(ip);
-    const wled = isWled(d);
+    const wled = isPixels(d);
     const model = document.createElement("span");
-    if (wled) model.append("WLED"); else model.append(d.sku || "–", modelBadge(d.sku));
+    if (isWled(d)) model.append("WLED");
+    else if (d.kind === "ddp") {
+      const first = input("number", "first", { min: 1, max: 100000, className: "seg-num",
+        title: "The LED on the controller where this light starts. Lights sharing a controller each start at their own LED." });
+      first.value = d.first || 1;
+      model.append("Pixel controller · first LED ", first);
+      const clash = overlapping(app.deviceList, d);
+      if (clash) {
+        const warn = document.createElement("div");
+        warn.className = "hint warn";
+        warn.textContent = `Shares LEDs with ${clash.name}`;
+        model.append(warn);
+      }
+    } else model.append(d.sku || "–", modelBadge(d.sku));
     cell(model);
     const segs = document.createElement("span");
     const find = button("Find", () => findSegments(d), "ghost");
     find.disabled = !d.ip || LONG_PROTOCOLS.includes(d.protocol);
     find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
     const count = input("number", "segments", { min: 1, max: LONG_PROTOCOLS.includes(d.protocol) ? 1000 : 255 });
-    if (wled) count.title = "How many LEDs the strip has. Each one is a segment.";
+    if (wled) count.title = "How many LEDs the light has. Each one is a segment.";
     segs.append(count);
     if (!wled) segs.append(" ", find);
     cell(segs);
@@ -362,8 +376,9 @@ function renderDevices() {
     if (wled) {
       const how = document.createElement("span");
       how.className = "hint";
-      how.textContent = "WLED";
-      how.title = "Colours go to the strip over DDP, which WLED listens for with no setup";
+      how.textContent = "DDP";
+      how.title = isWled(d) ? "Colours go to the strip over DDP, which WLED listens for with no setup"
+        : "Colours go to the controller over DDP. Turn DDP on in the controller's settings if it has a switch for it.";
       cell(how);
     } else {
       const proto = document.createElement("select");
@@ -676,13 +691,25 @@ async function loadModels() {
     app.models = Object.fromEntries(models.map((m) => [m.sku, m]));
     const list = $("model-list");
     for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.status ? "" : " (untested)"}`, m.sku));
-    list.append(new Option("WLED strip", "WLED"));
+    list.append(new Option("WLED strip", "WLED"), new Option("Pixel controller (DDP)", "DDP"));
     renderDevices();
     timeline.draw(); // lights' notes on the timeline come from the models
   } catch { /* the picker is a convenience; manual entry still works */ }
 }
 
 const isWled = (d) => d?.kind === "wled";
+const isPixels = (d) => ["wled", "ddp"].includes(d?.kind); // one LED a segment, sent over DDP
+
+// A pixel controller: no API to ask, so the LED count comes from the form. A second light on the same
+// controller starts just after the last one.
+function addController(ip, leds) {
+  const first = nextFirstLed(app.deviceList, ip);
+  const segments = Math.min(Math.max(Math.round(leds) || 50, 1), 1000);
+  app.deviceList.push({ id: controllerId(app.deviceList, ip), kind: "ddp", name: `Pixels ${ip.split(".").pop()}${first > 1 ? ` from ${first}` : ""}`,
+    ip, sku: "", protocol: "ddp", first, segments, bulbs: segments, reverse: false, gradient: false, brightness: 100 });
+  saveDevices();
+  status(`Added ${segments} LEDs on ${ip}, starting at LED ${first}. Press Test to check them.`);
+}
 // Protocols that aren't limited to 255 segments a light.
 const LONG_PROTOCOLS = ["whole", "segments", "pixels", "ddp"];
 
@@ -746,9 +773,9 @@ function planModelChanged() {
   const m = app.models[skuOf($("plan-model").value)];
   const info = $("plan-info");
   info.replaceChildren();
-  if (skuOf($("plan-model").value) === "WLED") {
+  if (["WLED", "DDP"].includes(skuOf($("plan-model").value))) {
     $("plan-segments").max = 1000;
-    info.append(" A WLED strip: set Segments to its number of LEDs.");
+    info.append(` A ${skuOf($("plan-model").value) === "WLED" ? "WLED strip" : "pixel controller light"}: set Segments to its number of LEDs.`);
     return;
   }
   if (!m) return;
@@ -3602,9 +3629,10 @@ function wire() {
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
     const model = app.models[skuOf($("plan-model").value)];
     const segments = Number($("plan-segments").value) || 15;
-    if (skuOf($("plan-model").value) === "WLED") {
-      app.deviceList.push({ id, name, kind: "wled", ip: "", sku: "", protocol: "ddp", segments, bulbs: segments,
-        reverse: false, gradient: false, brightness: 100 });
+    const kind = { WLED: "wled", DDP: "ddp" }[skuOf($("plan-model").value)];
+    if (kind) {
+      app.deviceList.push({ id, name, kind, ip: "", sku: "", protocol: "ddp", segments, bulbs: segments,
+        reverse: false, gradient: false, brightness: 100, ...(kind === "ddp" ? { first: 1 } : {}) });
     } else {
       app.deviceList.push(newLight(model, { id, name, ip: "", sku: model ? model.sku : "", segments }));
     }
@@ -3617,9 +3645,13 @@ function wire() {
   $("add-form").addEventListener("submit", (e) => {
     e.preventDefault();
     const ip = $("add-ip").value.trim();
-    if ($("add-kind").value === "wled") addWled(ip); else addDevice({ id: ip, ip, sku: "" });
+    const kind = $("add-kind").value;
+    if (kind === "wled") addWled(ip);
+    else if (kind === "ddp") addController(ip, Number($("add-leds").value));
+    else addDevice({ id: ip, ip, sku: "" });
     $("add-ip").value = "";
   });
+  $("add-kind").addEventListener("change", () => { $("add-leds-label").hidden = $("add-kind").value !== "ddp"; });
 
   document.addEventListener("keydown", (e) => {
     if (music.active) { music.key(e); return; }

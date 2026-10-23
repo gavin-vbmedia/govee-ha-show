@@ -111,6 +111,23 @@ only**.
 To plan a WLED strip before it arrives, type **WLED** as the model next to **Add planned light** and set
 **Segments** to its number of LEDs.
 
+### Pixel controllers
+
+Strings on a pixel controller work too: Falcon Player, ESPixelStick, ESPHome, Tasmota, a home-made ESP32,
+or anything else that listens for **DDP**. Turn DDP on in the controller's settings if it has a switch for
+it. Then pick **Pixel controller (DDP)** next to **Add by IP**, type the controller's IP and how many
+**LEDs** the string has, and press **Add by IP**. Controllers don't say how many LEDs they have, so check
+with **Test**: the white dot should reach the end of the string.
+
+One controller often drives several strings or props. Add the same IP again for each one: the new light
+starts just after the last light on that controller. **first LED**, in the **Model** column, is where the
+light starts in the controller's LED order, so you can set it to match how you've wired things. If two
+lights on one controller share LEDs, the row says *Shares LEDs with…*. You can also add the whole
+controller as one long light and split it into **parts** instead.
+
+To plan one before it arrives, type **DDP** as the model next to **Add planned light** and set
+**Segments** to its number of LEDs.
+
 ### Putting lights in order
 
 Drag a light by its ⠿ handle, or use its ↑ and ↓ buttons. Every
