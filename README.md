@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎄 HA-liday Show
+<img src="docs/brand/logo.svg" alt="HA-liday Show" width="600">
 
 **Music-synchronised light shows for Govee and WLED lights, built right inside Home Assistant.**
 
@@ -206,11 +206,12 @@ then reload the Add-on Store; it appears under **Local add-ons** and builds on y
 ```
 repository.yaml                         Home Assistant add-on repository metadata
 docs/images/                            Screenshots for the README
+docs/brand/                             Logo, icon and favicon (SVG originals; the add-on's PNGs are made from them)
 haliday_show/                             The add-on (config, Dockerfile, docs, changelog)
   README.md                             Intro shown on the add-on's Info tab
   DOCS.md                               User guide (shown on the add-on's Documentation tab)
   CHANGELOG.md                          What changed in each version
-  icon.png, logo.png                    Pictures shown in the Add-on Store
+  icon.png, logo.png                    Pictures shown in the Add-on Store (from docs/brand)
   app/halidayshow/__main__.py             Entry point and environment settings
   app/halidayshow/protocol.py             Govee LAN and razer packet encoding
   app/halidayshow/wled.py                 WLED: DDP packets, and the light's name, LEDs and segments

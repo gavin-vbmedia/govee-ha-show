@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.95
+
+- A new look: **HA-liday Show** has its own icon and logo in the **Add-on Store**, and the icon also
+  appears next to the name at the top of the editor and on its browser tab.
+
 ## 0.2.94
 
 - Nothing changes inside Home Assistant.
