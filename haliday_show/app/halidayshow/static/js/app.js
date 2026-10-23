@@ -1845,6 +1845,7 @@ async function stopLightPreview() {
 // Experimental effects (Govee scenes) only appear once switched on in Settings. `keep` stays listed
 // regardless, so a clip that already uses one can still be edited.
 const experimentalOn = () => prefs.get("experimental.scenes", false);
+const labsOn = () => prefs.get("labs", false);
 // house: true for the House lane's effects, false for lights', undefined for both.
 const visibleEffects = (keep, house) => Object.entries(EFFECTS).filter(([k, fx]) =>
   (!fx.experimental || experimentalOn() || k === keep) && (house === undefined || !!fx.house === house));
@@ -3886,11 +3887,12 @@ function frame() {
 
 // wiring ----------------------------------------------------------------------
 // Library and Setup each hold several pages; each remembers the page last open in it.
-const SECTIONS = { library: ["palettes", "presets"], setup: ["devices", "speakers", "house", "settings"] };
+const SECTIONS = { library: ["palettes", "presets"], setup: ["devices", "speakers", "house", "settings", "labs"] };
 const sectionPage = { library: "palettes", setup: "devices" };
 
 // Opens a tab (editor, music, library, setup) or a page in Library or Setup (devices, palettes…).
 function showView(view) {
+  if (view === "labs" && !labsOn()) view = "settings";
   const section = Object.keys(SECTIONS).find((k) => SECTIONS[k].includes(view));
   if (section) sectionPage[section] = view;
   const page = SECTIONS[view] ? sectionPage[view] : view;
@@ -4063,7 +4065,7 @@ function wire() {
   window.addEventListener("beforeunload", (e) => { if (app.dirty) e.preventDefault(); });
 }
 
-// Settings → Packet lab: send a hand-made message to one light and show what comes back.
+// Setup → Labs → Packet lab: send a hand-made message to one light and show what comes back.
 const LAB_HELP = {
   json: "A whole LAN message, sent as it is.",
   razer: "The command byte and its data in hex; the BB header, length and checksum are added. Set Length field to override it.",
@@ -4155,7 +4157,7 @@ function wireLab() {
   fillLab();
 }
 
-// Settings → Listen for Govee traffic: record what the lights say to each other, e.g. during Scene Stage.
+// Setup → Labs → Listen for Govee traffic: record what the lights say to each other, e.g. during Scene Stage.
 async function listenForTraffic() {
   try {
     await api("api/diagnostics/listen", { method: "POST", json: { seconds: 60 } });
@@ -4193,6 +4195,13 @@ async function init() {
   wireHouse();
   const layout = new Layout(() => { layoutPreview(); timeline.layout(); });
   $("btn-reset-layout").addEventListener("click", () => layout.reset());
+  $("exp-labs").checked = labsOn();
+  $("tab-labs").hidden = !labsOn();
+  $("exp-labs").addEventListener("change", (e) => {
+    prefs.set("labs", e.target.checked);
+    $("tab-labs").hidden = !e.target.checked;
+    if (!e.target.checked && sectionPage.setup === "labs") sectionPage.setup = "settings";
+  });
   $("exp-scenes").checked = experimentalOn();
   $("exp-scenes").addEventListener("change", (e) => {
     prefs.set("experimental.scenes", e.target.checked);

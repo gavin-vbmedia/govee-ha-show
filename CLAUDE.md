@@ -45,7 +45,7 @@ To check what goes on the wire, give a light the IP `127.0.0.1` and listen on it
 Home Assistant and point `HA_URL` and `HA_TOKEN` at it.
 
 Questions only the real lights can answer go to the owner one simple step at a time (for Govee lights,
-ideally through the packet lab, Setup → Settings): give the exact thing to paste or press and what to
+ideally through the packet lab, Setup → Labs; it appears once **Show the Labs tab** is ticked under Setup → Settings): give the exact thing to paste or press and what to
 look for. Check which lights the owner actually has before asking.
 
 ## Every user-facing change is a release
