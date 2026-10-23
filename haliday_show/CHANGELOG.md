@@ -1,9 +1,16 @@
 # Changelog
 
-## 0.2.94
+## 0.2.95
 
 - A new look: **HA-liday Show** has its own icon and logo in the **Add-on Store**, and the icon also
   appears next to the name at the top of the editor and on its browser tab.
+
+## 0.2.94
+
+- Nothing changes inside Home Assistant.
+- You can now install HA-liday Show with Python on a Mac, a Linux PC or a Raspberry Pi, with no Docker
+  and no Home Assistant add-ons. See **Running without Home Assistant → With Python** in the
+  documentation.
 
 ## 0.2.93
 

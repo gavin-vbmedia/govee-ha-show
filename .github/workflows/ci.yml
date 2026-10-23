@@ -19,6 +19,15 @@ jobs:
       - run: pip install -r haliday_show/requirements.txt pytest pytest-aiohttp
       - run: python -m pytest -q
       - run: node --test tests/js/*.mjs
+      - name: Installs and runs with pipx
+        run: |
+          pipx install .
+          haliday-show < /dev/null &
+          for i in $(seq 1 20); do curl -s -o /dev/null localhost:8099/api/info && break; sleep 1; done
+          curl -fsS localhost:8099/api/info
+          curl -fsS -o /dev/null localhost:8099/static/js/app.js
+          test -d ~/haliday-show/config
+          kill %1
       - name: Versions match
         run: |
           v_py=$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml)
