@@ -430,3 +430,21 @@ table.devices tr.drop-below + tr.parts-row td, table.devices tr.drop-below:not(:
 .hint.warn { color: #d97706; }
 #add-leds { width: 5em; }
 table.devices td > span > .seg-num { width: 5.4em; }
+
+/* Add a light: step 1 is a grid of kinds, step 2 the fields that kind needs. */
+.add-dialog { width: min(600px, calc(100vw - 32px)); }
+.add-dialog .effect-dialog-head { gap: 10px; }
+.add-dialog [data-step] { display: flex; flex-direction: column; gap: 12px; }
+.add-dialog [data-step][hidden] { display: none; }
+.add-dialog [data-step] > .hint:first-child { margin: 0; }
+.add-kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.add-kinds button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px;
+  text-align: left; min-height: 64px; }
+.add-kinds button span { font-size: 12px; color: var(--muted); font-weight: 400; }
+.add-kinds button:hover { border-color: var(--accent); }
+.add-kinds .add-plan { grid-column: 1 / -1; min-height: 0; }
+.add-scan { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.add-scan #scan-results { align-self: stretch; }
+.add-scan > .hint { margin: 0; }
+#add-plan-fields { display: flex; flex-direction: column; gap: 12px; }
+#add-error { margin: 0; }

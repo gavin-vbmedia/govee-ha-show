@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.100
+
+- Adding a light is now one button: **+ Add a light** under **Setup → Devices** opens a short
+  step-by-step window. Pick what you're adding (Govee, WLED, a pixel controller, a Home Assistant light or
+  switch, Twinkly, or a light that hasn't arrived), fill in just what that kind needs, and press **Add**.
+  Each step tells you what to do, so the long notes above the list of lights have gone.
+- When it's added you can go straight on to **Add another**. If something's wrong, like a mistyped IP,
+  the window says so and stays open.
+- **Scan network** for Govee lights is now inside the window, under **Govee light**.
+
 ## 0.2.99
 
 - **Twinkly** lights, experimental: under **Setup → Devices**, pick **Twinkly (experimental)** next to
