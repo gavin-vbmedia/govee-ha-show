@@ -16,6 +16,15 @@ export const SLOW_PROTOCOLS = {
 
 export const isSlow = (device) => !!device && device.protocol in SLOW_PROTOCOLS;
 
+// A Home Assistant switch is on while the show is at least half bright there, whatever the colour
+// (as output.HaDevice does), so that's all it can show: on or off.
+export const SWITCH_ON = 128;
+export const switchOn = (frame) => {
+  let top = 0;
+  for (let i = 0; i < frame.length; i++) top = Math.max(top, frame[i]);
+  return top >= SWITCH_ON;
+};
+
 // How often a clip asks a slow light to change, against how often the light can, from a few seconds
 // of the clip rendered as it would be baked. Returns null for realtime lights, else
 // {needed, can, tooFast, label}: changes a second the clip needs and the light manages. It's too fast
@@ -69,6 +78,8 @@ export function asShown(device, time, renderAt) {
   if (device.protocol === "whole") {
     const [r, g, b] = average(frame);
     for (let i = 0; i < frame.length; i += 3) { frame[i] = r; frame[i + 1] = g; frame[i + 2] = b; }
+  } else if (device.protocol === "ha_switch") {
+    frame.fill(switchOn(frame) ? 255 : 0); // a plain on or off, in white
   }
   return frame;
 }

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.108
+
+- Fixed: a Home Assistant switch with **Brightness %** below about 50 never turned on in a show.
+  Switches now ignore **Brightness %**, as a plug can't dim.
+- In the editor a Home Assistant switch now shows as plain on or off, the way it really works, and a
+  clip is marked if it would leave the switch off the whole time, or keep it on so its colours are
+  lost.
+- All your Home Assistant lights and switches now share about 10 changes a second between them, which
+  is what a Hue bridge or a Zigbee network keeps up with. With lots of them, each changes a little less
+  often instead of all of them falling behind.
+- Home Assistant lights join in sooner at the start of a show.
+- The warning on a Home Assistant light now talks about it showing one colour at a time, rather than
+  being "too short".
+
 ## 0.2.107
 
 - Icons now sit beside the tabs along the top (**Editor**, **Music**, **Library**, **Setup**), the pages in

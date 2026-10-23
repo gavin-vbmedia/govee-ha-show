@@ -375,15 +375,44 @@ class Calls:
         return self.task is not None and not self.task.done()
 
 
+# All the Home Assistant lights together get at most this many changes a second. Hue bridges and
+# Zigbee networks take about 10 a second in all before they queue and fall behind, so ten bulbs at
+# 4 a second each would lag; with the shared limit they each slow down evenly instead.
+HA_TOTAL_PER_S = 10
+
+
+class HaBudget:
+    """Shares HA_TOTAL_PER_S out between the lights that have a change waiting: the one that has
+    waited longest since its last change goes next."""
+
+    def __init__(self, per_second: float = HA_TOTAL_PER_S):
+        self.gap = 1.0 / per_second
+        self.next_at = 0.0
+        self.waiting: dict = {}  # light -> when its last change went
+
+    def ask(self, dev, now: float) -> bool:
+        self.waiting[dev] = dev.last_sent
+        if now < self.next_at or min(self.waiting, key=self.waiting.get) is not dev:
+            return False
+        del self.waiting[dev]
+        self.next_at = now + self.gap
+        return True
+
+    def drop(self, dev):
+        self.waiting.pop(dev, None)
+
+
 class HaDevice(Calls, OutputDevice):
     """A Home Assistant light or switch, one segment. Calls are made one at a time, in order: the
     snapshot, then each change (only the latest waits while one is going), then putting it back."""
 
-    def __init__(self, address: str, segments: int, sock: socket.socket, *, ha=None, tasks=None, **kwargs):
+    def __init__(self, address: str, segments: int, sock: socket.socket, *, ha=None, tasks=None, budget=None,
+                 **kwargs):
         entity = address.partition(":")[2]
         super().__init__(entity, segments, sock, **kwargs)
         self.entity, self.domain = entity, entity.partition(".")[0]
         self.ha = ha
+        self.budget = budget if budget is not None else HaBudget()
         self.tasks = tasks if tasks is not None else set()
         self.realtime = False
         self.min_interval = HA_SWITCH_INTERVAL_S if self.domain == "switch" else HA_LIGHT_INTERVAL_S
@@ -403,13 +432,24 @@ class HaDevice(Calls, OutputDevice):
         self.enabled = True
 
     async def _snapshot(self):
-        state = await self.ha.state(self.entity)
+        # Both at once: the show's first changes wait for these, so the light joins in sooner.
+        state, _ = await asyncio.gather(
+            self.ha.state(self.entity),
+            self.ha.call("scene", "create", {"scene_id": self.scene_id, "snapshot_entities": [self.entity]}))
+        self.saved = True
         modes = set((state.get("attributes") or {}).get("supported_color_modes") or [])
         self.colour = self.domain == "light" and bool(modes & HA_COLOUR_MODES)
-        await self.ha.call("scene", "create", {"scene_id": self.scene_id, "snapshot_entities": [self.entity]})
-        self.saved = True
+
+    def update(self, rgb: bytes):
+        if self.domain == "switch":
+            # A plug can't dim, and Brightness % would keep the show from ever reaching "on".
+            n = self.segments * 3
+            self.pending = bytes(rgb[:n]).ljust(n, b"\0")
+            return
+        super().update(rgb)
 
     def disable(self):
+        self.budget.drop(self)
         if self.enabled and self.ha is not None:
             self._run(self._restore)
         self.enabled = False
@@ -465,7 +505,11 @@ class HaDevice(Calls, OutputDevice):
         if frame is None or now - self.last_sent < self.min_interval:
             return
         state = self.state_for(frame)
-        if self._changed(state):
+        if not self._changed(state):
+            self.budget.drop(self)
+        elif not self.budget.ask(self, now):
+            return  # other lights' turn first; the latest frame waits
+        else:
             self._run(lambda: self._send_state(state))
             self.shown, self.last_sent = state, now
         self.last_frame, self.pending = frame, None
@@ -545,11 +589,11 @@ class TwinklyDevice(Calls, DdpDevice):
 
 
 def make_device(ip: str, segments: int, sock: socket.socket, *, universes=None, ha=None, tasks=None,
-                **kwargs) -> OutputDevice:
+                budget=None, **kwargs) -> OutputDevice:
     if kwargs.get("protocol") == "twinkly":
         return TwinklyDevice(ip, segments, sock, tasks=tasks, **kwargs)
     if kwargs.get("protocol") in ("ha_light", "ha_switch"):
-        return HaDevice(ip, segments, sock, ha=ha, tasks=tasks, **kwargs)
+        return HaDevice(ip, segments, sock, ha=ha, tasks=tasks, budget=budget, **kwargs)
     if kwargs.get("protocol") == "e131":
         return E131Device(ip, segments, sock, universes=universes, **kwargs)
     cls = DdpDevice if kwargs.get("protocol") == "ddp" else OutputDevice
@@ -565,6 +609,7 @@ class Output:
         self.devices: dict[str, OutputDevice] = {}
         self.universes: dict[str, e131.Universes] = {}  # E1.31 controller IP -> its universes
         self.ha = None  # the Home Assistant client, for HA lights and switches
+        self.ha_budget = HaBudget()  # their changes a second, shared between them
         self.calls: set[asyncio.Task] = set()  # HTTP calls still going (HA, Twinkly), finished before closing
         self._task: asyncio.Task | None = None
 
@@ -593,7 +638,7 @@ class Output:
             universes = self.universes.setdefault(ip.partition("#")[0], e131.Universes()) if protocol == "e131" else None
             dev = make_device(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol,
                               brightness=brightness, universes=universes,
-                              **(dict(ha=self.ha, tasks=self.calls) if protocol.startswith("ha_") else
+                              **(dict(ha=self.ha, tasks=self.calls, budget=self.ha_budget) if protocol.startswith("ha_") else
                                  dict(tasks=self.calls) if protocol == "twinkly" else {}))
             self.devices[ip] = dev
         if not dev.enabled:
