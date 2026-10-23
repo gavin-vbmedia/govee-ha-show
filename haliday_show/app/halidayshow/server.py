@@ -16,7 +16,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, ai, commands, discovery, migrate, scenes
+from . import __version__, ai, commands, discovery, migrate, scenes, wled
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError,
@@ -261,11 +261,13 @@ def _clean_device(d: dict) -> dict:
         segments = int(d.get("segments", 15))
     except (TypeError, ValueError) as e:
         raise web.HTTPBadRequest(text=f"bad device: {e}")
-    protocol = str(d.get("protocol") or "standard")
-    if protocol not in PROTOCOLS:
+    # Saved before WLED existed, a device has no kind: it's a Govee light.
+    kind = "wled" if d.get("kind") == "wled" else "govee"
+    protocol = "ddp" if kind == "wled" else str(d.get("protocol") or "standard")
+    if kind == "govee" and protocol not in PROTOCOLS:
         raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
     # Realtime messages hold the segment count in one byte; the other protocols can go further.
-    most = MAX_SEGMENTS if protocol in LONG_PROTOCOLS else 255
+    most = MAX_SEGMENTS if protocol in LONG_PROTOCOLS or kind == "wled" else 255
     if not 1 <= segments <= most:
         raise web.HTTPBadRequest(text=f"segments must be 1-{most} with this protocol")
     try:
@@ -283,9 +285,9 @@ def _clean_device(d: dict) -> dict:
     dev_id = str(d.get("id") or ip)
     if not dev_id:
         raise web.HTTPBadRequest(text="a planned device needs an id")
-    return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64],
-            "ip": ip, "sku": str(d.get("sku", "")), "segments": segments,
-            "reverse": bool(d.get("reverse")), "gradient": bool(d.get("gradient")),
+    return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64], "kind": kind,
+            "ip": ip, "sku": "" if kind == "wled" else str(d.get("sku", "")), "segments": segments,
+            "reverse": bool(d.get("reverse")), "gradient": kind == "govee" and bool(d.get("gradient")),
             "protocol": protocol, "brightness": brightness, "bulbs": bulbs,
             "parts": _clean_parts(d.get("parts"), segments),
             # A split light's own track plays across all its parts unless this is off.
@@ -307,6 +309,21 @@ async def scan_devices(request):
     found = await discovery.scan()
     return web.json_response([{"id": d.get("device") or d["ip"], "ip": d["ip"],
                                "sku": d.get("sku", "")} for d in found])
+
+
+async def wled_info(request):
+    """Ask a WLED light for its name, LED count and segments, to fill in a new light or its parts."""
+    body = await request.json()
+    ip = str(body.get("ip") or "").strip() if isinstance(body, dict) else ""
+    try:
+        ipaddress.IPv4Address(ip)
+    except ValueError:
+        raise web.HTTPBadRequest(text="ip must be an IP address")
+    try:
+        found = await wled.fetch(ip)
+    except wled.WledError as e:
+        raise web.HTTPBadGateway(text=str(e))
+    return web.json_response({**found, "max": MAX_SEGMENTS})
 
 
 async def test_device(request):
@@ -994,6 +1011,7 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
     r.add_get("/api/devices", get_devices)
     r.add_put("/api/devices", put_devices)
     r.add_post("/api/devices/scan", scan_devices)
+    r.add_post("/api/wled/info", wled_info)
     r.add_post("/api/devices/test", test_device)
     r.add_post("/api/devices/probe", probe_device)
     r.add_post("/api/devices/preview", preview_device)

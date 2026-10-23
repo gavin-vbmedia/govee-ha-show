@@ -2,7 +2,7 @@
 
 # 🎄 HA-liday Show
 
-**Music-synchronised light shows for Govee lights, built right inside Home Assistant.**
+**Music-synchronised light shows for Govee and WLED lights, built right inside Home Assistant.**
 
 A simple alternative to xLights, made for Govee: design a show in your browser, watch it play on a
 photo of your house, then run it from an automation. No extra software, no separate server.
@@ -53,7 +53,7 @@ photo of your house, then run it from an automation. No extra software, no separ
 ## 🚀 Installation
 
 **Requires** Home Assistant OS or Supervised, and Govee lights with **LAN Control** turned on in the
-Govee Home app.
+Govee Home app, or WLED strips, or both.
 
 1. Press **Add repository** above. It opens your Home Assistant and offers to add this add-on
    repository.
@@ -76,6 +76,8 @@ entities in automations, also set up the Mosquitto broker add-on and the MQTT in
 
 - Discover Govee devices on the local network, check each one's segments with a test pattern,
   and set its segments, bulb count, brightness, direction and blending
+- WLED strips alongside Govee lights: add one by IP and its LED count and WLED segments are filled in
+  for you
 - Plan shows before your lights arrive: add planned lights by name and segment count, then link
   them to the real devices later
 - Put your lights in any order (drag them on the Devices tab) and every show's timeline follows
@@ -153,6 +155,7 @@ flowchart LR
     end
     C -- save --> D
     E -- "razer packets over LAN UDP" --> F[💡 Govee lights]
+    E -- "DDP over LAN UDP" --> W[💡 WLED strips]
     E -- "start song" --> G[🔊 HA media player]
     H[Automations<br/>MQTT · addon_stdin] --> E
 ```
@@ -203,6 +206,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
   icon.png, logo.png                    Pictures shown in the Add-on Store
   app/halidayshow/__main__.py             Entry point and environment settings
   app/halidayshow/protocol.py             Govee LAN and razer packet encoding
+  app/halidayshow/wled.py                 WLED: DDP packets, and the light's name, LEDs and segments
   app/halidayshow/discovery.py            Multicast device scan
   app/halidayshow/listen.py               Records other Govee traffic (Settings → Listen)
   app/halidayshow/lab.py                  Packet lab: hand-made messages to one light
@@ -238,6 +242,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
 tools/build_models.py                   Adds new lights from Govee's LAN Control list to models.json
 tools/govee_btsnoop.py                  Decrypts the Govee app's Bluetooth traffic from an Android log
 docs/govee-protocols.md                 How Govee lights are driven: findings, measurements, open questions
+docs/wled.md                            How WLED strips are driven: DDP, and how WLED segments become parts
 tests/                                  pytest and node tests (tests/js)
 ```
 

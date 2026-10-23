@@ -334,14 +334,18 @@ function renderDevices() {
       saveDevices();
     });
     cell(ip);
+    const wled = isWled(d);
     const model = document.createElement("span");
-    model.append(d.sku || "–", modelBadge(d.sku));
+    if (wled) model.append("WLED"); else model.append(d.sku || "–", modelBadge(d.sku));
     cell(model);
     const segs = document.createElement("span");
     const find = button("Find", () => findSegments(d), "ghost");
-    find.disabled = !d.ip || ["whole", "segments", "pixels"].includes(d.protocol);
+    find.disabled = !d.ip || LONG_PROTOCOLS.includes(d.protocol);
     find.title = d.ip ? "Work out the segment count with a few yes or no questions" : "Link this light first";
-    segs.append(input("number", "segments", { min: 1, max: ["whole", "segments", "pixels"].includes(d.protocol) ? 1000 : 255 }), " ", find);
+    const count = input("number", "segments", { min: 1, max: LONG_PROTOCOLS.includes(d.protocol) ? 1000 : 255 });
+    if (wled) count.title = "How many LEDs the strip has. Each one is a segment.";
+    segs.append(count);
+    if (!wled) segs.append(" ", find);
     cell(segs);
     const bulbs = document.createElement("input");
     Object.assign(bulbs, { type: "number", min: 1, max: 2000, value: d.bulbs ?? "", placeholder: `${d.segments * 4}?`,
@@ -354,12 +358,20 @@ function renderDevices() {
     cell(bulbs);
     cell(input("number", "brightness", { min: 1, max: 100, title: "Caps this light in every show. 100 is full brightness." }));
     cell(input("checkbox", "reverse"));
-    cell(input("checkbox", "gradient"));
-    const proto = document.createElement("select");
-    for (const [v, label] of Object.entries(PROTOCOLS)) proto.add(new Option(label, v, false, v === (d.protocol || "standard")));
-    proto.title = "How colours are sent. If Test only turns the light on, try the next one.";
-    proto.addEventListener("change", () => { d.protocol = proto.value; saveDevices(); });
-    cell(proto);
+    if (wled) cell(document.createTextNode("")); else cell(input("checkbox", "gradient"));
+    if (wled) {
+      const how = document.createElement("span");
+      how.className = "hint";
+      how.textContent = "WLED";
+      how.title = "Colours go to the strip over DDP, which WLED listens for with no setup";
+      cell(how);
+    } else {
+      const proto = document.createElement("select");
+      for (const [v, label] of Object.entries(PROTOCOLS)) proto.add(new Option(label, v, false, v === (d.protocol || "standard")));
+      proto.title = "How colours are sent. If Test only turns the light on, try the next one.";
+      proto.addEventListener("change", () => { d.protocol = proto.value; saveDevices(); });
+      cell(proto);
+    }
     const actions = document.createElement("td");
     const test = button(d.ip ? "Test" : "Planned", async () => {
       if (await testLight(d)) status(`Testing ${d.name} for 20 seconds`);
@@ -487,10 +499,13 @@ function partsRow(d) {
     d.parts = [...parts, { id: `p${n}`, name: `Part ${n}`, from: run[0], to: run[1] }].sort((a, b) => a.from - b.from);
     saveDevices();
   };
+  const fromWled = isWled(d) && d.ip ? button("Use WLED segments", () => useWledSegments(d), "ghost small") : null;
+  if (fromWled) fromWled.title = "Make a part from each segment you've set up in WLED, with its name and LEDs";
   if (!parts.length) {
     const b = button("Split into parts…", add, "ghost small");
     b.title = "Give stretches of this light their own tracks, and leave segments you can't see off";
     td.append(b);
+    if (fromWled) td.append(" ", fromWled);
     return tr;
   }
   // One part per line, with a map of the light's segments: each part in its colour, unused ones grey.
@@ -584,7 +599,9 @@ function partsRow(d) {
   const stop = button("Stop", () => stopTest(d), "ghost small");
   stop.title = "Let the light go back to what it was doing";
   stop.disabled = !d.ip;
-  foot.append(more, testAll, stop, asOne, note);
+  foot.append(more, testAll, stop);
+  if (fromWled) foot.append(fromWled);
+  foot.append(asOne, note);
   panel.append(foot);
   return tr;
 }
@@ -659,9 +676,46 @@ async function loadModels() {
     app.models = Object.fromEntries(models.map((m) => [m.sku, m]));
     const list = $("model-list");
     for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.status ? "" : " (untested)"}`, m.sku));
+    list.append(new Option("WLED strip", "WLED"));
     renderDevices();
     timeline.draw(); // lights' notes on the timeline come from the models
   } catch { /* the picker is a convenience; manual entry still works */ }
+}
+
+const isWled = (d) => d?.kind === "wled";
+// Protocols that aren't limited to 255 segments a light.
+const LONG_PROTOCOLS = ["whole", "segments", "pixels", "ddp"];
+
+// Asks a WLED light for its name, LED count and segments (server.py wled_info).
+async function wledInfo(ip) {
+  const info = await api("api/wled/info", { method: "POST", json: { ip } });
+  if (info.leds > info.max) status(`${info.name} has ${info.leds} LEDs; shows can drive the first ${info.max}`, true);
+  return { ...info, leds: Math.min(info.leds, info.max) };
+}
+
+async function addWled(ip) {
+  if (app.deviceList.some((d) => d.ip === ip)) { status(`${ip} is already on the list`, true); return; }
+  try {
+    const w = await wledInfo(ip);
+    app.deviceList.push({ id: `wled-${ip}`, kind: "wled", name: w.name, ip, sku: "", protocol: "ddp",
+      segments: w.leds, bulbs: w.leds, reverse: false, gradient: false, brightness: 100, parts: w.parts });
+    saveDevices();
+    status(`Added ${w.name}: ${w.leds} LEDs${w.parts.length ? `, ${w.parts.length} parts from its WLED segments` : ""}`);
+  } catch (e) { status(`Couldn't add the WLED light: ${e.message}`, true); }
+}
+
+// Replaces a WLED light's parts with its WLED segments. Part ids follow WLED's segment ids, so clips
+// on a part stay with it when the segments are fetched again.
+async function useWledSegments(d) {
+  try {
+    const w = await wledInfo(d.ip);
+    if (!w.parts.length) { status(`${d.name} has only one segment in WLED, so there's nothing to split`, true); return; }
+    if (d.parts?.length && !confirm(`Replace ${d.name}'s parts with its ${w.parts.length} WLED segments? Clips on parts that disappear stay in your shows.`)) return;
+    d.segments = w.leds;
+    d.parts = w.parts;
+    saveDevices();
+    status(`${d.name} now has ${w.parts.length} parts: ${w.parts.map((p) => p.name).join(", ")}`);
+  } catch (e) { status(`Couldn't read ${d.name}'s segments: ${e.message}`, true); }
 }
 
 // Lights accept different forms of the realtime packet. See protocol.py.
@@ -692,10 +746,15 @@ function planModelChanged() {
   const m = app.models[skuOf($("plan-model").value)];
   const info = $("plan-info");
   info.replaceChildren();
+  if (skuOf($("plan-model").value) === "WLED") {
+    $("plan-segments").max = 1000;
+    info.append(" A WLED strip: set Segments to its number of LEDs.");
+    return;
+  }
   if (!m) return;
   if (!$("plan-name").value) $("plan-name").value = m.name.replace(/^Govee\s+/, "");
   const light = newLight(m, {});
-  $("plan-segments").max = ["whole", "segments", "pixels"].includes(light.protocol) ? 1000 : 255;
+  $("plan-segments").max = LONG_PROTOCOLS.includes(light.protocol) ? 1000 : 255;
   if (m.segments) $("plan-segments").value = m.segments;
   info.append(modelBadge(m.sku), m.segments
     ? ` Starts on ${PROTOCOLS[light.protocol]} with ${m.segments} segments.`
@@ -3542,7 +3601,13 @@ function wire() {
     let id = base;
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
     const model = app.models[skuOf($("plan-model").value)];
-    app.deviceList.push(newLight(model, { id, name, ip: "", sku: model ? model.sku : "", segments: Number($("plan-segments").value) || 15 }));
+    const segments = Number($("plan-segments").value) || 15;
+    if (skuOf($("plan-model").value) === "WLED") {
+      app.deviceList.push({ id, name, kind: "wled", ip: "", sku: "", protocol: "ddp", segments, bulbs: segments,
+        reverse: false, gradient: false, brightness: 100 });
+    } else {
+      app.deviceList.push(newLight(model, { id, name, ip: "", sku: model ? model.sku : "", segments }));
+    }
     $("plan-name").value = "";
     $("plan-model").value = "";
     $("plan-segments").max = 255;
@@ -3552,7 +3617,7 @@ function wire() {
   $("add-form").addEventListener("submit", (e) => {
     e.preventDefault();
     const ip = $("add-ip").value.trim();
-    addDevice({ id: ip, ip, sku: "" });
+    if ($("add-kind").value === "wled") addWled(ip); else addDevice({ id: ip, ip, sku: "" });
     $("add-ip").value = "";
   });
 

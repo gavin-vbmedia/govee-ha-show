@@ -13,6 +13,7 @@ import time
 from .protocol import (CMD_PORT, average, colorwc_msg, ptreal_msg, razer_colors, razer_enable, razer_msg,
                        pixel_packets, scene_packets, segment_changes, segment_colour_packet, segment_colour_packets,
                        wrap)
+from .wled import DDP_PORT, ddp_packets
 
 log = logging.getLogger(__name__)
 
@@ -196,6 +197,63 @@ class OutputDevice:
         self.last_sent = now
 
 
+# WLED drops back to its own effect when it hears nothing for a while (2.5 s by default), so a
+# still frame is repeated well inside that.
+WLED_RESEND_S = 1.0
+
+
+class WledDevice(OutputDevice):
+    """A WLED light, sent each frame over DDP. There's no mode to switch on or off: WLED shows the
+    frames as they arrive and goes back to its own effect a little after they stop."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.realtime = False
+        self.keepalive = WLED_RESEND_S
+        self.sequence = 0
+
+    def _send(self, payload: bytes):
+        try:
+            self.sock.sendto(payload, (self.ip, DDP_PORT))
+        except OSError as e:
+            log.debug("[%s] send failed: %s", self.ip, e)
+
+    def enable(self):
+        self.enabled_at = time.monotonic()
+        self.enabled = True
+
+    def disable(self):
+        self.enabled = False
+        self.pending = self.last_frame = None
+
+    def play_scene(self, code: int, param: str):
+        pass  # Govee scenes don't exist on WLED; the light keeps playing the track's frames
+
+    def end_scene(self):
+        pass
+
+    def packet(self, frame: bytes, previous: bytes | None = None) -> bytes:
+        return ddp_packets(frame, self.sequence % 15 + 1)[0]
+
+    def tick(self, now: float):
+        if not self.enabled:
+            return
+        frame = self.pending if self.pending is not None else self.last_frame
+        if frame is None or now - self.last_sent < self.min_interval:
+            return  # rate limited; latest pending frame wins
+        if frame != self.last_frame or now - self.last_sent > self.keepalive:
+            self.sequence = self.sequence % 15 + 1
+            for p in ddp_packets(frame, self.sequence):
+                self._send(p)
+            self.last_frame, self.last_sent = frame, now
+        self.pending = None
+
+
+def make_device(ip: str, segments: int, sock: socket.socket, **kwargs) -> OutputDevice:
+    cls = WledDevice if kwargs.get("protocol") == "ddp" else OutputDevice
+    return cls(ip, segments, sock, **kwargs)
+
+
 class Output:
     """Owns the UDP socket and ticks every claimed device."""
 
@@ -225,7 +283,7 @@ class Output:
         if dev is None or (dev.segments, dev.reverse, dev.gradient, dev.protocol) != (segments, reverse, gradient, protocol):
             if dev:
                 dev.disable()
-            dev = OutputDevice(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol,
+            dev = make_device(ip, segments, self.sock, reverse=reverse, gradient=gradient, protocol=protocol,
                                brightness=brightness)
             self.devices[ip] = dev
         if not dev.enabled:
@@ -269,7 +327,12 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
                        brightness=brightness)
     # Logged so a light that ignores the pattern can be compared against other tools.
     first = test_frame(segments, 0)
-    packet = razer_colors(first, gradient, protocol).hex(" ") if dev.realtime else dev.packet(first).decode()
+    if dev.realtime:
+        packet = razer_colors(first, gradient, protocol).hex(" ")
+    elif isinstance(dev, WledDevice):
+        packet = dev.packet(first)[:10].hex(" ") + " …"
+    else:
+        packet = dev.packet(first).decode()
     log.info("Test pattern on %s (%s): %d segments, first colour packet %s", ip, protocol, segments, packet)
     t0 = time.monotonic()
     try:
