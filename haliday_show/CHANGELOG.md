@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.105
+
+- **Setup → Devices** is now one tidy line per light: its name, IP, model, and a small bar of its
+  segments with each part in its colour, plus how many segments and parts it has. Hover the bar to see
+  each part's segments.
+- Press a light's line (or **Edit**) to open its window, with all its settings and its parts in one
+  place. **Find**, **Test** and **Remove light** are in there too, and changes save as you make them.
+- **Test** is still on each line, so you can check a light without opening it.
+- On a phone the list drops the IP and model so it fits, and tapping a line opens the light.
+
 ## 0.2.104
 
 - **Find** (next to **Segments** under **Setup → Devices**) now opens its questions in a window in front

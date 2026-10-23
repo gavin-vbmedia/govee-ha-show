@@ -91,7 +91,12 @@ On the **Devices** tab press **+ Add a light**. First pick what you're adding un
 **Plan a light** for one that hasn't arrived yet. Then fill in what that kind needs and press **Add**. For a
 Govee light or a WLED strip, press **Scan network** and **Add** each light it finds, or type its IP if it
 doesn't show up. When it's added, press **Add another**
-for the next one, or **Done**. Each light has a row of settings:
+for the next one, or **Done**.
+
+The list shows one line per light: its name, IP, model and a bar of its segments, with each part in its
+colour and a count of its segments and parts. Press **Test** on a line to test the light. Press anywhere
+else on the line (or **Edit**) to open the light's window, which has all its settings and its parts.
+**Remove light** is at the bottom of that window. The settings are:
 
 | Setting | What it does |
 | --- | --- |
@@ -103,7 +108,7 @@ for the next one, or **Done**. Each light has a row of settings:
 | Blend | Govee only: asks the light to blend smoothly between neighbouring segments. |
 | Protocol | Govee only: how colours are sent (see [Govee lights](#govee-lights)). Other kinds show how they're driven, such as **DDP** or **E1.31**. |
 
-Some kinds have a little more in their row: **first LED** for a pixel controller over DDP, **universe**
+Some kinds have a little more in their window: **first LED** for a pixel controller over DDP, **universe**
 and **channel** for one over E1.31, and the light or switch for a Home Assistant one.
 
 ### Govee lights
@@ -171,9 +176,9 @@ it. Then press **+ Add a light**, pick **Pixel controller (DDP)**, type the cont
 with **Test**: the white dot should reach the end of the string.
 
 One controller often drives several strings or props. Add the same IP again for each one: the new light
-starts just after the last light on that controller. **first LED**, in the **Model** column, is where the
+starts just after the last light on that controller. **first LED**, in the light's window, is where the
 light starts in the controller's LED order, so you can set it to match how you've wired things. If two
-lights on one controller share LEDs, the row says *Shares LEDs with…*. You can also add the whole
+lights on one controller share LEDs, their line says *Shares LEDs with…*. You can also add the whole
 controller as one long light and split it into **parts** instead.
 
 To plan one before it arrives, pick **Plan a light**, type **DDP** as the model and set
@@ -190,7 +195,7 @@ Each light has a **universe** and **channel** in the **Model** column: where it 
 controller's set-up. Each LED takes 3 channels, a universe holds 510 (170 LEDs), and a light carries on
 into the next universe when it runs past the end of one, the way xLights numbers them. Add the same IP
 again for the next string and it starts just after the last one. Lights on one controller can share a
-universe without blanking each other, and the row says *Shares LEDs with…* if two overlap.
+universe without blanking each other, and their line says *Shares LEDs with…* if two overlap.
 
 When a show or test stops, the add-on tells the controller, so it goes straight back to what it was
 doing. To plan one before it arrives, pick **Plan a light** and type **E1.31** as the model.
@@ -199,7 +204,7 @@ doing. To plan one before it arrives, pick **Plan a light** and type **E1.31** a
 
 Any light or switch in Home Assistant can join in: Zigbee and Hue bulbs, LIFX, or a smart plug driving an
 inflatable or a lit-up prop. Press **+ Add a light**, pick **Home Assistant light or switch**, pick it from
-the list and press **Add**. To swap it for another later, pick it in the row's **IP** column.
+the list and press **Add**. To swap it for another later, pick it in the light's window.
 
 Changes go through Home Assistant, so these are slow, and each is one colour at a time:
 
@@ -248,7 +253,7 @@ starts with the settings that suit it, such as **Per bulb** with 300 segments fo
 String Lights 2, both when you plan it and when you add it from **Scan network** (under **+ Add a light → Govee light**). Lights you've already
 added keep their settings. Otherwise 15 segments is a guess until you test the real
 light. Planned lights appear in the previews but nothing is sent to them. When the light arrives, type
-its IP into the planned light's row (or pick it, for a Home Assistant light). For a Govee light you can
+its IP into the planned light's window (or pick it, for a Home Assistant light). For a Govee light you can
 also press **+ Add a light → Govee light → Scan network** and choose **Link to** next to it. Its shows carry over, and if the real segment count differs, just change it: effects scale
 to any number of segments.
 
@@ -256,7 +261,7 @@ to any number of segments.
 
 A long light can run where you only want part of it in the show,
 or you may want different effects on different stretches, like a roof line that goes round the
-whole house. Press **Split into parts…** under the light's row. The first part covers every
+whole house. Press the light's line to open its window, then **Split into parts…**. The first part covers every
 segment; set its first and last segment, then press **+ Add part** for the next stretch (it starts
 just after the last part). For example, a 60-segment Permanent Outdoor Pro could be **Front roof**
 3–23, **Side** 24–40 and **Back** 41–60. Segments are counted the way effects run, so with
@@ -271,7 +276,7 @@ go.
 
 Each part gets its own track in the editor (named like *Roof · Front roof*), its own preview row,
 and works with Copy and Recolour like any other light. **Segments in no part stay off during a
-show**: the row lists them as *Unused, off in shows*. Parts can't overlap, and making the light
+show**: the light's window lists them as *Unused, off in shows*. Parts can't overlap, and making the light
 shorter trims them. Remove a part with ✕; its effects stay in your shows.
 
 ### The whole light as one
@@ -895,7 +900,7 @@ snapshots or DIYs) for as long as the clip lasts, then the show takes the light 
 | Test only turns a Govee light on | Change **Protocol** on the Devices tab and test again. |
 | Only the first part of a Govee light lights up | Some Govee lights only accept a few segments in realtime mode. The 30 m Christmas String Lights 2 (H70C5) stops at 44 bulbs. Set **Protocol** to **Per bulb (experimental)** and **Segments** to the number of bulbs (300 for the H70C5). **App segments (experimental)** and **Whole light only** also light the whole string, more coarsely. |
 | Only part of a WLED strip lights up | In WLED, open **Config → Sync Interfaces** and untick **Use main segment only**. |
-| A pixel controller doesn't light | For DDP, check DDP is switched on in the controller's settings. For E1.31, check it takes E1.31 as **unicast** and that **universe** and **channel** in the light's row match the controller's set-up. Then check **Segments** matches the number of LEDs. |
+| A pixel controller doesn't light | For DDP, check DDP is switched on in the controller's settings. For E1.31, check it takes E1.31 as **unicast** and that **universe** and **channel** in the light's window match the controller's set-up. Then check **Segments** matches the number of LEDs. |
 | A Home Assistant light lags behind the music | They change at most 4 times a second (a switch once a second), so fast effects look steppy. Use fades, colour changes and pulses on them. |
 | A Twinkly light doesn't light | Twinkly support is experimental and hasn't been tried on a real Twinkly yet. Please say what happens on GitHub. |
 | Effects run from the wrong end | Tick **Reverse** on the Devices tab. |
