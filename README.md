@@ -138,6 +138,7 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
   windows and tree
 - **Try the demo**: seven planned lights on the sample house, a sample song and a show ready to play,
   in one press, with no lights needed
+- A setup guide on first run: lights, a speaker, the house, then a first show generated from a song
 - Draw icicle lights as hanging drops and spotlights as beams aimed at the wall
 - Mark stretches that run out of view (round a corner, or an extension lead) so the bulb count
   still lines up; those bulbs still play in the real show

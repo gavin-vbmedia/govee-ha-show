@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.111
+
+- A new **setup guide** opens the first time you use the add-on. In one window it walks you through
+  adding your lights, checking each one with **Test** or **Find**, picking a speaker, choosing the sample
+  house or your own photo, and making your first show from a song with **✨ Generate my show** (or
+  **Start with a blank show**).
+- Its first page offers **Try the demo** as well as **Set up my lights**, while you have no lights yet.
+- Every step can be skipped, and **← Back** goes back a step. To run it again, press **Run the setup
+  guide** under **Setup → Settings**.
+- The first speaker you add in the guide becomes the **Default show speaker**, if you haven't picked one.
+
 ## 0.2.110
 
 - New **Try the demo**, for trying the add-on before your lights are up, or with no lights at all. On a

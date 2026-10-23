@@ -51,6 +51,12 @@ page you last had open. Below, "the House tab" and so on mean that page.
 
 ## Quick start
 
+The first time you open the add-on, the **setup guide** opens and walks you through these steps in one
+window: add your lights, check each one, pick a speaker, choose the sample house or your own photo, and
+make your first show from a song. Every step can be skipped, **← Back** goes back, and you can run it
+again any time with **Run the setup guide** under **Setup → Settings**. Its first page also offers
+**Try the demo** (see [The demo](#the-demo)). To do it by hand instead:
+
 1. **Setup → Devices**: press **+ Add a light**, pick what kind it is and follow the steps, then press
    **Test** to check it. For a Govee light, **Find** or **Test** sets its segment count.
 2. **Setup → Speakers** (optional): press **+ Add a speaker**, **Test and add** your speaker, and pick it as the default show
@@ -827,6 +833,8 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 | --- | --- |
 | AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
+| Setup guide | **Run the setup guide**, the step-by-step window that opens on a fresh install (see [Quick start](#quick-start)). |
+| Demo | **Try the demo** on a fresh install, or **Remove the demo** (see [The demo](#the-demo)). |
 | Experimental | **Govee scenes** (below), and **Show the Labs tab**. |
 
 **Labs** is a tab under **Setup** for working out new ways to drive Govee lights. It's hidden until you

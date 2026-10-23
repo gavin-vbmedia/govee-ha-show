@@ -343,7 +343,8 @@
     <button id="btn-add-light" class="primary">+ Add a light</button>
   </section>
   <p class="hint">Press a light to change its settings or split it into parts. <b>Test</b> runs a rainbow with a white
-    dot stepping along it: set <b>Segments</b> so the dot visits every segment once per lap.</p>  <dialog id="add-dialog" class="effect-dialog form-dialog add-dialog" aria-labelledby="add-title">
+    dot stepping along it: set <b>Segments</b> so the dot visits every segment once per lap.</p>
+  <dialog id="add-dialog" class="effect-dialog form-dialog add-dialog" aria-labelledby="add-title">
     <div class="effect-dialog-head"><h3 id="add-title">Add a light</h3>
       <span id="add-steps" class="hint"></span>
       <button class="ghost" data-add="close" aria-label="Close">✕</button></div>
@@ -533,6 +534,11 @@
       and the selection; never the song itself.</p>
   </section>
   <section class="card">
+    <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-presets"/></svg>Setup guide</h2>
+    <p class="hint">Walks you through adding your lights, a speaker and a photo, then making your first show.</p>
+    <p><button id="btn-wizard">Run the setup guide</button></p>
+  </section>
+  <section class="card">
     <h2 class="with-ico"><svg class="ico" aria-hidden="true"><use href="#i-house"/></svg>Demo</h2>
     <p class="hint" id="demo-hint"></p>
     <p><button id="btn-demo" class="primary">Try the demo</button>
@@ -621,5 +627,72 @@
 </main>
   </div>
 </div>
+<!-- The setup guide: a new user's first steps in one window (app.js, "setup guide"). -->
+<dialog id="wizard" class="effect-dialog form-dialog add-dialog wizard" aria-labelledby="wz-title">
+  <div class="effect-dialog-head"><h3 id="wz-title">Welcome to HA-liday Show</h3>
+    <span id="wz-step" class="hint"></span>
+    <button class="ghost" data-wz="close" aria-label="Close">✕</button></div>
+  <div id="wz-dots" class="wz-dots"></div>
+  <div class="form-dialog-body">
+    <section data-wz-step="welcome">
+      <p class="wz-lead">Let's get your first show playing. It takes about five minutes, and you can skip any step and
+        come back to it later.</p>
+      <div class="wz-pick" id="wz-start">
+        <button type="button" data-start="demo"><b><svg class="ico" aria-hidden="true"><use href="#i-house"/></svg> Try the demo</b><span>A sample house with seven
+          lights already placed, a song and a show ready to play. Nothing is sent to real lights, and you can remove
+          it all later.</span></button>
+        <button type="button" data-start="setup"><b><svg class="ico" aria-hidden="true"><use href="#i-devices"/></svg> Set up my lights</b><span>Add your own lights, a
+          speaker and a photo, then make your first show.</span></button>
+      </div>
+    </section>
+    <section data-wz-step="lights" hidden>
+      <p class="hint">Add each of your lights. Lights that haven't arrived yet can be added as planned lights.</p>
+      <div id="wz-lights" class="wz-list"></div>
+      <p><button type="button" id="wz-add-light">+ Add a light</button></p>
+    </section>
+    <section data-wz-step="check" hidden>
+      <p class="hint">Press <b>Test</b>: a rainbow runs along the light with a white dot stepping along it. If the dot
+        doesn't reach the end, press <b>Find</b> and answer a few yes or no questions to set its segments.</p>
+      <div id="wz-check" class="wz-list"></div>
+      <p class="hint">To split a light into parts, like a roof that turns a corner, press it under <b>Setup →
+        Devices</b> later.</p>
+    </section>
+    <section data-wz-step="speaker" hidden>
+      <p class="hint" id="wz-speaker-help"></p>
+      <div id="wz-speakers" class="wz-list"></div>
+      <p><button type="button" id="wz-add-speaker">+ Add a speaker</button></p>
+    </section>
+    <section data-wz-step="house" hidden>
+      <p class="hint">The <b>House</b> panel plays your show on a picture of your house, so you can design without
+        going outside.</p>
+      <div class="wz-pick" id="wz-house">
+        <button type="button" data-house="sample"><b><svg class="ico" aria-hidden="true"><use href="#i-house"/></svg> Use the sample house</b><span>Your lights are put on
+          its roof, porch, windows and tree for you.</span></button>
+        <label class="button" data-house="photo"><b><svg class="ico" aria-hidden="true"><use href="#i-layout"/></svg> Upload my photo</b><span>Take it from the road,
+          ideally at dusk. You trace your lights on it later under Setup → House.</span>
+          <input id="wz-photo" type="file" accept="image/*" hidden></label>
+      </div>
+      <p class="hint" id="wz-house-note"></p>
+    </section>
+    <section data-wz-step="show" hidden>
+      <p class="hint">Pick a song. It's listened to for its beats and sections, then <b>✨ Generate</b> fills your
+        lights with effects to start from. You can change anything afterwards.</p>
+      <div class="wz-pick" id="wz-song">
+        <button type="button" data-song="sample"><b><svg class="ico" aria-hidden="true"><use href="#i-music"/></svg> Use the sample song</b><span>A music-box
+          <i>Jingle Bells</i>, free to use.</span></button>
+        <label class="button" data-song="file"><b><svg class="ico" aria-hidden="true"><use href="#i-library"/></svg> Choose a song…</b><span id="wz-song-name">An MP3 or
+          other song file from this device.</span><input id="wz-song-file" type="file" accept="audio/*" hidden></label>
+      </div>
+      <label class="field">Show name <input id="wz-show-name" maxlength="80"></label>
+      <p class="hint warn" id="wz-error" hidden></p>
+    </section>
+  </div>
+  <div class="form-dialog-foot">
+    <button type="button" class="ghost" data-wz="back">← Back</button>
+    <span class="spacer"></span>
+    <button type="button" data-wz="secondary"></button>
+    <button type="button" class="primary" data-wz="primary"></button>
+  </div>
+</dialog>
 </body>
 </html>
