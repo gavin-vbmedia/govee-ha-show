@@ -91,6 +91,7 @@ export class Layout {
       btn.className = "panel-move ghost";
       btn.textContent = "⋯";
       btn.title = "Move this panel";
+      btn.setAttribute("aria-label", `Move the ${PANELS[panel.dataset.panel] ?? "panel"} panel`);
       btn.addEventListener("click", (e) => { e.stopPropagation(); this.openMenu(panel.dataset.panel, btn); });
       const head = panel.querySelector(".panel-head");
       head.append(btn);
@@ -170,6 +171,7 @@ export class Layout {
       if (fold) {
         fold.textContent = folded ? "▸" : "▾";
         fold.title = folded ? `Show ${PANELS[key]}` : `Collapse ${PANELS[key]} to its title`;
+        fold.setAttribute("aria-label", fold.title);
         fold.setAttribute("aria-expanded", String(!folded));
       }
     }
