@@ -14,9 +14,17 @@ def main():
     config_dir = Path(os.environ.get("HALIDAY_SHOW_CONFIG", "/config"))
     media_dir = Path(os.environ.get("HALIDAY_SHOW_MEDIA", "/media"))
     allow_all = os.environ.get("HALIDAY_SHOW_ALLOW_ALL") == "1"
+    # Only outside Home Assistant: the add-on is reached through ingress, never a password.
+    password = "" if os.environ.get("SUPERVISOR_TOKEN") else os.environ.get("HALIDAY_SHOW_PASSWORD", "")
     port = int(os.environ.get("HALIDAY_SHOW_PORT", "8099"))
-    logging.getLogger(__name__).info("HA-liday Show %s on port %d", __version__, port)
-    web.run_app(make_app(config_dir, media_dir, allow_all=allow_all, read_stdin=True), port=port,
+    log = logging.getLogger(__name__)
+    log.info("HA-liday Show %s on port %d", __version__, port)
+    if allow_all:
+        log.info("open to anyone on the network (HALIDAY_SHOW_ALLOW_ALL=1)")
+    elif password:
+        log.info("other devices need the password (HALIDAY_SHOW_PASSWORD)")
+    web.run_app(make_app(config_dir, media_dir, allow_all=allow_all, password=password, read_stdin=True),
+                port=port,
                 access_log=None, print=None)
 
 

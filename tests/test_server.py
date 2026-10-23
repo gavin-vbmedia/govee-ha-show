@@ -48,6 +48,79 @@ async def test_only_ingress_proxy_may_connect(tmp_path, peer, allowed):
             await server.ingress_only(req, handler)
 
 
+def _lan_request(app, headers=None):
+    from unittest import mock
+
+    from aiohttp.test_utils import make_mocked_request
+
+    transport = mock.Mock()
+    transport.get_extra_info.side_effect = lambda k, d=None: ("192.168.1.20", 5000) if k == "peername" else d
+    return make_mocked_request("GET", "/api/info", headers=headers or {}, app=app, transport=transport)
+
+
+@pytest.mark.parametrize("auth,allowed", [(None, False), ("anyone:secret", True), (":secret", True),
+                                          ("anyone:wrong", False), ("not base64", False)])
+async def test_password_lets_other_devices_in(tmp_path, auth, allowed):
+    import base64
+
+    from aiohttp import web
+
+    app = server.make_app(tmp_path / "c", tmp_path / "m", password="secret")
+    headers = {}
+    if auth == "not base64":
+        headers["Authorization"] = "Basic !!!"
+    elif auth:
+        headers["Authorization"] = "Basic " + base64.b64encode(auth.encode()).decode()
+
+    async def handler(request):
+        return web.Response(text="ok")
+
+    if allowed:
+        assert (await server.ingress_only(_lan_request(app, headers), handler)).text == "ok"
+    else:
+        with pytest.raises(web.HTTPUnauthorized) as e:
+            await server.ingress_only(_lan_request(app, headers), handler)
+        assert e.value.headers["WWW-Authenticate"].startswith("Basic")
+
+
+async def test_no_password_still_refuses_other_devices(tmp_path, monkeypatch):
+    from aiohttp import web
+
+    monkeypatch.delenv("SUPERVISOR_TOKEN", raising=False)
+    app = server.make_app(tmp_path / "c", tmp_path / "m")
+
+    async def handler(request):
+        return web.Response(text="ok")
+
+    with pytest.raises(web.HTTPForbidden) as e:
+        await server.ingress_only(_lan_request(app), handler)
+    assert "HALIDAY_SHOW_PASSWORD" in e.value.text
+
+
+def test_password_is_ignored_inside_home_assistant(monkeypatch):
+    from halidayshow import __main__ as entry
+
+    seen = {}
+    monkeypatch.setenv("SUPERVISOR_TOKEN", "t")
+    monkeypatch.setenv("HALIDAY_SHOW_PASSWORD", "secret")
+    monkeypatch.setattr(entry, "make_app", lambda *a, **kw: seen.update(kw))
+    monkeypatch.setattr(entry.web, "run_app", lambda *a, **kw: None)
+    entry.main()
+    assert seen["password"] == ""
+
+
+async def test_mqtt_broker_from_environment(monkeypatch):
+    from halidayshow.ha import HomeAssistant
+
+    monkeypatch.delenv("SUPERVISOR_TOKEN", raising=False)
+    monkeypatch.delenv("HALIDAY_SHOW_MQTT_HOST", raising=False)
+    assert await HomeAssistant().mqtt_service() is None
+    monkeypatch.setenv("HALIDAY_SHOW_MQTT_HOST", "broker.lan")
+    monkeypatch.setenv("HALIDAY_SHOW_MQTT_USERNAME", "me")
+    assert await HomeAssistant().mqtt_service() == {"host": "broker.lan", "port": 1883,
+                                                    "username": "me", "password": None}
+
+
 async def test_devices_round_trip_and_validation(client):
     resp = await client.put("/api/devices", json=[{"ip": "192.168.1.50", "name": "Porch", "segments": 12}])
     assert resp.status == 200

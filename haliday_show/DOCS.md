@@ -13,7 +13,8 @@ play them from Home Assistant. Open **HA-liday Show** from the Home Assistant si
 
 **Reference:** [Arrange the editor](#arrange-the-editor) · [Settings](#settings) ·
 [Setting up the AI](#setting-up-the-ai) · [Govee scenes](#experimental-govee-scenes) ·
-[Troubleshooting](#troubleshooting) · [Where things are stored](#where-things-are-stored)
+[Troubleshooting](#troubleshooting) · [Where things are stored](#where-things-are-stored) ·
+[Running without Home Assistant](#running-without-home-assistant)
 
 ## Finding your way
 
@@ -829,6 +830,40 @@ Shows, devices, palettes, your presets, the house photo and settings live in the
 (`/addon_configs/<slug>_haliday_show/`), so they are included in Home Assistant backups. Uploaded songs
 go to `/media/haliday_show/` so media players can play them. The editor layout, the editing speaker
 and the experimental switch are kept in each browser.
+
+## Running without Home Assistant
+
+You don't need this if you use the add-on. It's for running HA-liday Show on another always-on
+machine, such as a NAS, a Raspberry Pi or a Linux PC, for example if your Home Assistant can't
+install add-ons. Instructions for Docker and a Python install follow in the next updates.
+
+It works the same as the add-on, with a few differences:
+
+- There's no sidebar panel. Open `http://<that machine's address>:8099/` in your browser.
+- On that machine itself it opens straight away. From any other device you need a password, which
+  you set with `HALIDAY_SHOW_PASSWORD`. Your browser asks for it once; any user name works.
+  Or set `HALIDAY_SHOW_ALLOW_ALL=1` to let anyone on your home network in without one.
+- It must be on the same network as your lights, with full network access (for Docker, host
+  networking), as the add-on is.
+- There's no `hassio.addon_stdin` action. Use the MQTT entities in automations instead.
+
+You set everything with these settings (environment variables). All are optional.
+
+| Setting | What it does |
+| --- | --- |
+| `HALIDAY_SHOW_PASSWORD` | The password other devices need. |
+| `HALIDAY_SHOW_ALLOW_ALL` | `1` lets anyone on your network in, with no password. |
+| `HALIDAY_SHOW_CONFIG` | The folder your shows, lights and settings are kept in. It holds the same files as the add-on's, so you can copy shows across. |
+| `HALIDAY_SHOW_MEDIA` | The folder your songs are kept in. |
+| `HALIDAY_SHOW_PORT` | The web port, `8099` unless you change it. |
+| `HA_URL`, `HA_TOKEN` | Your Home Assistant address (e.g. `http://homeassistant.local:8123`) and a long-lived access token (your profile in Home Assistant → **Security**). Needed for speakers and for Home Assistant's AI. |
+| `ANTHROPIC_API_KEY` | A Claude API key for the AI, instead of Home Assistant's. |
+| `HALIDAY_SHOW_AI_TASK_ENTITY` | Which Home Assistant AI Task to use, if you have several. |
+| `HALIDAY_SHOW_MQTT_HOST` | Your MQTT broker, for the show entities. Also `_PORT`, `_USERNAME` and `_PASSWORD`. |
+
+> **Speakers:** Home Assistant plays songs from its own **media** folder, so a speaker can only play
+> a song if `HALIDAY_SHOW_MEDIA` is that same folder (shared over the network, for example).
+> Otherwise, play the music in your browser.
 
 ## Notes
 
