@@ -14,6 +14,7 @@ its own with Docker or Python.
 [![Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgavin-vbmedia%2Fha-liday-show%2Fmain%2Fhaliday_show%2Fconfig.yaml&query=%24.version&label=version&color=blue)](haliday_show/CHANGELOG.md)
 ![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-informational)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
+[![Coded with Claude](https://img.shields.io/badge/coded%20with-Claude-d97757)](#-how-this-is-made)
 
 [![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgavin-vbmedia%2Fha-liday-show)
 
