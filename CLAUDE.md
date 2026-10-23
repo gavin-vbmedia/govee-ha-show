@@ -1,14 +1,18 @@
 # HA-liday Show
 
-A Home Assistant add-on for making and playing music-synchronised Govee light shows. One Python
-service (aiohttp) in `haliday_show/app/halidayshow/` serves a browser editor (plain ES modules in
-`static/`, no build step) and streams baked frames to the lights over Govee's LAN "razer" protocol.
+A Home Assistant add-on for making and playing music-synchronised light shows on Govee lights, WLED
+strips, pixel controllers (DDP and E1.31), Home Assistant lights and switches, and Twinkly
+(experimental). One Python service (aiohttp) in `haliday_show/app/halidayshow/` serves a browser editor
+(plain ES modules in `static/`, no build step) and streams baked frames to each light in its own
+protocol: Govee's LAN "razer" protocol, DDP, E1.31, Home Assistant actions or Twinkly's realtime mode.
 It also runs without Home Assistant, as a Docker container or a `pipx` install (see "Running
 without Home Assistant" below). README.md has the architecture and a map of every file.
-**Before changing how lights are driven (protocols, `output.py`, `protocol.py`), read
-`docs/govee-protocols.md`**: what's known about each protocol, measurements from the owner's real
-lights, what was tried and didn't work, and open questions.
-Add to it when you learn something new about the lights.
+**Before changing how lights are driven (`output.py`, `protocol.py`, `wled.py`, `e131.py`,
+`twinkly.py`), read that kind's notes, listed in `docs/README.md`**. For Govee that's
+`docs/govee-protocols.md`: what's known about each protocol, measurements from the owner's real
+lights, what was tried and didn't work, and open questions. Add to the notes when you learn something
+new about the lights. A new kind of light gets its own `docs/<kind>.md` and a row in `docs/README.md`.
+Saved lights have a `kind`; each kind's saved fields are a saved-data change to agree with Gavin.
 
 The owner (Gavin) uses this at home and wants Claude to run the project with as little input from
 them as possible. How much to decide alone is in `.claude/skills/steward/SKILL.md`.
@@ -36,10 +40,13 @@ image to `ghcr.io/gavin-vbmedia/ha-liday-show` on every merge that touches `hali
 No real lights are reachable from a cloud session. To see a UI change working, run the service
 locally, add **planned lights** (devices with no IP, `PUT /api/devices`) and drive the editor with
 Playwright (Chromium is at `/opt/pw-browsers`; `pip install playwright`, never `playwright install`).
-To check what goes on the wire, give a light the IP `127.0.0.1` and listen on UDP port 4003.
+To check what goes on the wire, give a light the IP `127.0.0.1` and listen on its port: UDP 4003
+(Govee), 4048 (WLED and DDP), 5568 (E1.31) or 7777 (Twinkly); for Home Assistant lights run a fake
+Home Assistant and point `HA_URL` and `HA_TOKEN` at it.
 
-Questions only the real lights can answer go to the owner one simple step at a time, ideally through
-the packet lab (Setup → Settings): give the exact thing to paste or press and what to look for.
+Questions only the real lights can answer go to the owner one simple step at a time (for Govee lights,
+ideally through the packet lab, Setup → Settings): give the exact thing to paste or press and what to
+look for. Check which lights the owner actually has before asking.
 
 ## Every user-facing change is a release
 

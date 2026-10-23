@@ -1,7 +1,7 @@
 name: HA-liday Show
-version: "0.2.102"
+version: "0.2.103"
 slug: haliday_show
-description: Create, preview and play music-synchronised light shows (formerly Govee Light Show).
+description: Music-synchronised light shows for Govee, WLED, pixel controllers, Twinkly and Home Assistant lights (formerly Govee Light Show).
 url: https://github.com/gavin-vbmedia/ha-liday-show
 arch:
   - aarch64
@@ -9,7 +9,8 @@ arch:
 init: false
 startup: application
 boot: auto
-# Govee LAN control uses UDP multicast discovery and fixed ports, which need the host network.
+# Finding lights (Govee's multicast scan, WLED's mDNS) and sending to them on fixed UDP ports need the
+# host network.
 # The web server only answers the ingress proxy, so the port isn't open to the LAN.
 host_network: true
 ingress: true

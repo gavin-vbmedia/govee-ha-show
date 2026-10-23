@@ -513,6 +513,9 @@ async def test_packet_lab_sends_only_to_your_lights(client):
     for bad in ({**ok, "ip": "192.0.2.99"}, {**ok, "kind": "dmx"}, {**ok, "text": "zz"}, {**ok, "repeat": 0},
                 {**ok, "repeat": 99999}, {**ok, "interval_ms": 1}, {**ok, "length": -1}):
         assert (await client.post("/api/lab/send", json=bad)).status == 400
+    # Only Govee lights: the lab speaks Govee's protocol.
+    await client.put("/api/devices", json=[{"ip": "127.0.0.1", "kind": "wled", "name": "Eaves", "segments": 10}])
+    assert (await client.post("/api/lab/send", json=ok)).status == 400
 
 
 async def test_packet_lab_runs_a_sweep_step_by_step(client):

@@ -201,7 +201,7 @@ async def lab_send(request):
         raise web.HTTPBadRequest(text="expected an object")
     app = request.app
     ip = str(body.get("ip", ""))
-    if not ip or ip not in {d["ip"] for d in app[STORAGE].load_devices()}:
+    if not ip or ip not in _govee_ips(app):
         raise web.HTTPBadRequest(text="pick one of your lights")
     raw_steps = body["steps"] if "steps" in body else [body]
     if not isinstance(raw_steps, list) or not 1 <= len(raw_steps) <= LAB_MAX_STEPS:
@@ -223,7 +223,7 @@ async def lab_speed(request):
         raise web.HTTPBadRequest(text="expected an object")
     app = request.app
     ip = str(body.get("ip", ""))
-    if not ip or ip not in {d["ip"] for d in app[STORAGE].load_devices()}:
+    if not ip or ip not in _govee_ips(app):
         raise web.HTTPBadRequest(text="pick one of your lights")
     try:
         bulbs, per_second = int(body.get("bulbs", 300)), float(body.get("per_second", 2))
@@ -255,6 +255,11 @@ async def get_devices(request):
 
 _PART_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 MAX_PARTS = 32
+
+
+def _govee_ips(app) -> set:
+    """The lab and Listen speak Govee's LAN protocol, so they only reach Govee lights."""
+    return {d["ip"] for d in app[STORAGE].load_devices() if d.get("ip") and (d.get("kind") or "govee") == "govee"}
 
 
 def _clean_parts(parts, segments: int) -> list:
