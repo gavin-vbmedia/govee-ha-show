@@ -1,5 +1,7 @@
 # HA-liday Show
 
+![HA-liday Show](https://raw.githubusercontent.com/gavin-vbmedia/ha-liday-show/main/haliday_show/logo.png)
+
 Music-synchronised light shows for Govee lights, built right inside Home Assistant.
 
 ![The editor: a generated show on five lights, playing on the house preview](https://raw.githubusercontent.com/gavin-vbmedia/ha-liday-show/main/docs/images/editor.webp)
