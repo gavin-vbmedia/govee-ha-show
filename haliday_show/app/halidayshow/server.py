@@ -19,7 +19,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import __version__, ai, commands, discovery, e131, migrate, scenes, twinkly, wled
+from . import __version__, ai, backup, commands, discovery, e131, migrate, scenes, twinkly, wled
 from .baked import BakedError, decode
 from .ha import HAError, HomeAssistant
 from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as LAB_MAX_STEPS, Lab, LabError,
@@ -1078,6 +1078,68 @@ async def run_command(request):
     return web.json_response({"result": result, **request.app[RUNNER].status()})
 
 
+# export, import and start afresh ----------------------------------------
+async def export_backup(request):
+    data = backup.export(request.app[STORAGE].config_dir, __version__)
+    name = f"haliday-show-{time.strftime('%Y-%m-%d')}.zip"
+    return web.Response(body=data, content_type="application/zip",
+                        headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+async def _replace_data(app, reason: str, data: bytes | None) -> dict:
+    """Keeps a copy of what's there, then restores `data` (an export) or, with None, clears it all."""
+    config = app[STORAGE].config_dir
+    if data is not None:
+        backup.check(data)  # refuse a bad file before anything changes
+    await app[RUNNER].stop()
+    kept = backup.keep_copy(config, __version__, reason)
+    restored = 0
+    if data is None:
+        backup.clear(config)
+    else:
+        restored = backup.restore(config, data)
+        migrate.fill_device_kinds(app[STORAGE])  # an export from before lights had a kind
+    app[MQTT].refresh()
+    return {"ok": True, "kept": kept, "restored": restored}
+
+
+async def import_backup(request):
+    data = bytearray()
+    while chunk := await request.content.read(1 << 16):
+        data += chunk
+        if len(data) > MAX_UPLOAD:
+            raise web.HTTPRequestEntityTooLarge(max_size=MAX_UPLOAD, actual_size=len(data))
+    try:
+        return web.json_response(await _replace_data(request.app, "import", bytes(data)))
+    except backup.BackupError as e:
+        raise web.HTTPBadRequest(text=f"Couldn't import: {e}")
+
+
+async def start_afresh(request):
+    return web.json_response(await _replace_data(request.app, "fresh-start", None))
+
+
+async def list_copies(request):
+    return web.json_response(backup.copies(request.app[STORAGE].config_dir))
+
+
+async def restore_copy(request):
+    p = backup.copy_path(request.app[STORAGE].config_dir, request.match_info["name"])
+    if p is None:
+        raise web.HTTPNotFound(text="that copy has gone")
+    try:
+        return web.json_response(await _replace_data(request.app, "import", p.read_bytes()))
+    except backup.BackupError as e:
+        raise web.HTTPBadRequest(text=f"Couldn't restore that copy: {e}")
+
+
+async def download_copy(request):
+    p = backup.copy_path(request.app[STORAGE].config_dir, request.match_info["name"])
+    if p is None:
+        raise web.HTTPNotFound(text="that copy has gone")
+    return web.FileResponse(p, headers={"Content-Disposition": f'attachment; filename="{p.name}"'})
+
+
 # app ---------------------------------------------------------------------
 def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, password: str = "",
              read_stdin: bool = False) -> web.Application:
@@ -1169,6 +1231,12 @@ def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, pass
     r.add_get("/api/house/photo", get_house_photo)
     r.add_put("/api/house/photo", put_house_photo)
     r.add_delete("/api/house/photo", delete_house_photo)
+    r.add_get("/api/backup", export_backup)
+    r.add_post("/api/backup", import_backup)
+    r.add_post("/api/backup/reset", start_afresh)
+    r.add_get("/api/backup/copies", list_copies)
+    r.add_get("/api/backup/copies/{name}", download_copy)
+    r.add_post("/api/backup/copies/{name}/restore", restore_copy)
     r.add_post("/api/command", run_command)
     r.add_get("/api/ai", ai_status)
     r.add_post("/api/ai/clips", ai_clips)

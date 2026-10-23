@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.112
+
+- New **Your data** under **Setup → Settings**. **Export…** downloads one file with your lights, shows,
+  palettes, presets, settings and house photo. **Import…** puts a file like that back, replacing what's
+  there. Your songs stay in your songs folder either way.
+- **Start afresh…** clears it all, so the add-on is like new and the setup guide opens. It also resets
+  this browser's layout and choices, such as **Show the Labs tab**. Your songs are kept.
+- Before an import or a fresh start, a copy of what you had is kept and listed under **Your data**
+  (the newest five), with **Put back** and **Download**. So you can try the setup guide and then get
+  everything back.
+
 ## 0.2.111
 
 - A new **setup guide** opens the first time you use the add-on. In one window it walks you through

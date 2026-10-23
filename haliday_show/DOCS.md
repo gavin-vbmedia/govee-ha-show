@@ -833,6 +833,7 @@ picked speaker's delay, and the exact `hassio.addon_stdin` input for the open sh
 | --- | --- |
 | AI | Which AI **Describe it** uses, or how to set one up (below). |
 | Layout | Where every editor panel sits, including hidden ones, and **Reset layout**. |
+| Your data | **Export…**, **Import…** and **Start afresh…**, and the copies kept before an import or a fresh start (see [Your data](#your-data)). |
 | Setup guide | **Run the setup guide**, the step-by-step window that opens on a fresh install (see [Quick start](#quick-start)). |
 | Demo | **Try the demo** on a fresh install, or **Remove the demo** (see [The demo](#the-demo)). |
 | Experimental | **Govee scenes** (below), and **Show the Labs tab**. |
@@ -845,6 +846,26 @@ phone has its own. It holds:
 | --- | --- |
 | Packet lab | Sends hand-made messages to one Govee light, for trying out new ways of driving it (below). |
 | Listen for Govee traffic | Records what your Govee lights say to each other, to help support new ways of driving them (below). |
+
+## Your data
+
+**Setup → Settings → Your data** puts everything the add-on saves in one file, and back:
+
+- **Export…** downloads a `.zip` of your lights (with their parts), shows, palettes, presets, settings,
+  the house photo and where each light is traced on it. Your songs stay in your songs folder and aren't
+  in it. It's the same on every install, so you can move your shows to another Home Assistant, or
+  between the add-on and a Docker or pipx install.
+- **Import…** replaces all of that with what's in an exported file. A file that isn't an HA-liday Show
+  export is refused and nothing changes.
+- **Start afresh…** removes it all, so the add-on is like new and the setup guide opens. It also resets
+  this browser's layout and choices (like **Show the Labs tab**). Your songs are kept.
+
+Before an import or a fresh start, the add-on keeps a copy of what you had, listed under **Your data**
+(the newest five). **Put back** restores one, and **Download** saves it as an export. So to try the
+setup guide without losing anything: **Start afresh…**, try it, then **Put back** the copy *Before a
+fresh start* (or **Import…** your export).
+
+Home Assistant's own backups include all of this too, as the add-on's config folder.
 
 ## Setting up the AI
 
