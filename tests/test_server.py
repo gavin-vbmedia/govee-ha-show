@@ -609,3 +609,16 @@ async def test_wled_info_reads_name_leds_and_segments(client, aiohttp_server, mo
     assert (await client.post("/api/wled/info", json={"ip": "nope"})).status == 400
     await fake.close()
     assert (await client.post("/api/wled/info", json={"ip": "127.0.0.1"})).status == 502
+
+
+async def test_pixel_controller_lights(client):
+    strings = [{"id": "ddp-a", "kind": "ddp", "ip": "192.168.1.80", "segments": 100},
+               {"id": "ddp-b", "kind": "ddp", "ip": "192.168.1.80", "segments": 600, "first": 101, "gradient": True}]
+    resp = await client.put("/api/devices", json=strings)
+    assert resp.status == 200
+    a, b = await resp.json()
+    assert (a["kind"], a["protocol"], a["first"]) == ("ddp", "ddp", 1)
+    assert (b["first"], b["segments"], b["gradient"]) == (101, 600, False)
+    assert "first" not in (await (await client.put("/api/devices", json=[{"ip": "1.2.3.4"}])).json())[0]
+    for bad in (0, 100001, "x"):
+        assert (await client.put("/api/devices", json=[{**strings[0], "first": bad}])).status == 400

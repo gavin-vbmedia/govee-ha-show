@@ -198,16 +198,26 @@ class OutputDevice:
 
 
 # WLED drops back to its own effect when it hears nothing for a while (2.5 s by default), so a
-# still frame is repeated well inside that.
+# still frame is repeated well inside that. Other DDP receivers time out similarly or not at all.
 WLED_RESEND_S = 1.0
 
 
-class WledDevice(OutputDevice):
-    """A WLED light, sent each frame over DDP. There's no mode to switch on or off: WLED shows the
-    frames as they arrive and goes back to its own effect a little after they stop."""
+def address(d: dict) -> str:
+    """Where a saved light's frames go, and the key it's claimed under. A pixel controller can drive
+    several lights from one IP, each from its own first LED, so those get `ip#first`."""
+    first = int(d.get("first") or 1)
+    return f"{d['ip']}#{first}" if d.get("kind") == "ddp" and first > 1 else d["ip"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+
+class DdpDevice(OutputDevice):
+    """A light sent each frame over DDP: WLED, or a pixel controller (FPP, ESPixelStick, ESPHome...).
+    There's no mode to switch on or off: the receiver shows frames as they arrive and goes back to
+    what it was doing a little after they stop."""
+
+    def __init__(self, ip: str, *args, **kwargs):
+        ip, _, first = ip.partition("#")
+        super().__init__(ip, *args, **kwargs)
+        self.start = (int(first or 1) - 1) * 3  # byte offset of the light's first LED
         self.realtime = False
         self.keepalive = WLED_RESEND_S
         self.sequence = 0
@@ -227,13 +237,13 @@ class WledDevice(OutputDevice):
         self.pending = self.last_frame = None
 
     def play_scene(self, code: int, param: str):
-        pass  # Govee scenes don't exist on WLED; the light keeps playing the track's frames
+        pass  # Govee scenes don't exist here; the light keeps playing the track's frames
 
     def end_scene(self):
         pass
 
     def packet(self, frame: bytes, previous: bytes | None = None) -> bytes:
-        return ddp_packets(frame, self.sequence % 15 + 1)[0]
+        return ddp_packets(frame, self.sequence % 15 + 1, self.start)[0]
 
     def tick(self, now: float):
         if not self.enabled:
@@ -243,14 +253,17 @@ class WledDevice(OutputDevice):
             return  # rate limited; latest pending frame wins
         if frame != self.last_frame or now - self.last_sent > self.keepalive:
             self.sequence = self.sequence % 15 + 1
-            for p in ddp_packets(frame, self.sequence):
+            for p in ddp_packets(frame, self.sequence, self.start):
                 self._send(p)
             self.last_frame, self.last_sent = frame, now
         self.pending = None
 
 
+WledDevice = DdpDevice
+
+
 def make_device(ip: str, segments: int, sock: socket.socket, **kwargs) -> OutputDevice:
-    cls = WledDevice if kwargs.get("protocol") == "ddp" else OutputDevice
+    cls = DdpDevice if kwargs.get("protocol") == "ddp" else OutputDevice
     return cls(ip, segments, sock, **kwargs)
 
 
@@ -329,7 +342,7 @@ async def run_test_pattern(output: Output, ip: str, segments: int, seconds: floa
     first = test_frame(segments, 0)
     if dev.realtime:
         packet = razer_colors(first, gradient, protocol).hex(" ")
-    elif isinstance(dev, WledDevice):
+    elif isinstance(dev, DdpDevice):
         packet = dev.packet(first)[:10].hex(" ") + " …"
     else:
         packet = dev.packet(first).decode()

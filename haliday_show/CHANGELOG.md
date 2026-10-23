@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.90
+
+- **Pixel controllers** now work too: Falcon Player, ESPixelStick, ESPHome, Tasmota, home-made ESP32
+  strings and anything else that takes DDP. Under **Setup → Devices**, pick **Pixel controller (DDP)**
+  next to **Add by IP**, type its IP and how many **LEDs** the string has, and press **Add by IP**.
+- One controller can drive several lights. Add the same IP again and the new light starts just after the
+  last one; you can change where each starts with **first LED** in its row. If two lights on one
+  controller share LEDs, the row says so.
+- You can plan one before it arrives: type **DDP** as the model next to **Add planned light**.
+
 ## 0.2.89
 
 - When the add-on starts, any of your saved lights from before WLED support are marked as Govee lights,

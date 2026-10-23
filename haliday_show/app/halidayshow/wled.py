@@ -21,14 +21,15 @@ DDP_MAX_DATA = 480 * 3  # 480 LEDs a packet keeps each one well inside a normal 
 MAX_PARTS = 32  # matches server.MAX_PARTS
 
 
-def ddp_packets(rgb: bytes, sequence: int) -> list[bytes]:
-    """One frame as DDP packets. `sequence` is 1-15; WLED uses it to drop stale packets."""
+def ddp_packets(rgb: bytes, sequence: int, start: int = 0) -> list[bytes]:
+    """One frame as DDP packets. `sequence` is 1-15; receivers use it to drop stale packets. `start` is
+    the byte the frame begins at on the receiver, for a controller with several strings on one IP."""
     packets = []
     for offset in range(0, max(len(rgb), 1), DDP_MAX_DATA):
         data = rgb[offset: offset + DDP_MAX_DATA]
         last = offset + DDP_MAX_DATA >= len(rgb)
         header = bytes([DDP_FLAGS | (DDP_PUSH if last else 0), sequence & 0x0F, DDP_RGB, DDP_OUTPUT])
-        packets.append(header + offset.to_bytes(4, "big") + len(data).to_bytes(2, "big") + data)
+        packets.append(header + (start + offset).to_bytes(4, "big") + len(data).to_bytes(2, "big") + data)
     return packets
 
 

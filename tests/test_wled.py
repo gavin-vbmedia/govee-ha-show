@@ -51,3 +51,28 @@ def test_wled_light_streams_frames_over_ddp_and_ignores_govee_scenes():
     assert len(sock.sent) == 2  # repeated so WLED doesn't fall back to its own effect
     out.release("10.0.0.9")
     assert len(sock.sent) == 2
+
+
+def test_ddp_frames_can_start_part_way_along_a_controller():
+    first, = wled.ddp_packets(b"\x01\x02\x03", 1, start=300)
+    assert int.from_bytes(first[4:8], "big") == 300
+
+
+def test_two_lights_on_one_controller_are_claimed_separately():
+    sock = FakeSock()
+    out = output.Output.__new__(output.Output)
+    out.sock, out.devices, out._task = sock, {}, None
+    a = {"kind": "ddp", "ip": "10.0.0.5", "first": 1}
+    b = {"kind": "ddp", "ip": "10.0.0.5", "first": 101}
+    assert output.address(a) == "10.0.0.5" and output.address(b) == "10.0.0.5#101"
+    assert output.address({"kind": "govee", "ip": "10.0.0.5", "first": 101}) == "10.0.0.5"
+    da = out.claim(output.address(a), 100, protocol="ddp")
+    db = out.claim(output.address(b), 50, protocol="ddp")
+    assert da is not db and db.ip == "10.0.0.5"
+    now = time.monotonic()
+    da.update(b"\xff\x00\x00" * 100)
+    db.update(b"\x00\x00\xff" * 50)
+    da.tick(now)
+    db.tick(now)
+    offsets = sorted((int.from_bytes(p[4:8], "big"), addr) for p, addr in sock.sent)
+    assert offsets == [(0, ("10.0.0.5", wled.DDP_PORT)), (300, ("10.0.0.5", wled.DDP_PORT))]

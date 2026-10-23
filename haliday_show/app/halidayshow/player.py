@@ -8,7 +8,7 @@ import logging
 import time
 
 from .baked import Baked
-from .output import Output
+from .output import Output, address
 
 log = logging.getLogger(__name__)
 
@@ -55,11 +55,11 @@ class Player:
         for t in baked.tracks:
             d = devices.get(t.device)
             if d:
-                self.output.claim(d["ip"], t.segments, reverse=d.get("reverse", False),
+                self.output.claim(address(d), t.segments, reverse=d.get("reverse", False),
                                   gradient=d.get("gradient", False),
                                   protocol=d.get("protocol", "standard"),
                                   brightness=d.get("brightness", 100))
-                claimed.add(d["ip"])
+                claimed.add(address(d))
         for ip in set(self.output.devices) - claimed:
             self.output.release(ip)
         self.start = time.monotonic() - position
@@ -99,7 +99,7 @@ class Player:
                 for k, t in enumerate(b.tracks):
                     d = self.devices.get(t.device)
                     if d:
-                        dev = self.output.devices.get(d["ip"])
+                        dev = self.output.devices.get(address(d))
                         if dev:
                             scene = next((s for s in b.scenes if s.track == k and s.start <= idx < s.end), None)
                             if scene:

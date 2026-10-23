@@ -23,7 +23,7 @@ from .lab import (KINDS as LAB_KINDS, MAX_REPEAT as LAB_MAX_REPEAT, MAX_STEPS as
                   Step as LabStep, build as lab_build, pixel_speed_steps)
 from .listen import Listener
 from .mqtt import MqttBridge
-from .output import PROBE_MAX, LivePreview, Output, run_hold, run_probe, run_test_pattern
+from .output import PROBE_MAX, LivePreview, Output, address, run_hold, run_probe, run_test_pattern
 from .player import Player
 from .protocol import LONG_PROTOCOLS, PROTOCOLS
 from .runner import Runner, RunnerError
@@ -36,6 +36,8 @@ INGRESS_PEER = "172.30.32.2"  # the Supervisor's ingress proxy
 MAX_UPLOAD = 200 * 1024 * 1024
 MAX_BULBS = 2000  # bulbs on one light
 MAX_SEGMENTS = 1000  # per light; the Christmas String Lights 2 have 300 bulbs
+MAX_FIRST_LED = 100000  # where a light starts on a pixel controller; DDP offsets go far beyond this
+KINDS = ("govee", "wled", "ddp")
 
 OUTPUT = web.AppKey("output", Output)
 PLAYER = web.AppKey("player", Player)
@@ -263,12 +265,12 @@ def _clean_device(d: dict) -> dict:
         raise web.HTTPBadRequest(text=f"bad device: {e}")
     # Saved before WLED existed (say, restored from an old backup), a device has no kind: it's a Govee
     # light. Start-up fills these in (migrate.fill_device_kinds).
-    kind = "wled" if d.get("kind") == "wled" else "govee"
-    protocol = "ddp" if kind == "wled" else str(d.get("protocol") or "standard")
+    kind = d.get("kind") if d.get("kind") in KINDS else "govee"
+    protocol = "ddp" if kind in ("wled", "ddp") else str(d.get("protocol") or "standard")
     if kind == "govee" and protocol not in PROTOCOLS:
         raise web.HTTPBadRequest(text=f"protocol must be one of {', '.join(PROTOCOLS)}")
     # Realtime messages hold the segment count in one byte; the other protocols can go further.
-    most = MAX_SEGMENTS if protocol in LONG_PROTOCOLS or kind == "wled" else 255
+    most = MAX_SEGMENTS if protocol in LONG_PROTOCOLS or kind != "govee" else 255
     if not 1 <= segments <= most:
         raise web.HTTPBadRequest(text=f"segments must be 1-{most} with this protocol")
     try:
@@ -286,13 +288,23 @@ def _clean_device(d: dict) -> dict:
     dev_id = str(d.get("id") or ip)
     if not dev_id:
         raise web.HTTPBadRequest(text="a planned device needs an id")
+    extra = {}
+    if kind == "ddp":
+        # A controller can drive several lights from one IP, each from its own first LED.
+        try:
+            first = int(d["first"]) if d.get("first") is not None else 1
+        except (TypeError, ValueError):
+            raise web.HTTPBadRequest(text="first must be a number")
+        if not 1 <= first <= MAX_FIRST_LED:
+            raise web.HTTPBadRequest(text=f"first must be 1-{MAX_FIRST_LED}")
+        extra["first"] = first
     return {"id": dev_id, "name": str(d.get("name") or ip or dev_id)[:64], "kind": kind,
             "ip": ip, "sku": "" if kind == "wled" else str(d.get("sku", "")), "segments": segments,
             "reverse": bool(d.get("reverse")), "gradient": kind == "govee" and bool(d.get("gradient")),
             "protocol": protocol, "brightness": brightness, "bulbs": bulbs,
             "parts": _clean_parts(d.get("parts"), segments),
             # A split light's own track plays across all its parts unless this is off.
-            "whole": d.get("whole", True) is not False}
+            "whole": d.get("whole", True) is not False, **extra}
 
 
 async def put_devices(request):
@@ -332,6 +344,7 @@ async def test_device(request):
     d = _clean_device(body)
     if not d["ip"]:
         raise web.HTTPBadRequest(text="link this device to a real light before testing it")
+    target = address(d)
     seconds = min(max(float(body.get("seconds", 15)), 1), 60)
     rgb = None
     if body.get("rgb") is not None:
@@ -344,21 +357,21 @@ async def test_device(request):
             raise web.HTTPBadRequest(text="rgb must have 3 bytes per segment")
     app = request.app
     tests = app[TESTS]
-    if (old := tests.pop(d["ip"], None)):
+    if (old := tests.pop(target, None)):
         old.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await old
     if body.get("stop"):
-        app[OUTPUT].release(d["ip"])
+        app[OUTPUT].release(target)
         return web.json_response({"ok": True})
     if app[RUNNER].player.playing:  # stopping lets go of every light, which makes a lit test blink
         await app[RUNNER].stop()
     settings = dict(reverse=d["reverse"], gradient=d["gradient"], protocol=d["protocol"], brightness=d["brightness"])
     if rgb is None:
-        task = run_test_pattern(app[OUTPUT], d["ip"], d["segments"], seconds, **settings)
+        task = run_test_pattern(app[OUTPUT], target, d["segments"], seconds, **settings)
     else:
-        task = run_hold(app[OUTPUT], d["ip"], rgb, d["segments"], seconds, **settings)
-    tests[d["ip"]] = asyncio.create_task(task)
+        task = run_hold(app[OUTPUT], target, rgb, d["segments"], seconds, **settings)
+    tests[target] = asyncio.create_task(task)
     return web.json_response({"ok": True, "seconds": seconds})
 
 
@@ -368,6 +381,7 @@ async def probe_device(request):
     d = _clean_device(body)
     if not d["ip"]:
         raise web.HTTPBadRequest(text="link this device to a real light first")
+    target = address(d)
     try:
         segment = int(body.get("segment", 0))
     except (TypeError, ValueError):
@@ -376,16 +390,16 @@ async def probe_device(request):
         raise web.HTTPBadRequest(text=f"segment must be 0-{PROBE_MAX}")
     app = request.app
     tests = app[TESTS]
-    if (old := tests.pop(d["ip"], None)):
+    if (old := tests.pop(target, None)):
         old.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await old
     if segment == 0:
-        app[OUTPUT].release(d["ip"])
+        app[OUTPUT].release(target)
         return web.json_response({"ok": True})
     await app[RUNNER].stop()
-    tests[d["ip"]] = asyncio.create_task(run_probe(
-        app[OUTPUT], d["ip"], segment, gradient=d["gradient"], protocol=d["protocol"]))
+    tests[target] = asyncio.create_task(run_probe(
+        app[OUTPUT], target, segment, gradient=d["gradient"], protocol=d["protocol"]))
     return web.json_response({"ok": True, "max": PROBE_MAX})
 
 
@@ -395,9 +409,10 @@ async def preview_device(request):
     d = _clean_device(body)
     if not d["ip"]:
         raise web.HTTPBadRequest(text="link this device to a real light first")
+    target = address(d)
     app = request.app
     previews, tests = app[PREVIEWS], app[TESTS]
-    live = previews.get(d["ip"])
+    live = previews.get(target)
     if body.get("stop"):
         if live and not live.task.done():
             live.stop()
@@ -411,12 +426,12 @@ async def preview_device(request):
     if live is None or live.task.done():
         # Previewing takes the light over from a running show or a test, like Test does.
         await app[RUNNER].stop()
-        if (old := tests.pop(d["ip"], None)):
+        if (old := tests.pop(target, None)):
             old.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await old
-        live = previews[d["ip"]] = LivePreview(app[OUTPUT], d["ip"])
-        tests[d["ip"]] = live.task
+        live = previews[target] = LivePreview(app[OUTPUT], target)
+        tests[target] = live.task
     live.show(rgb, d["segments"], reverse=d["reverse"], gradient=d["gradient"], protocol=d["protocol"],
               brightness=d["brightness"])
     return web.json_response({"ok": True})
