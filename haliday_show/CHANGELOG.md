@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.121
+
+- **Preview cut** on the **Music** tab now moves the red playhead as it plays: it runs up to your
+  selection, jumps over it as the cut would, and carries on. When it finishes, the playhead waits at
+  the start of the selection, so you can preview again or cut.
+
 ## 0.2.120
 
 The **Music** tab, tidied up after a review:

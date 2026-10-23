@@ -105,6 +105,13 @@ export function beatsToDraw(beats, bars, gap, min = 8) {
   return bars.filter((_, i) => i % every === 0);
 }
 
+// Where in the uncut song a cut preview is, `elapsed` seconds in: it plays from `from` up to the
+// selection's start, then carries on from its end.
+export function previewTime(elapsed, from, start, end, total) {
+  const before = start - from;
+  return Math.min(elapsed < before ? from + elapsed : end + (elapsed - before), total);
+}
+
 // sections ----------------------------------------------------------------------
 // [{start, end, label, energy, color?}], in order. Edits return a new list.
 
@@ -473,9 +480,20 @@ export class MusicEditor {
     node.connect(this.audio.destination);
     this.audio.resume();
     node.start();
-    this.playing = { node, from: this.time, at: this.audio.currentTime, preview: true };
-    node.onended = () => { if (this.playing?.node === node) this.stop(); };
+    const from = Math.max(0, start - 3);
+    this.playing = { node, from, at: this.audio.currentTime, preview: true };
+    // Afterwards the playhead waits where the cut would join, ready to hear it again.
+    node.onended = () => { if (this.playing?.node === node) { this.stop(); this.time = start; this.draw(); } };
     $("music-play").textContent = "⏸ Stop";
+    // The playhead runs up to the selection, then jumps over it, as the cut would.
+    const tick = () => {
+      if (this.playing?.node !== node) return;
+      this.time = previewTime(this.audio.currentTime - this.playing.at, from, start, end, this.total);
+      this.follow();
+      this.draw();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   // Applies a change to the base song's sections and saves it with the song shortly after.

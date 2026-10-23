@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   arrange, cut, editName, mapInfo, encodeWav, hueHex, insert, joins, keep, merge, mergeSections, moveEdge, removeSection,
-  render, sectionAt, splitSection, beatsToDraw,
+  render, sectionAt, splitSection, beatsToDraw, previewTime,
 } from "../../haliday_show/app/halidayshow/static/js/music.js";
 
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg ?? ""} ${a} != ${b}`);
@@ -136,4 +136,11 @@ test("beat lines thin out to bars, then every 2nd, 4th… bar as you zoom out", 
   assert.deepEqual(beatsToDraw(beats, bars, 1), bars.filter((_, i) => i % 2 === 0));
   assert.deepEqual(beatsToDraw(beats, bars, 0.5), bars.filter((_, i) => i % 4 === 0));
   assert.equal(beatsToDraw(beats, [], 1), beats);
+});
+
+test("a cut preview's playhead runs up to the selection, then jumps over it", () => {
+  assert.equal(previewTime(1, 7, 10, 20, 60), 8);
+  assert.equal(previewTime(2.9, 7, 10, 20, 60).toFixed(1), "9.9");
+  assert.equal(previewTime(3.5, 7, 10, 20, 60), 20.5);
+  assert.equal(previewTime(99, 7, 10, 20, 60), 60);
 });

@@ -465,7 +465,7 @@ time (a few hundredths of a second hides the click, a few seconds blends one son
 precision. **Save as new file** writes a WAV to `/media/haliday_show/` and leaves the original alone, so
 pick the new file under **Song** in the editor. Once the song is detected, selection edges snap to bars
 (hold Shift to place them freely), clicking a section in the lane selects exactly its stretch (Shift-click
-adds the next), and **Preview cut** plays the join before you cut. Beats and sections follow your edits
+adds the next), and **Preview cut** plays the join before you cut, with the playhead jumping over the selection as the cut would. Beats and sections follow your edits
 and are kept when you save. Edit the song before placing clips, because cutting it
 afterwards won't move them.
 
