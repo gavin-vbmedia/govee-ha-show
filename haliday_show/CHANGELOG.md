@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.113
+
+- HA-liday Show has moved on GitHub, to **github.com/gdeboos/ha-liday-show**. You don't need to change
+  anything in your own Home Assistant: the old address still works and sends you to the new one, so
+  updates keep arriving as normal.
+- If you run it with Docker, the image is now `ghcr.io/gdeboos/ha-liday-show`. Change the `image:` line
+  in your `docker-compose.yml` to that to keep getting updates. pipx installs need no change.
+
 ## 0.2.112
 
 - New **Your data** under **Setup → Settings**. **Export…** downloads one file with your lights, shows,

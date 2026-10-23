@@ -4,7 +4,7 @@
 (for example the Curtain Lights 2) that drives other Govee lights, especially the **Christmas String
 Lights 2** (H70C5 and the 20 m set) or the **icicle lights** (H70D1/H70D2).
 
-**Why:** [HA-liday Show](https://github.com/gavin-vbmedia/ha-liday-show) is a free Home Assistant add-on
+**Why:** [HA-liday Show](https://github.com/gdeboos/ha-liday-show) is a free Home Assistant add-on
 for music light shows. On the Christmas String Lights 2, the live colour mode we can use only reaches the
 **first 44 bulbs**. Yet a TV sync box gets colour onto the **whole string**, live. We've tried every
 command we could think of. We need a recording of what your sync box (or sync centre) actually sends to
@@ -84,7 +84,7 @@ catches the connection being made) and send us the file. Don't buy one just for 
 
 ## Sending it to us
 
-Open an issue at <https://github.com/gavin-vbmedia/ha-liday-show/issues> (or reply where you saw this)
+Open an issue at <https://github.com/gdeboos/ha-liday-show/issues> (or reply where you saw this)
 with:
 
 - your answers from Step 1, and the video,

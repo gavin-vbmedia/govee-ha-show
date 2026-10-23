@@ -35,7 +35,7 @@ pipx install . && HALIDAY_SHOW_PASSWORD=pw haliday-show   # data in ~/haliday-sh
 There is no linter. CI (`.github/workflows/ci.yml`) runs both test suites, checks the three
 version numbers match, builds the Docker image and checks it serves `/api/info`, runs that image
 standalone on the host network with a password, and installs with `pipx`. `publish.yml` pushes the
-image to `ghcr.io/gavin-vbmedia/ha-liday-show` on every merge that touches `haliday_show/`.
+image to `ghcr.io/gdeboos/ha-liday-show` on every merge that touches `haliday_show/`.
 
 No real lights are reachable from a cloud session. To see a UI change working, run the service
 locally, add **planned lights** (devices with no IP, `PUT /api/devices`) and drive the editor with

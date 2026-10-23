@@ -11,13 +11,13 @@ its own with Docker or Python.
 
 <sub>A hobby project, written almost entirely by AI. See [How this is made](#-how-this-is-made).</sub>
 
-[![CI](https://github.com/gavin-vbmedia/ha-liday-show/actions/workflows/ci.yml/badge.svg)](https://github.com/gavin-vbmedia/ha-liday-show/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgavin-vbmedia%2Fha-liday-show%2Fmain%2Fhaliday_show%2Fconfig.yaml&query=%24.version&label=version&color=blue)](haliday_show/CHANGELOG.md)
+[![CI](https://github.com/gdeboos/ha-liday-show/actions/workflows/ci.yml/badge.svg)](https://github.com/gdeboos/ha-liday-show/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fgdeboos%2Fha-liday-show%2Fmain%2Fhaliday_show%2Fconfig.yaml&query=%24.version&label=version&color=blue)](haliday_show/CHANGELOG.md)
 ![Architectures](https://img.shields.io/badge/arch-amd64%20%7C%20aarch64-informational)
 [![Licence: MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 [![Coded with Claude](https://img.shields.io/badge/coded%20with-Claude-d97757)](#-how-this-is-made)
 
-[![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgavin-vbmedia%2Fha-liday-show)
+[![Add this repository to your Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgdeboos%2Fha-liday-show)
 
 [Install](#-installation) · [Features](#-features) · [User guide](haliday_show/DOCS.md) ·
 [Changelog](haliday_show/CHANGELOG.md) · [Development](#-development)
@@ -79,7 +79,7 @@ Needs Home Assistant OS or Supervised (anything with **Settings → Add-ons**).
    <details><summary>Adding it by hand</summary>
 
    Go to **Settings → Add-ons → Add-on Store**, open the ⋮ menu, choose **Repositories** and add
-   `https://github.com/gavin-vbmedia/ha-liday-show`.
+   `https://github.com/gdeboos/ha-liday-show`.
    </details>
 2. Install **HA-liday Show**, turn on **Show in sidebar**, and start it.
 3. Open **HA-liday Show** from the sidebar and follow the
@@ -96,7 +96,7 @@ Assistant at all, run it on any always-on machine on your network instead:
 - **[With Docker](haliday_show/DOCS.md#with-docker)** on a NAS, Raspberry Pi or Linux PC, with the
   ready-made [`docker-compose.yml`](standalone/docker-compose.yml).
 - **[With Python](haliday_show/DOCS.md#with-python)** on a Mac, Linux or a Raspberry Pi:
-  `pipx install git+https://github.com/gavin-vbmedia/ha-liday-show`
+  `pipx install git+https://github.com/gdeboos/ha-liday-show`
 
 It's the same app with the same saved files, so shows copy across. You open it in a browser with a
 password, and it can still use your Home Assistant speakers, AI and MQTT if you point it at them. See
@@ -252,7 +252,7 @@ then reload the Add-on Store; it appears under **Local add-ons** and builds on y
 **Releasing:** bump the version in `pyproject.toml`, `haliday_show/config.yaml` and
 `haliday_show/app/halidayshow/__init__.py` together (CI checks they match), and add an entry to
 [`CHANGELOG.md`](haliday_show/CHANGELOG.md). Merging to `main` also publishes the Docker image to
-`ghcr.io/gavin-vbmedia/ha-liday-show` (`latest` and the version) for standalone installs.
+`ghcr.io/gdeboos/ha-liday-show` (`latest` and the version) for standalone installs.
 
 <details>
 <summary><b>Repository layout</b></summary>
@@ -335,7 +335,7 @@ and a test build before it's released. Govee models with a **✓ works** or **�
 add-on's model list have been tried on real lights; ones marked **? untested** are best effort. WLED,
 pixel controllers, Home Assistant lights and Twinkly have so far only been tested against pretend
 devices on the wire, so reports from real ones are especially welcome. If something doesn't work on yours, please
-[open an issue](https://github.com/gavin-vbmedia/ha-liday-show/issues).
+[open an issue](https://github.com/gdeboos/ha-liday-show/issues).
 
 ## 📄 Licence
 

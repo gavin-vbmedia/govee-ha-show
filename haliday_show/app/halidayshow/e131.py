@@ -17,6 +17,8 @@ MAX_UNIVERSE = 63999
 SOURCE_NAME = b"HA-liday Show"
 PRIORITY = 100
 # One fixed source id: receivers use it to tell senders apart, and there's only ever one of us.
+# Built from the repo's first address. Left as it is after the move to gdeboos so the ID
+# sent to controllers never changes.
 CID = uuid.uuid5(uuid.NAMESPACE_URL, "https://github.com/gavin-vbmedia/ha-liday-show").bytes
 TERMINATED = 0x40  # options bit: this source is stopping, let go of the universe now
 
