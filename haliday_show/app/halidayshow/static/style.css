@@ -520,3 +520,8 @@ table.device-list td.device-actions { text-align: right; width: 1%; }
 .subtab b, .subtab span { grid-column: 2; }
 h2.with-ico { display: flex; align-items: center; gap: 8px; }
 h2.with-ico .ico { color: var(--muted); }
+
+/* The note above the lights while the sample house is shown. */
+.house-sample { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 12px;
+  border: 1px dashed var(--line); border-radius: 8px; }
+.house-sample p { margin: 0; }

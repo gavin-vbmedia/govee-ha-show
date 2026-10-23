@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.109
+
+- Until you upload a photo, **Setup → House** and the editor's **House** panel now show a drawn sample
+  house instead of nothing, so you can try the House view and the **House** lane straight away.
+- Press **Put my lights on it** on **Setup → House** to put your lights on the sample house's roofline,
+  eaves, porch, windows, tree, garage and path. A light named after where it is, like *Porch* or
+  *Icicles*, goes there.
+- When you upload your own photo, you're asked whether to clear the lights on the sample house so you
+  can trace them on your photo. **Remove photo** takes you back to the sample house.
+
 ## 0.2.108
 
 - Fixed: a Home Assistant switch with **Brightness %** below about 50 never turned on in a show.
