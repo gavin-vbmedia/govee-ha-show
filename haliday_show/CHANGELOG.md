@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.91
+## 0.2.92
 
 - Pixel controllers that speak **E1.31** (also called sACN) now work: most Falcon and Kulp controllers, and
   anything set up for xLights. Under **Setup → Devices**, pick **Pixel controller (E1.31)** next to
@@ -11,6 +11,15 @@
 - When a show or test stops, the controller is told straight away, so it goes back to what it was doing
   without waiting.
 - You can plan one before it arrives: type **E1.31** as the model next to **Add planned light**.
+
+## 0.2.91
+
+- Nothing changes inside Home Assistant. This is groundwork for running HA-liday Show on its own, on a
+  computer or NAS without Home Assistant add-ons.
+- Run that way, you can open the editor from other devices once you set a password. Your browser asks
+  for it the first time; any user name works.
+- It can still use your Home Assistant speakers, AI and MQTT entities if you tell it where they are. See
+  **Running without Home Assistant** in the documentation.
 
 ## 0.2.90
 

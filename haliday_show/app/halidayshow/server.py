@@ -4,7 +4,10 @@ All URLs the editor uses are relative, because ingress serves the panel from
 /api/hassio_ingress/<token>/.
 """
 import asyncio
+import base64
+import binascii
 import contextlib
+import hmac
 import ipaddress
 import json
 import logging
@@ -49,6 +52,7 @@ RUNNER = web.AppKey("runner", Runner)
 MQTT = web.AppKey("mqtt", MqttBridge)
 BACKGROUND = web.AppKey("background", list)
 ALLOW_ALL = web.AppKey("allow_all", bool)
+PASSWORD = web.AppKey("password", str)
 # {"listener": the latest Listener or None, "options": Listener options (tests use spare ports)}
 LISTENING = web.AppKey("listening", dict)
 LAB = web.AppKey("lab", Lab)
@@ -56,16 +60,39 @@ LAB = web.AppKey("lab", Lab)
 
 @web.middleware
 async def ingress_only(request: web.Request, handler):
-    """host_network exposes our port on the LAN; only answer the ingress proxy."""
+    """host_network exposes our port on the LAN; only answer the ingress proxy.
+
+    Outside Home Assistant there is no ingress, so a password (HALIDAY_SHOW_PASSWORD) lets the
+    browser in with HTTP Basic auth instead.
+    """
     if not request.app[ALLOW_ALL]:
         peer = request.remote or ""
         try:
             ok = peer == INGRESS_PEER or ipaddress.ip_address(peer).is_loopback
         except ValueError:
             ok = False
-        if not ok:
-            raise web.HTTPForbidden(text="Open HA-liday Show from the Home Assistant sidebar.")
+        password = request.app[PASSWORD]
+        if not ok and password:
+            if not _password_ok(request.headers.get("Authorization", ""), password):
+                raise web.HTTPUnauthorized(text="Enter the HA-liday Show password.",
+                                           headers={"WWW-Authenticate": 'Basic realm="HA-liday Show"'})
+        elif not ok:
+            raise web.HTTPForbidden(text="Open HA-liday Show from the Home Assistant sidebar."
+                                    if os.environ.get("SUPERVISOR_TOKEN") else
+                                    "Set HALIDAY_SHOW_PASSWORD to open HA-liday Show from another device.")
     return await handler(request)
+
+
+def _password_ok(header: str, password: str) -> bool:
+    """Any user name; only the password counts."""
+    scheme, _, value = header.partition(" ")
+    if scheme.lower() != "basic":
+        return False
+    try:
+        _, _, given = base64.b64decode(value, validate=True).decode().partition(":")
+    except (binascii.Error, UnicodeDecodeError):
+        return False
+    return hmac.compare_digest(given.encode(), password.encode())
 
 
 def _show_id(request) -> str:
@@ -995,11 +1022,12 @@ async def run_command(request):
 
 
 # app ---------------------------------------------------------------------
-def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False,
+def make_app(config_dir: Path, media_dir: Path, *, allow_all: bool = False, password: str = "",
              read_stdin: bool = False) -> web.Application:
     app = web.Application(middlewares=[ingress_only], client_max_size=MAX_UPLOAD)
     app.on_response_prepare.append(no_cache_static)
     app[ALLOW_ALL] = allow_all
+    app[PASSWORD] = password
     try:
         migrate.import_old(config_dir, media_dir)
     except OSError as e:

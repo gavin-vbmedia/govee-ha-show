@@ -92,9 +92,17 @@ class HomeAssistant:
                                    json=data, timeout=timeout)
 
     async def mqtt_service(self) -> dict | None:
-        """Broker details from the Supervisor (services: mqtt:want), if a broker is set up."""
+        """Broker details from the Supervisor (services: mqtt:want), if a broker is set up.
+
+        Outside Home Assistant, HALIDAY_SHOW_MQTT_HOST (and _PORT, _USERNAME, _PASSWORD) say where it is.
+        """
         if not self.supervisor:
-            return None
+            host = os.environ.get("HALIDAY_SHOW_MQTT_HOST", "").strip()
+            if not host:
+                return None
+            return {"host": host, "port": int(os.environ.get("HALIDAY_SHOW_MQTT_PORT") or 1883),
+                    "username": os.environ.get("HALIDAY_SHOW_MQTT_USERNAME") or None,
+                    "password": os.environ.get("HALIDAY_SHOW_MQTT_PASSWORD") or None}
         try:
             body = await self._request("GET", f"{self.supervisor}/services/mqtt")
         except HAError:

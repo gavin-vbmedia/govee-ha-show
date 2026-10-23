@@ -216,7 +216,7 @@ async def status(ha: HomeAssistant) -> dict:
         except HAError:
             pass
     # The entity named in the Configuration, else the only one, else Home Assistant's preferred one.
-    entity = str(options().get("ai_task_entity") or "") or (entities[0] if len(entities) == 1 else None)
+    entity = str(options().get("ai_task_entity") or os.environ.get("HALIDAY_SHOW_AI_TASK_ENTITY") or "") or (entities[0] if len(entities) == 1 else None)
     return {"via": "ha" if entities else None, "entities": entities, "entity": entity}
 
 
