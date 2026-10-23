@@ -23,13 +23,13 @@ class FakeHA:
 def fake_output(ha):
     out = output.Output.__new__(output.Output)
     out.sock, out.devices, out.universes, out._task = None, {}, {}, None
-    out.ha, out.ha_tasks = ha, set()
+    out.ha, out.calls = ha, set()
     return out
 
 
 async def settle(out):
-    while out.ha_tasks:
-        await asyncio.wait(set(out.ha_tasks))
+    while out.calls:
+        await asyncio.wait(set(out.calls))
 
 
 async def test_light_gets_the_show_colour_then_is_put_back():

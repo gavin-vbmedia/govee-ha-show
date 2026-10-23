@@ -348,6 +348,7 @@ function renderDevices() {
     const wled = isPixels(d) || isHa(d);
     const model = document.createElement("span");
     if (isWled(d)) model.append("WLED");
+    else if (d.kind === "twinkly") model.append("Twinkly (experimental)");
     else if (isHa(d)) model.append(d.protocol === "ha_switch" ? "Home Assistant switch" : "Home Assistant light");
     else if (d.kind === "ddp") {
       const first = input("number", "first", { min: 1, max: 100000, className: "seg-num",
@@ -398,8 +399,9 @@ function renderDevices() {
     if (wled) {
       const how = document.createElement("span");
       how.className = "hint";
-      how.textContent = isHa(d) ? "Home Assistant" : d.kind === "e131" ? "E1.31" : "DDP";
-      how.title = isHa(d) ? "Changes go through Home Assistant, so they're slow: a few a second for a light, one a second for a switch"
+      how.textContent = isHa(d) ? "Home Assistant" : d.kind === "e131" ? "E1.31" : d.kind === "twinkly" ? "Twinkly" : "DDP";
+      how.title = d.kind === "twinkly" ? "Twinkly's own realtime mode. It isn't official, so this is experimental."
+        : isHa(d) ? "Changes go through Home Assistant, so they're slow: a few a second for a light, one a second for a switch"
         : isWled(d) ? "Colours go to the strip over DDP, which WLED listens for with no setup"
         : d.kind === "e131" ? "Colours go straight to the controller's IP over E1.31 (sACN)"
         : "Colours go to the controller over DDP. Turn DDP on in the controller's settings if it has a switch for it.";
@@ -717,7 +719,8 @@ async function loadModels() {
     const list = $("model-list");
     for (const m of models) list.append(new Option(`${m.sku} ${m.name}${m.status ? "" : " (untested)"}`, m.sku));
     list.append(new Option("WLED strip", "WLED"), new Option("Pixel controller (DDP)", "DDP"),
-      new Option("Pixel controller (E1.31)", "E1.31"), new Option("Home Assistant light or switch", "HA"));
+      new Option("Pixel controller (E1.31)", "E1.31"), new Option("Home Assistant light or switch", "HA"),
+      new Option("Twinkly (experimental)", "Twinkly"));
     renderDevices();
     timeline.draw(); // lights' notes on the timeline come from the models
   } catch { /* the picker is a convenience; manual entry still works */ }
@@ -758,7 +761,20 @@ async function fillHaPicker(select, current = "") {
     status(`Couldn't list Home Assistant's lights: ${e.message}`, true);
   }
 }
-const isPixels = (d) => ["wled", "ddp", "e131"].includes(d?.kind); // one LED a segment, not a Govee light
+const isPixels = (d) => ["wled", "ddp", "e131", "twinkly"].includes(d?.kind); // one LED a segment, not a Govee light
+
+// Twinkly (experimental): asks the light for its name and LED count, like WLED.
+async function addTwinkly(ip) {
+  if (app.deviceList.some((d) => d.ip === ip)) { status(`${ip} is already on the list`, true); return; }
+  try {
+    const t = await api("api/twinkly/info", { method: "POST", json: { ip } });
+    const segments = Math.min(t.leds, t.max);
+    app.deviceList.push({ id: `twinkly-${ip}`, kind: "twinkly", name: t.name, ip, sku: "", protocol: "twinkly",
+      segments, bulbs: segments, reverse: false, gradient: false, brightness: 100 });
+    saveDevices();
+    status(`Added ${t.name}: ${segments} LEDs. Twinkly support is experimental, so press Test to check it.`);
+  } catch (e) { status(`Couldn't add the Twinkly light: ${e.message}`, true); }
+}
 
 // A pixel controller: no API to ask, so the LED count comes from the form. A second light on the same
 // controller starts just after the last one.
@@ -847,9 +863,10 @@ function planModelChanged() {
     info.append(" A Home Assistant light or plug: pick it in its row once it's set up in Home Assistant.");
     return;
   }
-  if (["WLED", "DDP", "E1.31"].includes(skuOf($("plan-model").value))) {
+  if (["WLED", "DDP", "E1.31", "TWINKLY"].includes(skuOf($("plan-model").value))) {
     $("plan-segments").max = 1000;
-    info.append(` A ${skuOf($("plan-model").value) === "WLED" ? "WLED strip" : "pixel controller light"}: set Segments to its number of LEDs.`);
+    const what = { WLED: "WLED strip", TWINKLY: "Twinkly light (experimental)" }[skuOf($("plan-model").value)] || "pixel controller light";
+    info.append(` A ${what}: set Segments to its number of LEDs.`);
     return;
   }
   if (!m) return;
@@ -3703,13 +3720,13 @@ function wire() {
     for (let n = 2; app.devices[id]; n++) id = `${base}-${n}`;
     const model = app.models[skuOf($("plan-model").value)];
     const segments = Number($("plan-segments").value) || 15;
-    const kind = { WLED: "wled", DDP: "ddp", "E1.31": "e131", HA: "ha" }[skuOf($("plan-model").value)];
+    const kind = { WLED: "wled", DDP: "ddp", "E1.31": "e131", HA: "ha", TWINKLY: "twinkly" }[skuOf($("plan-model").value)];
     if (kind === "ha") {
       app.deviceList.push({ id, name, kind, ip: "", entity: "", sku: "", protocol: "ha_light", segments: 1, bulbs: 1,
         reverse: false, gradient: false, brightness: 100 });
     } else if (kind) {
       const where = { ddp: { first: 1 }, e131: { universe: 1, channel: 1 } }[kind] || {};
-      app.deviceList.push({ id, name, kind, ip: "", sku: "", protocol: kind === "e131" ? "e131" : "ddp", segments,
+      app.deviceList.push({ id, name, kind, ip: "", sku: "", protocol: { e131: "e131", twinkly: "twinkly" }[kind] || "ddp", segments,
         bulbs: segments, reverse: false, gradient: false, brightness: 100, ...where });
     } else {
       app.deviceList.push(newLight(model, { id, name, ip: "", sku: model ? model.sku : "", segments }));
@@ -3726,6 +3743,7 @@ function wire() {
     const kind = $("add-kind").value;
     if (kind === "ha") { addHaLight($("add-entity").value); return; }
     if (kind === "wled") addWled(ip);
+    else if (kind === "twinkly") addTwinkly(ip);
     else if (kind === "ddp" || kind === "e131") addController(ip, Number($("add-leds").value), kind);
     else addDevice({ id: ip, ip, sku: "" });
     $("add-ip").value = "";

@@ -167,6 +167,18 @@ show or test starts, the add-on remembers how each light and switch was, and put
 Running HA-liday Show without Home Assistant? These need `HA_URL` and `HA_TOKEN` set (see **Running
 without Home Assistant**). To plan one, type **HA** as the model next to **Add planned light**.
 
+### Twinkly lights (experimental)
+
+Pick **Twinkly (experimental)** next to **Add by IP** and type the light's IP (it's in the Twinkly app
+under the light's **Device settings**). Its name and number of LEDs are filled in for you, and you can
+split it into **parts** like any other light.
+
+During a show the add-on switches the light into Twinkly's realtime mode and sets every LED itself; when
+the show or a test ends, the light goes back to what it was playing. Twinkly doesn't officially support
+this mode, and it hasn't been tried on a real Twinkly yet, so press **Test** first: a rainbow with a
+white dot should run along the whole light. If nothing happens, or the colours are wrong, say so on
+GitHub.
+
 ### Putting lights in order
 
 Drag a light by its ⠿ handle, or use its ↑ and ↓ buttons. Every

@@ -106,6 +106,7 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
   (Falcon, Kulp, xLights set-ups), with several lights on one controller
 - Any Home Assistant light or switch (Zigbee, Hue, LIFX bulbs, smart plugs for inflatables), put back
   as it was after the show
+- Twinkly lights (experimental), through Twinkly's local realtime mode
 - Plan shows before your lights arrive: add planned lights by name and segment count, then link
   them to the real devices later
 - Put your lights in any order (drag them on the Devices tab) and every show's timeline follows
@@ -186,6 +187,7 @@ flowchart LR
     E -- "DDP over LAN UDP" --> W[💡 WLED strips · pixel controllers]
     E -- "E1.31 unicast" --> X[💡 E1.31 controllers]
     E -- "light and switch actions" --> Y[💡 HA lights and plugs]
+    E -- "realtime over LAN UDP" --> Z[💡 Twinkly, experimental]
     E -- "start song" --> G[🔊 HA media player]
     H[Automations<br/>MQTT · addon_stdin] --> E
 ```
@@ -250,6 +252,7 @@ haliday_show/                             The add-on (config, Dockerfile, docs, 
   app/halidayshow/protocol.py             Govee LAN and razer packet encoding
   app/halidayshow/wled.py                 WLED: DDP packets, and the light's name, LEDs and segments
   app/halidayshow/e131.py                 E1.31 (sACN) packets and each controller's shared universes
+  app/halidayshow/twinkly.py              Twinkly (experimental): HTTP login and modes, realtime packets
   app/halidayshow/discovery.py            Multicast device scan
   app/halidayshow/listen.py               Records other Govee traffic (Settings → Listen)
   app/halidayshow/lab.py                  Packet lab: hand-made messages to one light
@@ -290,6 +293,7 @@ docs/wled.md                            How WLED strips are driven: DDP, and how
 docs/ddp.md                             Pixel controllers over DDP: several lights on one controller
 docs/e131.md                            E1.31 (sACN) controllers: universes, shared universes, stopping
 docs/ha-lights.md                       Home Assistant lights and switches: pace, switching, putting back
+docs/twinkly.md                         Twinkly (experimental): login, realtime packets, putting back
 tests/                                  pytest and node tests (tests/js)
 ```
 
