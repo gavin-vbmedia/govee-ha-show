@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.97
+
+- The logo in the **Add-on Store** now shows the same Christmas tree as the add-on's icon.
+
 ## 0.2.96
 
 - Nothing changes inside Home Assistant.
