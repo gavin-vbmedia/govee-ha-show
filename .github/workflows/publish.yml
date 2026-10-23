@@ -10,7 +10,7 @@ permissions:
   contents: read
   packages: write
 env:
-  IMAGE: ghcr.io/gavin-vbmedia/ha-liday-show
+  IMAGE: ghcr.io/gdeboos/ha-liday-show
 jobs:
   build:
     runs-on: ubuntu-latest

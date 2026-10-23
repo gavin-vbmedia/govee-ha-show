@@ -2,7 +2,7 @@
 #   docker compose up -d     then open http://<this machine>:8099/
 services:
   haliday-show:
-    image: ghcr.io/gavin-vbmedia/ha-liday-show:latest
+    image: ghcr.io/gdeboos/ha-liday-show:latest
     container_name: haliday-show
     # The lights are found and driven with multicast and fixed ports, which need the host network.
     network_mode: host

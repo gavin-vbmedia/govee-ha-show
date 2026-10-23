@@ -1029,7 +1029,7 @@ lights need. On a Raspberry Pi, use the 64-bit Raspberry Pi OS (a Pi 3 or newer)
 [install Docker](https://docs.docker.com/engine/install/raspberry-pi-os/) first.
 
 1. Make a folder for it, for example `haliday-show`.
-2. Download [docker-compose.yml](https://github.com/gavin-vbmedia/ha-liday-show/blob/main/standalone/docker-compose.yml)
+2. Download [docker-compose.yml](https://github.com/gdeboos/ha-liday-show/blob/main/standalone/docker-compose.yml)
    into that folder.
 3. Open the file and change `change-me` to your own password. Uncomment any optional settings
    you want (remove the `#`).
@@ -1043,6 +1043,9 @@ folder into `media`.
 
 To update, run `docker compose pull` and then `docker compose up -d` in that folder.
 
+The image is `ghcr.io/gdeboos/ha-liday-show`. If your `docker-compose.yml` is from before
+version 0.2.113 and its `image:` line says `gavin-vbmedia`, change that to `gdeboos`, or updates stop.
+
 ### With Python
 
 This works on a Mac, Linux and a Raspberry Pi, without Docker. Windows may work but isn't tested,
@@ -1050,7 +1053,7 @@ because Windows often blocks the network traffic the lights use. It needs Python
 [pipx](https://pipx.pypa.io/stable/installation/).
 
 1. Install it:
-   `pipx install git+https://github.com/gavin-vbmedia/ha-liday-show`
+   `pipx install git+https://github.com/gdeboos/ha-liday-show`
 2. Start it with your own password:
    `HALIDAY_SHOW_PASSWORD=your-password haliday-show`
 3. Open `http://localhost:8099/` on that computer, or `http://<its address>:8099/` from another
