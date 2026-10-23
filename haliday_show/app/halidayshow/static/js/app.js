@@ -653,19 +653,39 @@ function partsRow(d) {
 // answered with the light still on its reel.
 const finder = { device: null, lo: 1, hi: 128, max: 128, guess: 0, steps: 0, busy: false };
 
-async function probe(segment) {
-  return api("api/devices/probe", { method: "POST", json: { ...finder.device, segment } });
+async function probe(segment, d = finder.device) {
+  return api("api/devices/probe", { method: "POST", json: { ...d, segment } });
+}
+
+// Shown in a window so the questions are in front of you, wherever the light's row is on the page.
+function finderView(state, text) {
+  const asking = state === "asking";
+  $("finder-question").textContent = text;
+  $("finder-question").className = state === "error" ? "hint error" : "";
+  $("finder-yes").hidden = $("finder-no").hidden = !asking;
+  $("finder-yes").disabled = $("finder-no").disabled = state === "busy";
+  if (state === "busy") $("finder-yes").hidden = $("finder-no").hidden = false;
+  $("finder-cancel").hidden = state === "done" || state === "error";
+  $("finder-done").hidden = !(state === "done" || state === "error");
+  $("finder-note").hidden = !(asking || state === "busy");
 }
 
 async function findSegments(d) {
   if (finder.device) await stopFinder();
   Object.assign(finder, { device: d, lo: 1, hi: 128, steps: 0, busy: false });
+  $("finder-title").textContent = `Find segments on ${d.name}`;
+  $("finder-progress").textContent = "";
+  $("finder-bar").hidden = true;
+  finderView("busy", `Connecting to ${d.name}…`);
+  if (!$("finder").open) $("finder").showModal();
   try {
     const { max } = await probe(1);
     finder.hi = finder.max = max;
-  } catch (e) { status(`Couldn't reach ${d.name}: ${e.message}`, true); finder.device = null; return; }
-  $("finder").hidden = false;
-  $("finder-title").textContent = `Finding segments on ${d.name}`;
+  } catch (e) {
+    finder.device = null;
+    finderView("error", `Couldn't reach ${d.name}: ${e.message}. Check it's switched on, then try again.`);
+    return;
+  }
   // Segment 1 always exists, so the first real question is the middle of the range.
   await askFinder();
 }
@@ -675,9 +695,17 @@ async function askFinder() {
   finder.guess = Math.ceil((finder.lo + finder.hi) / 2);
   finder.steps++;
   const left = Math.ceil(Math.log2(finder.hi - finder.lo + 1));
-  $("finder-question").textContent = "One segment is lit white and everything else is off. Can you see any light on it?";
-  $("finder-progress").textContent = `Question ${finder.steps}, about ${left} to go. Between ${finder.lo} and ${finder.hi} segments.`;
-  try { await probe(finder.guess); } catch (e) { status(`Find segments failed: ${e.message}`, true); stopFinder(); }
+  $("finder-progress").textContent = `Question ${finder.steps} of about ${finder.steps + left - 1}`;
+  $("finder-bar").hidden = false;
+  $("finder-bar").firstElementChild.style.width = `${Math.round(100 * (finder.steps - 1) / (finder.steps + left - 1))}%`;
+  finderView("busy", "Lighting one segment…");
+  try {
+    await probe(finder.guess);
+    finderView("asking", "One segment is lit white and everything else is off. Can you see any light on it?");
+  } catch (e) {
+    await stopFinder(false);
+    finderView("error", `Find stopped: ${e.message}`);
+  }
 }
 
 async function answerFinder(lit) {
@@ -691,25 +719,32 @@ async function answerFinder(lit) {
 async function finishFinder() {
   const d = finder.device;
   const stretched = finder.lo === finder.max;
-  await stopFinder();
+  await stopFinder(false);
   d.segments = finder.lo;
   await saveDevices();
   renderDevices();
-  status(stretched
-    ? `${d.name} lit every segment asked for, so it may stretch the colours itself. Set to ${finder.lo}; use Test to check.`
-    : `${d.name} has ${finder.lo} segments`, stretched);
+  $("finder-progress").textContent = "";
+  $("finder-bar").firstElementChild.style.width = "100%";
+  finderView("done", stretched
+    ? `${d.name} lit every segment asked for, so it may stretch the colours itself. Segments is set to ${finder.lo}: press Test to check.`
+    : `${d.name} has ${finder.lo} segments. Segments is set to ${finder.lo}.`);
 }
 
-async function stopFinder() {
-  $("finder").hidden = true;
+async function stopFinder(close = true) {
+  if (close && $("finder").open) $("finder").close();
   if (!finder.device) return;
-  try { await probe(0); } catch { /* the light falls back to its own scene within a minute anyway */ }
+  const d = finder.device;
   finder.device = null;
+  try { await probe(0, d); } catch { /* the light falls back to its own scene within a minute anyway */ }
 }
 
 $("finder-yes").addEventListener("click", () => answerFinder(true));
 $("finder-no").addEventListener("click", () => answerFinder(false));
-$("finder-cancel").addEventListener("click", () => stopFinder());
+$("finder").addEventListener("click", (e) => {
+  if (e.target.closest("[data-finder]")) stopFinder();
+});
+// Escape closes the window; make sure the light is let go too.
+$("finder").addEventListener("close", () => { if (finder.device) stopFinder(false); });
 
 // Govee models ------------------------------------------------------------------
 async function loadModels() {

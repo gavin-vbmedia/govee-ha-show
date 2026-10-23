@@ -382,16 +382,23 @@
       <button type="button" class="primary" data-add="close" id="add-finish" hidden>Done</button>
     </div>
   </dialog>
-  <section id="finder" class="finder" hidden>
-    <b id="finder-title"></b>
-    <p id="finder-question"></p>
-    <div class="group">
-      <button id="finder-yes">Yes, something is lit</button>
-      <button id="finder-no">No, it's all off</button>
-      <button id="finder-cancel" class="ghost">Cancel</button>
+  <dialog id="finder" class="effect-dialog form-dialog finder-dialog" aria-labelledby="finder-title">
+    <div class="effect-dialog-head"><h3 id="finder-title">Find segments</h3>
+      <span id="finder-progress" class="hint"></span>
+      <button class="ghost" data-finder="cancel" aria-label="Close">✕</button></div>
+    <div class="form-dialog-body">
+      <p id="finder-question"></p>
+      <div id="finder-bar" class="finder-bar" hidden><span></span></div>
+      <p id="finder-note" class="hint">Answer by looking at the light. It works even with the light still on its reel.</p>
     </div>
-    <p id="finder-progress" class="hint"></p>
-  </section>
+    <div class="form-dialog-foot">
+      <button type="button" class="ghost" data-finder="cancel" id="finder-cancel">Cancel</button>
+      <span class="spacer"></span>
+      <button type="button" id="finder-no">No, it's all off</button>
+      <button type="button" class="primary" id="finder-yes">Yes, something is lit</button>
+      <button type="button" class="primary" id="finder-done" data-finder="done" hidden>Done</button>
+    </div>
+  </dialog>
   <div class="table-scroll">
   <table class="devices">
     <thead><tr><th title="Drag to reorder. Shows, the timeline and the House tab follow this order."></th><th>Name</th><th>IP</th><th>Model</th><th>Segments</th><th title="How many bulbs the light has, for the House view. Blank guesses 4 per segment.">Bulbs</th><th title="Caps this light in every show">Brightness %</th><th>Reverse</th><th title="Ask the device to blend between segments">Blend</th><th title="How colours are sent to the light">Protocol</th><th></th></tr></thead>
