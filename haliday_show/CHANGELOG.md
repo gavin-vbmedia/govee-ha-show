@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.116
+
+- When a song won't load, the message now says why and what to do: the file has gone from your songs
+  folder (pick it again under **Song**), this browser can't play it (try an MP3 or WAV), or HA-liday
+  Show didn't answer. It used to show the browser's own wording.
+- **✨ Create** in **Describe it**, and its twin for presets in **Library**, are greyed out until an AI
+  is set up, so they no longer look ready to press. Any button you can't press right now looks greyed
+  out too.
+- Under **Setup → Devices**, a planned light now shows a greyed-out **Test** button instead of
+  **Planned**. Point at it to see what to add under **Edit** so you can test it.
+- Short clips on the timeline no longer have their names running into the next clip. A name that
+  doesn't fit ends in "…".
+- Moving around with the keyboard now shows a clear blue ring on whatever you're on.
+
 ## 0.2.115
 
 - Home Assistant now calls add-ons **apps**, so the guide, the README and HA-liday Show's own messages

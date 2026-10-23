@@ -101,7 +101,14 @@ input[type="range"] { padding: 0; border: 0; background: none; accent-color: var
 input[type="color"] { padding: 0 2px; width: 44px; height: 30px; }
 input[type="number"] { width: 6em; }
 button, .button { cursor: pointer; }
+/* Keyboard focus: a 2px accent ring, shown only when moving around with the keyboard. */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 0; }
 button:hover, .button:hover { border-color: var(--accent); }
+/* A button that can't be pressed right now looks it, rather than matching the ones that can. */
+button:disabled { opacity: 0.5; cursor: default; }
+button:disabled:hover { border-color: var(--line); }
+button.primary:disabled:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 button.ghost, .button.ghost { background: transparent; }
 button.danger { color: var(--danger); }

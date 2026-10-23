@@ -7,6 +7,7 @@
 
 import { analyseInWorker, toMono } from "./analysis.js";
 import { SECTION_ALPHA, fmtTime, sectionHue, sectionTint } from "./timeline.js";
+import { fetchSong, songLoadMessage } from "./songload.js";
 
 const EPS = 1e-6;
 const RULER_H = 22;
@@ -290,7 +291,7 @@ export class MusicEditor {
     const key = keyOf(ref);
     if (this.sources[key]) return key;
     this.host.status(`Loading ${nameOf(ref)}…`);
-    const buf = await (await fetch(urlOf(ref))).arrayBuffer();
+    const buf = await fetchSong(urlOf(ref));
     this.audio ||= new AudioContext();
     const decoded = await this.audio.decodeAudioData(buf);
     this.sources[key] = Array.from({ length: decoded.numberOfChannels }, (_, c) => decoded.getChannelData(c));
@@ -321,7 +322,7 @@ export class MusicEditor {
       const info = await this.host.api(infoUrl(ref)).catch(() => null);
       if (this.base === ref) { this.info = info; this.secSel = -1; this.updateControls(); this.draw(); }
     } catch (e) {
-      this.host.status(`Couldn't load the song: ${e.message}`, true);
+      this.host.status(songLoadMessage(e), true);
     }
   }
 
