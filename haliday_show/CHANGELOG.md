@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.93
+
+- Nothing changes inside Home Assistant.
+- You can now run HA-liday Show with Docker on a NAS, a Raspberry Pi or a Linux PC, without Home
+  Assistant add-ons. See **Running without Home Assistant → With Docker** in the documentation.
+
 ## 0.2.92
 
 - Pixel controllers that speak **E1.31** (also called sACN) now work: most Falcon and Kulp controllers, and

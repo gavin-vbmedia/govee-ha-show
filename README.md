@@ -69,6 +69,9 @@ Govee Home app, WLED strips, or pixel controllers that take DDP or E1.31, in any
 Home Assistant builds the add-on on your machine the first time, which takes a few minutes. For show
 entities in automations, also set up the Mosquitto broker add-on and the MQTT integration (optional).
 
+**No add-ons?** If your Home Assistant can't install add-ons, or you don't use Home Assistant, you can
+run it [with Docker](haliday_show/DOCS.md#with-docker) on a NAS, Raspberry Pi or Linux PC instead.
+
 ## 🧰 Features
 
 <details open>
