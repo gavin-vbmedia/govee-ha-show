@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.101
+
+- **Scan network** now finds WLED strips too: in **+ Add a light**, pick **WLED strip** and press **Scan
+  network**, then **Add** the ones it finds. Typing the IP still works.
+- The kinds of light in **+ Add a light** have icons, so they're quicker to tell apart.
+- Planning a light that hasn't arrived is now its own choice, **Plan a light**, under **Not arrived
+  yet?**, apart from the lights you already have.
+
 ## 0.2.100
 
 - Adding a light is now one button: **+ Add a light** under **Setup → Devices** opens a short

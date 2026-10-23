@@ -330,15 +330,18 @@
       <button class="ghost" data-add="close" aria-label="Close">✕</button></div>
     <div class="form-dialog-body">
       <section data-step="kind">
-        <p class="hint">What are you adding?</p>
+        <p class="add-group">A light you have</p>
         <div class="add-kinds">
-          <button type="button" data-kind="govee"><b>Govee light</b><span>Found on your network, or by its IP</span></button>
-          <button type="button" data-kind="wled"><b>WLED strip</b><span>Its LEDs and segments are filled in for you</span></button>
-          <button type="button" data-kind="ddp"><b>Pixel controller (DDP)</b><span>Falcon Player, ESPixelStick, ESPHome, ESP32</span></button>
-          <button type="button" data-kind="e131"><b>Pixel controller (E1.31)</b><span>Falcon, Kulp, xLights set-ups</span></button>
-          <button type="button" data-kind="ha"><b>Home Assistant light or switch</b><span>Bulbs, or a plug for a prop</span></button>
-          <button type="button" data-kind="twinkly"><b>Twinkly</b><span>Experimental</span></button>
-          <button type="button" data-kind="plan" class="add-plan"><b>A light that hasn't arrived</b><span>Build shows now, link it later</span></button>
+          <button type="button" data-kind="govee"><svg class="add-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg><span class="add-text"><b>Govee light</b><span>Found on your network, or by its IP</span></span></button>
+          <button type="button" data-kind="wled"><svg class="add-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15c3-6 6 0 9-3s6-6 9 0"/><circle cx="4.5" cy="13" r="1"/><circle cx="9" cy="12.5" r="1"/><circle cx="13.5" cy="11.5" r="1"/><circle cx="18" cy="9.5" r="1"/></svg><span class="add-text"><b>WLED strip</b><span>Its LEDs and segments are filled in for you</span></span></button>
+          <button type="button" data-kind="ddp"><svg class="add-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg><span class="add-text"><b>Pixel controller (DDP)</b><span>Falcon Player, ESPixelStick, ESPHome, ESP32</span></span></button>
+          <button type="button" data-kind="e131"><svg class="add-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="13" height="9" rx="2"/><path d="M7 15h1M11 15h1"/><path d="M17 8a4 4 0 0 1 0 6M19.5 5.5a7.5 7.5 0 0 1 0 11"/></svg><span class="add-text"><b>Pixel controller (E1.31)</b><span>Falcon, Kulp, xLights set-ups</span></span></button>
+          <button type="button" data-kind="ha"><svg class="add-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M12 13.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM12 16.5V20"/></svg><span class="add-text"><b>Home Assistant light or switch</b><span>Bulbs, or a plug for a prop</span></span></button>
+          <button type="button" data-kind="twinkly"><svg class="add-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/><circle cx="12" cy="12" r="1.5"/></svg><span class="add-text"><b>Twinkly</b><span>Experimental</span></span></button>
+        </div>
+        <p class="add-group">Not arrived yet?</p>
+        <div class="add-kinds add-kinds-plan">
+          <button type="button" data-kind="plan" class="add-plan"><svg class="add-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z"/><path d="M4 8.5 12 13l8-4.5M12 13v7"/></svg><span class="add-text"><b>Plan a light</b><span>A light you're waiting for or thinking of buying. Build shows with it now and link it to the real light when it comes.</span></span></button>
         </div>
       </section>
       <section data-step="details" hidden>

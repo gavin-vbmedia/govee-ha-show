@@ -100,7 +100,7 @@ password, and it can still use your Home Assistant speakers, AI and MQTT if you 
 
 - Discover Govee devices on the local network, check each one's segments with a test pattern,
   and set its segments, bulb count, brightness, direction and blending
-- WLED strips alongside Govee lights: add one by IP and its LED count and WLED segments are filled in
+- WLED strips alongside Govee lights: scan for them or add one by IP, and its LED count and WLED segments are filled in
   for you
 - Pixel controllers over DDP (Falcon Player, ESPixelStick, ESPHome, Tasmota, ESP32) or E1.31/sACN
   (Falcon, Kulp, xLights set-ups), with several lights on one controller

@@ -76,3 +76,38 @@ def test_two_lights_on_one_controller_are_claimed_separately():
     db.tick(now)
     offsets = sorted((int.from_bytes(p[4:8], "big"), addr) for p, addr in sock.sent)
     assert offsets == [(0, ("10.0.0.5", wled.DDP_PORT)), (300, ("10.0.0.5", wled.DDP_PORT))]
+
+
+async def test_scan_finds_lights_that_answer_for_the_wled_service(aiohttp_server, monkeypatch):
+    import asyncio
+
+    from aiohttp import web
+
+    async def info(request):
+        return web.json_response({"info": {"name": "Eaves", "leds": {"count": 120}}, "state": {"seg": []}})
+
+    app = web.Application()
+    app.router.add_get("/json", info)
+    fake = await aiohttp_server(app, host="127.0.0.1")
+    monkeypatch.setattr(wled, "HTTP_PORT", fake.port)
+
+    asked = []
+
+    class Responder(asyncio.DatagramProtocol):
+        def connection_made(self, transport):
+            self.transport = transport
+
+        def datagram_received(self, data, addr):
+            asked.append(data)
+            # A response (QR set) naming the service, then something unrelated that must be ignored.
+            self.transport.sendto(b"\x00\x00\x84\x00" + bytes(8) + b"\x05_wled\x04_tcp\x05local\x00", addr)
+            self.transport.sendto(b"\x00\x00\x84\x00" + bytes(8) + b"\x04_hap\x04_tcp\x05local\x00", addr)
+
+    loop = asyncio.get_running_loop()
+    transport, _ = await loop.create_datagram_endpoint(Responder, local_addr=("127.0.0.1", 0))
+    port = transport.get_extra_info("sockname")[1]
+    found = await wled.scan(timeout=0.2, to=("127.0.0.1", port))
+    transport.close()
+    assert asked and asked[0] == wled.mdns_query()
+    assert b"\x05_wled\x04_tcp\x05local\x00\x00\x0c\x80\x01" in asked[0]  # PTR, answer straight back
+    assert found == [{"ip": "127.0.0.1", "name": "Eaves", "leds": 120, "version": "", "parts": []}]

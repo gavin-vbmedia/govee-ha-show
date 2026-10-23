@@ -442,9 +442,19 @@ table.devices td > span > .seg-num { width: 5.4em; }
   text-align: left; min-height: 64px; }
 .add-kinds button span { font-size: 12px; color: var(--muted); font-weight: 400; }
 .add-kinds button:hover { border-color: var(--accent); }
-.add-kinds .add-plan { grid-column: 1 / -1; min-height: 0; }
+.add-kinds-plan { grid-template-columns: 1fr; }
+.add-kinds .add-plan { min-height: 0; border-style: dashed; background: transparent; }
+.add-group { margin: 0; font-weight: 600; }
+.add-group + .add-kinds { margin-top: -4px; }
 .add-scan { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .add-scan #scan-results { align-self: stretch; }
 .add-scan > .hint { margin: 0; }
 #add-plan-fields { display: flex; flex-direction: column; gap: 12px; }
 #add-error { margin: 0; }
+.add-kinds button { flex-direction: row; align-items: flex-start; gap: 10px; }
+.add-kinds .add-text { display: flex; flex-direction: column; gap: 3px; font-size: inherit; color: inherit; }
+.add-kinds .add-text span { font-size: 12px; color: var(--muted); }
+.add-icon { flex: none; width: 26px; height: 26px; margin-top: 1px; fill: none; stroke: var(--accent);
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.add-kinds .add-plan .add-icon { stroke: var(--muted); }
+@media (prefers-color-scheme: dark) { .add-icon { stroke: #4fb3e8; } }
