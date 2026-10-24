@@ -16,6 +16,11 @@ Merge your own PR once CI is green on its latest commit, with no review needed, 
 - UI polish, wording, docs, tests, refactors, CI or dependency patch bumps
 - anything you'd be comfortable explaining afterwards in one changelog line
 
+Before merging a change to code or user-facing docs, run the `pr-checker` agent
+(`.claude/agents/pr-checker.md`) on the branch and fix anything it marks must-fix; if it says
+**Ask Gavin first**, treat the PR as an ask-first one below. Skip it for notes-, test- or CI-only
+changes.
+
 Use a merge commit (the repo's convention). A merged PR is a
 release (see CLAUDE.md), so Gavin gets it as a normal app update, and Docker and pipx installs get it
 from the published image or `pipx upgrade`.
